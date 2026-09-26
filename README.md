@@ -17,19 +17,35 @@ Portfólióprojekt, egy valódi Xiaomi Mi TV-n (Android 10) fejlesztve és teszt
   - feliratok a videó mellett és a kiadások almappáiban (`hun/`, `hundub.hunsub/`), Windows-1250 → UTF-8 átalakítással
   - magyar szinkronnál automatikusan a kényszerített (forced) felirat, eredeti nyelvnél a teljes magyar
   - részletes sávnevek: nyelv, formátum (SRT/ASS/PGS…), kényszerített, SDH, kodek, csatornák
+- **Wi-Fi-s feltöltés** telefonról vagy PC-ről, böngészőből, közvetlenül a TV-re kötött meghajtóra
+  - QR-kódos vagy begépelhető párosítás, hibás kódoknál letiltás
+  - darabolt, **folytatható** feltöltés: megszakadás után onnan folytatja, ahol abbamaradt; félkész fájl nem kerül a médiatárba
+  - fájlok, teljes mappák, húzd-és-ejtsd; haladás, sebesség, hátralévő idő, szünet/folytatás
+  - törlés előnézettel és megerősítéssel; meghajtók és médiatár-mappák védettek, meglévő fájl sosem íródik felül
+  - a beérkezett fájlok után automatikus médiatár-frissítés
 - **Fájlböngésző** távirányítóra optimalizálva, **diagnosztika** (kodekek, tárhelyek írástesztje)
+
+## Wi-Fi-s feltöltés használata
+
+1. A TV-n: **Feltöltés → Bekapcsolás**. Megjelenik a cím (pl. `http://192.168.1.3:8080`), a párosítási kód és egy QR-kód.
+2. Telefonon olvasd be a QR-kódot, PC-n nyisd meg a címet és add meg a kódot (a böngésző megjegyzi).
+3. Válaszd ki a célmappát, és húzd rá a fájlokat vagy mappákat.
+
+Ha a böngésző szerint a TV „visszautasította a csatlakozást”, a szerver nincs bekapcsolva a TV-n
+(biztonsági okból nem indul magától), vagy a TV-nek új IP-címe lett – mindig a TV-n látható címet használd.
 
 ## Technológia
 
 Kotlin · Jetpack Compose for TV · Hilt · Room (automatikus migrációval) · Coroutines/Flow ·
 Navigation (típusos útvonalak) · Media3 ExoPlayer + FFmpeg extension · Retrofit + kotlinx.serialization ·
-Coil 3 · JUnit
+Coil 3 · Ktor (CIO) szerver előtérszolgáltatásban · ZXing · JUnit (egység- és valódi HTTP-s integrációs tesztek)
 
 ```
-app/src/main/java/com/kiroland/mediacenter/
+app/src/main/java/com/kiroland/mediacenter/          (webes felület: app/src/main/assets/web)
 ├── data/storage     tárhelyek, fájllistázás, írásteszt
 ├── data/library     Room-adatbázis, átfésülő, médiatár-repository
 ├── data/metadata    TMDB API, illesztő, metaadat-kiegészítő
+├── data/transfer    feltöltő szerver, folytatható feltöltés, párosítás, előtérszolgáltatás
 ├── media            fájlnév-felismerő, kodekvizsgáló
 ├── player           lejátszó, feliratkezelés, sávnevek
 └── ui               képernyők (Compose for TV)
@@ -60,7 +76,6 @@ Token nélkül is működik, csak poszterek és leírások nélkül.
 
 ## Tervek
 
-- Wi-Fi-s feltöltés a TV-re (helyi szerver, webes felület, QR-kódos párosítás)
 - Android TV „Watch Next” integráció
 - M3U / `.strm` online források
 
