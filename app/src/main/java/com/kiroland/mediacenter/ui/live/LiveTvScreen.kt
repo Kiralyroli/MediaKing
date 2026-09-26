@@ -1,5 +1,6 @@
 package com.kiroland.mediacenter.ui.live
 
+import android.content.Context
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -41,21 +42,44 @@ import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.tv.material3.Card
 import androidx.tv.material3.Icon
 import androidx.tv.material3.MaterialTheme
+import androidx.tv.material3.OutlinedButton
 import androidx.tv.material3.Text
 import com.kiroland.mediacenter.data.live.LaunchMode
 import com.kiroland.mediacenter.data.live.LiveChannel
+import com.kiroland.mediacenter.data.live.LiveStreamResolver
 import com.kiroland.mediacenter.data.live.LiveTvLauncher
 import com.kiroland.mediacenter.data.live.LiveTvPlanner
 import com.kiroland.mediacenter.data.live.PublicChannels
+import com.kiroland.mediacenter.player.PlayerActivity
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
+import java.util.Optional
 import javax.inject.Inject
 
 @HiltViewModel
-class LiveTvViewModel @Inject constructor(private val launcher: LiveTvLauncher) : ViewModel() {
+class LiveTvViewModel @Inject constructor(
+    @param:ApplicationContext context: Context,
+    private val launcher: LiveTvLauncher,
+    private val resolver: Optional<LiveStreamResolver>,
+) : ViewModel() {
+    private val prefs = context.getSharedPreferences("live_tv", Context.MODE_PRIVATE)
+
     fun installed(): Set<String> = launcher.installed()
     fun hasBrowser(): Boolean = launcher.hasBrowser()
     fun open(channel: LiveChannel) = launcher.open(channel)
     fun openTuner() = launcher.openTuner()
+
+    /** True when this build can play the channel in the app's own player. */
+    fun playsInApp(channel: LiveChannel): Boolean = resolver.map { it.supports(channel) }.orElse(false)
+
+    /** The tuner needs an antenna and a channel scan, which not every home has: off unless asked for. */
+    var showAntenna: Boolean
+        get() = prefs.getBoolean(KEY_ANTENNA, false)
+        set(value) = prefs.edit().putBoolean(KEY_ANTENNA, value).apply()
+
+    private companion object {
+        const val KEY_ANTENNA = "show_antenna"
+    }
 }
 
 @Composable
@@ -64,8 +88,10 @@ fun LiveTvScreen(viewModel: LiveTvViewModel = hiltViewModel()) {
     // Re-check on every return: the user may have just installed Médiaklikk from the store.
     var installed by remember { mutableStateOf(viewModel.installed()) }
     val hasBrowser = remember { viewModel.hasBrowser() }
+    var showAntenna by remember { mutableStateOf(viewModel.showAntenna) }
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { installed = viewModel.installed() }
-    val tuner = LiveTvPlanner.tunerApp(installed)
+    val tuner = LiveTvPlanner.tunerApp(installed)?.takeIf { showAntenna }
+    val anyInApp = PublicChannels.all.any(viewModel::playsInApp)
     val firstTile = remember { FocusRequester() }
 
     LazyColumn(
@@ -77,10 +103,53 @@ fun LiveTvScreen(viewModel: LiveTvViewModel = hiltViewModel()) {
             Column(Modifier.padding(horizontal = 48.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text("Élő TV", style = MaterialTheme.typography.headlineMedium)
                 Text(
-                    "A közmédia csatornái a hivatalos Médiaklikk alkalmazásban nyílnak meg, ha telepítve van, " +
-                        "különben a mediaklikk.hu élő oldalán, a TV böngészőjében.",
+                    if (anyInApp) {
+                        "A csatornák a beépített lejátszóban indulnak. Csatornaváltás: fel/le vagy a csatornagombok."
+                    } else {
+                        "A közmédia csatornái a hivatalos Médiaklikk alkalmazásban nyílnak meg, ha telepítve van, " +
+                            "különben a mediaklikk.hu élő oldalán, a TV böngészőjében."
+                    },
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+            }
+        }
+
+        item {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text("Közmédia", style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(start = 48.dp))
+                LazyRow(
+                    contentPadding = PaddingValues(horizontal = 48.dp, vertical = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(20.dp),
+                ) {
+                    itemsIndexed(PublicChannels.all, key = { _, it -> it.id }) { index, channel ->
+                        val inApp = viewModel.playsInApp(channel)
+                        Tile(
+                            title = channel.name,
+                            caption = if (inApp) {
+                                "Lejátszás itt"
+                            } else {
+                                when (LiveTvPlanner.mode(channel, installed, hasBrowser)) {
+                                    LaunchMode.MEDIAKLIKK -> "Médiaklikk"
+                                    LaunchMode.M4_SPORT_APP -> "M4 Sport alkalmazás"
+                                    LaunchMode.WEBSITE -> "mediaklikk.hu – böngészőben"
+                                    LaunchMode.INSTALL -> "Alkalmazás telepítése"
+                                }
+                            },
+                            color = channel.color,
+                            modifier = if (index == 0) Modifier.focusRequester(firstTile) else Modifier,
+                            onClick = {
+                                when {
+                                    inApp -> context.startActivity(PlayerActivity.liveIntent(context, channel))
+                                    !viewModel.open(channel) -> Toast.makeText(
+                                        context,
+                                        "Nem sikerült megnyitni: nincs Médiaklikk alkalmazás és böngésző sem.",
+                                        Toast.LENGTH_LONG,
+                                    ).show()
+                                }
+                            },
+                        )
+                    }
+                }
             }
         }
 
@@ -92,9 +161,8 @@ fun LiveTvScreen(viewModel: LiveTvViewModel = hiltViewModel()) {
                         item {
                             Tile(
                                 title = "TV-adás",
-                                caption = "Beépített tuner (MinDig TV)",
+                                caption = "Antenna és behangolt csatornák kellenek hozzá",
                                 color = 0xFF37474F,
-                                modifier = Modifier.focusRequester(firstTile),
                                 onClick = {
                                     if (!viewModel.openTuner()) {
                                         Toast.makeText(context, "A TV tuner-alkalmazása nem indítható", Toast.LENGTH_SHORT).show()
@@ -110,45 +178,23 @@ fun LiveTvScreen(viewModel: LiveTvViewModel = hiltViewModel()) {
         }
 
         item {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text("Közmédia", style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(start = 48.dp))
-                LazyRow(
-                    contentPadding = PaddingValues(horizontal = 48.dp, vertical = 8.dp),
-                    horizontalArrangement = Arrangement.spacedBy(20.dp),
-                ) {
-                    itemsIndexed(PublicChannels.all, key = { _, it -> it.id }) { index, channel ->
-                        Tile(
-                            title = channel.name,
-                            caption = when (LiveTvPlanner.mode(channel, installed, hasBrowser)) {
-                                LaunchMode.MEDIAKLIKK -> "Médiaklikk"
-                                LaunchMode.M4_SPORT_APP -> "M4 Sport alkalmazás"
-                                LaunchMode.WEBSITE -> "mediaklikk.hu – böngészőben"
-                                LaunchMode.INSTALL -> "Alkalmazás telepítése"
-                            },
-                            color = channel.color,
-                            modifier = if (tuner == null && index == 0) Modifier.focusRequester(firstTile) else Modifier,
-                            onClick = {
-                                if (!viewModel.open(channel)) {
-                                    Toast.makeText(
-                                        context,
-                                        "Nem sikerült megnyitni: nincs Médiaklikk alkalmazás és böngésző sem.",
-                                        Toast.LENGTH_LONG,
-                                    ).show()
-                                }
-                            },
-                        )
+            Column(Modifier.padding(horizontal = 48.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                if (LiveTvPlanner.tunerApp(installed) != null) {
+                    OutlinedButton(onClick = {
+                        showAntenna = !showAntenna
+                        viewModel.showAntenna = showAntenna
+                    }) {
+                        Text(if (showAntenna) "Antennás TV-adás elrejtése" else "Antennás TV-adás megjelenítése")
                     }
                 }
+                if (!anyInApp) {
+                    Text(
+                        "Az adást az MTVA hivatalos alkalmazása vagy weboldala játssza le; ez az app csak megnyitja a csatornát.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
             }
-        }
-
-        item {
-            Text(
-                "Az adást az MTVA hivatalos alkalmazása vagy weboldala játssza le; ez az app csak megnyitja a csatornát.",
-                modifier = Modifier.padding(horizontal = 48.dp),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
         }
     }
     LaunchedEffect(Unit) { runCatching { firstTile.requestFocus() } }

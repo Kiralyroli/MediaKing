@@ -82,6 +82,19 @@ class DetailedTrackNameProviderTest {
     }
 
     @Test
+    fun `live stream original audio tagged mul uses its title`() {
+        assertEquals(
+            "eredeti · AAC · Sztereó",
+            name {
+                setSampleMimeType(MimeTypes.AUDIO_AAC)
+                setLanguage("mul")
+                setLabel("eredeti")
+                setChannelCount(2)
+            },
+        )
+    }
+
+    @Test
     fun `channel layouts`() {
         assertEquals("Sztereó", DetailedTrackNameProvider.channelLayout(2))
         assertEquals("5.1", DetailedTrackNameProvider.channelLayout(6))

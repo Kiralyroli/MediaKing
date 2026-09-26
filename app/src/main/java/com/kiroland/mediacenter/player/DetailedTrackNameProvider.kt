@@ -19,6 +19,7 @@ object DetailedTrackNameProvider : TrackNameProvider {
     const val EXTERNAL_ID_PREFIX = "external:"
 
     private val HU = Locale.forLanguageTag("hu-HU")
+    private val NON_LANGUAGES = setOf(C.LANGUAGE_UNDETERMINED, "mul", "mis", "zxx")
 
     override fun getTrackName(format: Format): String {
         val mime = effectiveMimeType(format)
@@ -58,7 +59,7 @@ object DetailedTrackNameProvider : TrackNameProvider {
     }
 
     private fun audioParts(format: Format, mime: String?): List<String?> = buildList {
-        add(languageName(format.language) ?: "Ismeretlen nyelv")
+        add(languageName(format.language) ?: if (format.label.isNullOrBlank()) "Ismeretlen nyelv" else null)
         add(format.label)
         add(audioCodecName(mime))
         add(channelLayout(format.channelCount))
@@ -80,7 +81,8 @@ object DetailedTrackNameProvider : TrackNameProvider {
     }
 
     fun languageName(language: String?): String? {
-        if (language.isNullOrBlank() || language == C.LANGUAGE_UNDETERMINED) return null
+        // "mul" (several languages) and friends say nothing useful; the track title, if any, does.
+        if (language.isNullOrBlank() || language in NON_LANGUAGES) return null
         val name = Locale.forLanguageTag(language).getDisplayName(HU)
         if (name.isBlank() || name.equals(language, ignoreCase = true)) return language
         return name.replaceFirstChar { it.titlecase(HU) }

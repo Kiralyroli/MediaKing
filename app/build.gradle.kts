@@ -29,6 +29,14 @@ android {
         buildConfigField("String", "TMDB_TOKEN", "\"${localProperties.getProperty("tmdb.token", "")}\"")
     }
 
+    // "standard" is what the public repository builds. "personal" adds private extras for the owner's own
+    // TV from app/src/personal (git-ignored); both install as the same app, so the library is kept.
+    flavorDimensions += "distribution"
+    productFlavors {
+        create("standard") { dimension = "distribution" }
+        create("personal") { dimension = "distribution" }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = true
@@ -86,6 +94,7 @@ dependencies {
 
     implementation(libs.media3.exoplayer)
     implementation(libs.media3.ui)
+    implementation(libs.media3.hls)
     // Software decoders for AC3/E-AC3/DTS/TrueHD: the target TV has no hardware decoder for them.
     implementation(libs.media3.ffmpeg)
 

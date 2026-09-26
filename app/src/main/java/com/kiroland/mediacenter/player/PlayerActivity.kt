@@ -16,6 +16,8 @@ import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.lifecycleScope
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
+import androidx.media3.common.MediaMetadata
+import androidx.media3.common.MimeTypes
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.common.TrackSelectionOverride
@@ -26,6 +28,9 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.PlayerView
 import androidx.media3.ui.TrackSelectionDialogBuilder
 import com.kiroland.mediacenter.data.library.LibraryRepository
+import com.kiroland.mediacenter.data.live.LiveChannel
+import com.kiroland.mediacenter.data.live.LiveStreamResolver
+import com.kiroland.mediacenter.data.live.PublicChannels
 import com.kiroland.mediacenter.di.ApplicationScope
 import com.kiroland.mediacenter.ui.library.episodeCode
 import dagger.hilt.android.AndroidEntryPoint
@@ -37,6 +42,7 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
+import java.util.Optional
 import javax.inject.Inject
 
 /**
@@ -50,6 +56,8 @@ class PlayerActivity : ComponentActivity() {
     @Inject lateinit var library: LibraryRepository
     // Progress writes must survive the activity finishing.
     @Inject @ApplicationScope lateinit var appScope: CoroutineScope
+    // Present only in builds that ship a resolver; without one, live channels never reach this screen.
+    @Inject lateinit var liveResolver: Optional<LiveStreamResolver>
 
     private lateinit var playerView: PlayerView
     private var player: ExoPlayer? = null
@@ -61,9 +69,17 @@ class PlayerActivity : ComponentActivity() {
     private var playWhenReady = true
     private var subtitlesChosenFor: String? = null
 
+    /** Set when playing a live channel instead of a file: no progress, no next episode, channel zapping. */
+    private var liveChannel: LiveChannel? = null
+    private var lastLiveRecoveryMs = 0L
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        currentPath = savedInstanceState?.getString(STATE_PATH) ?: requireNotNull(intent.getStringExtra(EXTRA_PATH))
+        val liveId = savedInstanceState?.getString(STATE_LIVE) ?: intent.getStringExtra(EXTRA_LIVE)
+        liveChannel = liveId?.let { id -> PublicChannels.all.firstOrNull { it.id == id } }
+        currentPath = liveChannel?.let { liveKey(it) }
+            ?: savedInstanceState?.getString(STATE_PATH)
+            ?: requireNotNull(intent.getStringExtra(EXTRA_PATH))
         if (savedInstanceState != null) {
             resumePositionMs = savedInstanceState.getLong(STATE_POSITION)
             playWhenReady = savedInstanceState.getBoolean(STATE_PLAY_WHEN_READY, true)
@@ -98,12 +114,14 @@ class PlayerActivity : ComponentActivity() {
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
         outState.putString(STATE_PATH, currentPath)
+        liveChannel?.let { outState.putString(STATE_LIVE, it.id) }
         outState.putLong(STATE_POSITION, player?.currentPosition ?: resumePositionMs ?: 0L)
         outState.putBoolean(STATE_PLAY_WHEN_READY, player?.playWhenReady ?: playWhenReady)
     }
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
         if (handleShortcut(event)) return true
+        if (handleZapping(event)) return true
         // Media keys and D-pad go to the player UI first (shows the controller, seeks, toggles).
         if (event.keyCode != KeyEvent.KEYCODE_BACK && playerView.dispatchKeyEvent(event)) return true
         if (event.keyCode == KeyEvent.KEYCODE_BACK && event.action == KeyEvent.ACTION_UP && playerView.isControllerFullyVisible) {
@@ -129,11 +147,13 @@ class PlayerActivity : ComponentActivity() {
                 }
 
                 override fun onPlayerError(error: PlaybackException) {
+                    if (liveChannel != null && recoverLive(this@apply)) return
                     Toast.makeText(this@PlayerActivity, "Lejátszási hiba: ${error.errorCodeName}", Toast.LENGTH_LONG).show()
                 }
 
                 override fun onPlaybackStateChanged(playbackState: Int) {
-                    if (playbackState == Player.STATE_ENDED) onEnded()
+                    if (playbackState != Player.STATE_ENDED) return
+                    if (liveChannel != null) recoverLive(this@apply) else onEnded()
                 }
             })
         }
@@ -141,6 +161,10 @@ class PlayerActivity : ComponentActivity() {
         playerView.player = exoPlayer
         subtitlesChosenFor = null
 
+        liveChannel?.let { channel ->
+            lifecycleScope.launch { loadLive(exoPlayer, channel) }
+            return
+        }
         lifecycleScope.launch {
             val start = resumePositionMs ?: savedStart(currentPath)
             if (player !== exoPlayer) return@launch // Released while loading.
@@ -149,6 +173,65 @@ class PlayerActivity : ComponentActivity() {
             startProgressUpdates(exoPlayer)
         }
     }
+
+    private suspend fun loadLive(exoPlayer: ExoPlayer, channel: LiveChannel) {
+        val url = liveResolver.orElse(null)?.resolve(channel)
+        if (player !== exoPlayer || liveChannel != channel) return // Released or zapped meanwhile.
+        if (url == null) {
+            Toast.makeText(this, "Nem sikerült elindítani: ${channel.name}", Toast.LENGTH_LONG).show()
+            finish()
+            return
+        }
+        val item = MediaItem.Builder()
+            .setUri(url)
+            .setMimeType(MimeTypes.APPLICATION_M3U8)
+            .setMediaMetadata(MediaMetadata.Builder().setTitle(channel.name).build())
+            .build()
+        exoPlayer.setMediaItem(item)
+        exoPlayer.prepare()
+        exoPlayer.playWhenReady = true
+        Toast.makeText(this, channel.name, Toast.LENGTH_SHORT).show()
+    }
+
+    /**
+     * Live stream addresses carry a short-lived token: when the stream stops (expired token, fell behind
+     * the live window), resolve a fresh address. At most every 20 s, so a real outage does not loop.
+     */
+    private fun recoverLive(exoPlayer: ExoPlayer): Boolean {
+        val channel = liveChannel ?: return false
+        val now = System.currentTimeMillis()
+        if (now - lastLiveRecoveryMs < LIVE_RECOVERY_INTERVAL_MS) return false
+        lastLiveRecoveryMs = now
+        lifecycleScope.launch { loadLive(exoPlayer, channel) }
+        return true
+    }
+
+    /** Up/down (with the controls hidden) and the remote's channel keys switch channels while live. */
+    private fun handleZapping(event: KeyEvent): Boolean {
+        val current = liveChannel ?: return false
+        val step = when (event.keyCode) {
+            KeyEvent.KEYCODE_CHANNEL_UP -> 1
+            KeyEvent.KEYCODE_CHANNEL_DOWN -> -1
+            KeyEvent.KEYCODE_DPAD_UP -> if (playerView.isControllerFullyVisible) return false else 1
+            KeyEvent.KEYCODE_DPAD_DOWN -> if (playerView.isControllerFullyVisible) return false else -1
+            else -> return false
+        }
+        if (event.action != KeyEvent.ACTION_UP) return true
+        val resolver = liveResolver.orElse(null) ?: return true
+        val channels = PublicChannels.all.filter(resolver::supports)
+        val index = channels.indexOf(current).coerceAtLeast(0)
+        val next = channels[(index + step).mod(channels.size)]
+        val exoPlayer = player ?: return true
+        liveChannel = next
+        currentPath = liveKey(next)
+        subtitlesChosenFor = null
+        lastLiveRecoveryMs = 0L
+        exoPlayer.stop()
+        lifecycleScope.launch { loadLive(exoPlayer, next) }
+        return true
+    }
+
+    private fun liveKey(channel: LiveChannel) = "live:${channel.id}"
 
     /** Runs once per loaded file; later track changes are the user's own choices. */
     private fun autoSelectSubtitles(exoPlayer: ExoPlayer, tracks: Tracks) {
@@ -216,6 +299,7 @@ class PlayerActivity : ComponentActivity() {
     }
 
     private fun saveProgress(exoPlayer: ExoPlayer) {
+        if (liveChannel != null) return // Nothing to resume in a live broadcast.
         val duration = exoPlayer.duration.takeIf { it != C.TIME_UNSET } ?: return
         val path = currentPath
         val position = exoPlayer.currentPosition
@@ -341,6 +425,9 @@ class PlayerActivity : ComponentActivity() {
 
     companion object {
         private const val EXTRA_PATH = "path"
+        private const val EXTRA_LIVE = "liveChannel"
+        private const val STATE_LIVE = "liveChannel"
+        private const val LIVE_RECOVERY_INTERVAL_MS = 20_000L
         private const val EXTRA_FROM_START = "fromStart"
         private const val STATE_PATH = "path"
         private const val STATE_POSITION = "position"
@@ -353,6 +440,10 @@ class PlayerActivity : ComponentActivity() {
             KeyEvent.KEYCODE_CAPTIONS,
             KeyEvent.KEYCODE_MEDIA_AUDIO_TRACK,
         )
+
+        /** Plays a live channel through the build's [LiveStreamResolver]. */
+        fun liveIntent(context: Context, channel: LiveChannel): Intent =
+            Intent(context, PlayerActivity::class.java).putExtra(EXTRA_LIVE, channel.id)
 
         fun intent(context: Context, path: String, fromStart: Boolean = false): Intent =
             Intent(context, PlayerActivity::class.java)
