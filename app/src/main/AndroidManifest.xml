@@ -13,6 +13,23 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
 
+    <!-- Apps this one opens (Android 11+ package visibility; harmless on the Android 10 target). -->
+    <queries>
+        <package android:name="hu.mtva.mediaklikk" />
+        <package android:name="me.appsters.m4" />
+        <package android:name="com.android.vending" />
+        <package android:name="com.mediatek.wwtv.tvcenter" />
+        <package android:name="com.sony.dtv.tvx" />
+        <package android:name="com.tcl.tvinput" />
+        <package android:name="com.google.android.tv" />
+        <package android:name="com.android.tv" />
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <category android:name="android.intent.category.BROWSABLE" />
+            <data android:scheme="https" />
+        </intent>
+    </queries>
+
     <uses-feature android:name="android.software.leanback" android:required="false" />
     <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
 
