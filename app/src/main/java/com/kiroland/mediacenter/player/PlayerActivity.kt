@@ -31,6 +31,7 @@ import androidx.media3.ui.PlayerView
 import androidx.media3.ui.TrackSelectionDialogBuilder
 import com.kiroland.mediacenter.data.library.LibraryRepository
 import com.kiroland.mediacenter.data.addons.AddonRepository
+import com.kiroland.mediacenter.data.settings.SettingsRepository
 import com.kiroland.mediacenter.di.ApplicationScope
 import com.kiroland.mediacenter.ui.library.episodeCode
 import dagger.hilt.android.AndroidEntryPoint
@@ -56,6 +57,7 @@ class PlayerActivity : ComponentActivity() {
     // Progress writes must survive the activity finishing.
     @Inject @ApplicationScope lateinit var appScope: CoroutineScope
     @Inject lateinit var addons: AddonRepository
+    @Inject lateinit var settings: SettingsRepository
 
     private lateinit var playerView: PlayerView
     private var player: ExoPlayer? = null
@@ -153,7 +155,7 @@ class PlayerActivity : ComponentActivity() {
                 .build()
             addListener(object : Player.Listener {
                 override fun onTracksChanged(tracks: Tracks) {
-                    autoSelectSubtitles(this@apply, tracks)
+                    if (settings.current.autoSubtitles) autoSelectSubtitles(this@apply, tracks)
                 }
 
                 override fun onPlayerError(error: PlaybackException) {
@@ -324,7 +326,7 @@ class PlayerActivity : ComponentActivity() {
         val duration = exoPlayer.duration.takeIf { it != C.TIME_UNSET }
         lifecycleScope.launch {
             if (duration != null) library.saveProgress(finishedPath, duration, duration)
-            val next = library.nextEpisode(finishedPath)
+            val next = if (settings.current.autoNextEpisode) library.nextEpisode(finishedPath) else null
             if (next == null || player !== exoPlayer) {
                 finish()
                 return@launch

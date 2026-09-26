@@ -14,6 +14,7 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.outlined.PlayCircle
+import androidx.compose.material.icons.outlined.ManageSearch
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -33,6 +34,7 @@ import androidx.tv.material3.FilterChip
 import androidx.tv.material3.Icon
 import androidx.tv.material3.ListItem
 import androidx.tv.material3.MaterialTheme
+import androidx.tv.material3.OutlinedButton
 import androidx.tv.material3.Text
 import com.kiroland.mediacenter.data.metadata.tmdb.TmdbImages
 import com.kiroland.mediacenter.util.formatBytes
@@ -42,6 +44,7 @@ import com.kiroland.mediacenter.util.formatDuration
 @Composable
 fun SeriesScreen(
     onPlay: (path: String) -> Unit,
+    onFixMatch: (key: String, query: String) -> Unit,
     viewModel: SeriesViewModel = hiltViewModel(),
 ) {
     val episodes by viewModel.episodes.collectAsStateWithLifecycle()
@@ -91,6 +94,11 @@ fun SeriesScreen(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+                all.first().media.metadataKey?.let { key ->
+                    OutlinedButton(onClick = { onFixMatch(key, all.first().media.title) }, modifier = Modifier.padding(top = 4.dp)) {
+                        ButtonContent(Icons.Outlined.ManageSearch, "Nem ez a sorozat?")
+                    }
+                }
             }
 
             if (seasons.size > 1) {

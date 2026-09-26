@@ -19,6 +19,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Replay
 import androidx.compose.material.icons.outlined.CheckCircle
+import androidx.compose.material.icons.outlined.ManageSearch
 import androidx.compose.material.icons.outlined.RemoveDone
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -53,6 +54,7 @@ import java.util.Locale
 @Composable
 fun MovieScreen(
     onPlay: (path: String, fromStart: Boolean) -> Unit,
+    onFixMatch: (key: String, query: String) -> Unit,
     viewModel: MovieViewModel = hiltViewModel(),
 ) {
     val item by viewModel.movie.collectAsStateWithLifecycle()
@@ -108,6 +110,11 @@ fun MovieScreen(
                     OutlinedButton(onClick = { viewModel.setWatched(!movie.isWatched) }) {
                         if (movie.isWatched) ButtonContent(Icons.Outlined.RemoveDone, "Nem néztem meg")
                         else ButtonContent(Icons.Outlined.CheckCircle, "Megnézve")
+                    }
+                    media.metadataKey?.let { key ->
+                        OutlinedButton(onClick = { onFixMatch(key, media.title) }) {
+                            ButtonContent(Icons.Outlined.ManageSearch, "Nem ez a film?")
+                        }
                     }
                 }
 

@@ -41,6 +41,12 @@ interface MetadataDao {
     @Query("SELECT * FROM episode_metadata WHERE tvId = :tvId ORDER BY season, episode")
     fun observeEpisodes(tvId: Int): Flow<List<EpisodeMetadataEntity>>
 
+    @Query("DELETE FROM metadata")
+    suspend fun clearMetadata()
+
+    @Query("DELETE FROM episode_metadata")
+    suspend fun clearEpisodes()
+
     @Query("SELECT * FROM metadata WHERE key = :key")
     fun observe(key: String): Flow<MetadataEntity?>
 }

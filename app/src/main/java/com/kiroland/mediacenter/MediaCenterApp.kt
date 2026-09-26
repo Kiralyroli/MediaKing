@@ -10,6 +10,8 @@ import coil3.network.okhttp.OkHttpNetworkFetcherFactory
 import coil3.request.crossfade
 import com.kiroland.mediacenter.data.library.LibraryScanner
 import com.kiroland.mediacenter.data.storage.StorageRepository
+import com.kiroland.mediacenter.data.settings.SettingsRepository
+import com.kiroland.mediacenter.data.transfer.TransferService
 import com.kiroland.mediacenter.di.ApplicationScope
 import dagger.hilt.android.HiltAndroidApp
 import kotlinx.coroutines.CoroutineScope
@@ -27,9 +29,11 @@ class MediaCenterApp : Application(), SingletonImageLoader.Factory {
     @Inject lateinit var storageRepository: StorageRepository
     @Inject @ApplicationScope lateinit var appScope: CoroutineScope
     @Inject lateinit var okHttpClient: OkHttpClient
+    @Inject lateinit var settings: SettingsRepository
 
     override fun onCreate() {
         super.onCreate()
+        if (settings.current.uploadAutoStart) TransferService.start(this)
         // Rescan at start and whenever a drive comes or goes (mount events arrive in bursts).
         appScope.launch {
             @OptIn(kotlinx.coroutines.FlowPreview::class)

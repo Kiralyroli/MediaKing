@@ -1,6 +1,5 @@
 package com.kiroland.mediacenter.ui.live
 
-import android.content.Context
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -52,22 +51,21 @@ import com.kiroland.mediacenter.data.addons.AddonRepository
 import com.kiroland.mediacenter.data.live.LiveTvLauncher
 import com.kiroland.mediacenter.data.live.LiveTvPlanner
 import com.kiroland.mediacenter.data.live.PublicChannels
+import com.kiroland.mediacenter.data.settings.SettingsRepository
 import com.kiroland.mediacenter.player.PlayerActivity
 import dagger.hilt.android.lifecycle.HiltViewModel
-import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.StateFlow
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import javax.inject.Inject
 
 @HiltViewModel
 class LiveTvViewModel @Inject constructor(
-    @param:ApplicationContext context: Context,
+    private val settings: SettingsRepository,
     private val launcher: LiveTvLauncher,
     private val addonRepository: AddonRepository,
 ) : ViewModel() {
     val addons: StateFlow<List<AddonManifest>> = addonRepository.addons
 
-    private val prefs = context.getSharedPreferences("live_tv", Context.MODE_PRIVATE)
 
     fun installed(): Set<String> = launcher.installed()
     fun hasBrowser(): Boolean = launcher.hasBrowser()
@@ -79,12 +77,8 @@ class LiveTvViewModel @Inject constructor(
 
     /** The tuner needs an antenna and a channel scan, which not every home has: off unless asked for. */
     var showAntenna: Boolean
-        get() = prefs.getBoolean(KEY_ANTENNA, false)
-        set(value) = prefs.edit().putBoolean(KEY_ANTENNA, value).apply()
-
-    private companion object {
-        const val KEY_ANTENNA = "show_antenna"
-    }
+        get() = settings.current.showAntenna
+        set(value) = settings.update { it.copy(showAntenna = value) }
 }
 
 @Composable

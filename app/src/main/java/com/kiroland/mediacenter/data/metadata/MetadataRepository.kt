@@ -36,6 +36,35 @@ class MetadataRepository @Inject constructor(
         }
     }
 
+    /** TMDB search for the "wrong match?" screen; the user picks the right one. */
+    suspend fun search(kind: MediaKind, query: String): List<MatchCandidate> =
+        if (kind == MediaKind.MOVIE) {
+            api.searchMovie(query, null).results.map {
+                MatchCandidate(it.id, it.title ?: it.originalTitle.orEmpty(), it.originalTitle, TmdbMatcher.yearOf(it.releaseDate), it.posterPath, it.overview)
+            }
+        } else {
+            api.searchTv(query, null).results.map {
+                MatchCandidate(it.id, it.name ?: it.originalName.orEmpty(), it.originalName, TmdbMatcher.yearOf(it.firstAirDate), it.posterPath, it.overview)
+            }
+        }
+
+    /** Replaces the match for [key]; kept until the user reloads all metadata. Episode data follows. */
+    suspend fun applyMatch(key: String, kind: MediaKind, tmdbId: Int) {
+        dao.upsert(if (kind == MediaKind.MOVIE) movieEntity(key, tmdbId) else showEntity(key, tmdbId))
+        if (kind == MediaKind.EPISODE) {
+            for (season in dao.seasonsToFetch()) {
+                runLogged("season ${season.tvId}/${season.season}") { fetchSeason(season.tvId, season.season) }
+            }
+        }
+    }
+
+    /** Forgets every TMDB match (including manual ones) and looks everything up again. */
+    suspend fun reloadAll() {
+        dao.clearEpisodes()
+        dao.clearMetadata()
+        enrichMissing()
+    }
+
     private suspend fun lookup(key: String) {
         val inputs = dao.lookupInputs(key)
         val title = inputs.firstOrNull()?.title ?: return
@@ -55,9 +84,13 @@ class MetadataRepository @Inject constructor(
             Candidate(it.id, listOf(it.title, it.originalTitle), TmdbMatcher.yearOf(it.releaseDate), it.popularity)
         }
         val match = TmdbMatcher.best(title, year, candidates) ?: return null
-        val details = api.movie(match.id)
+        return movieEntity(key, match.id)
+    }
+
+    private suspend fun movieEntity(key: String, id: Int): MetadataEntity {
+        val details = api.movie(id)
         val overview = details.overview?.takeIf { it.isNotBlank() }
-            ?: api.movie(match.id, TmdbApi.FALLBACK_LANGUAGE, append = "").overview
+            ?: api.movie(id, TmdbApi.FALLBACK_LANGUAGE, append = "").overview
         return details.toEntity(key, overview)
     }
 
@@ -68,9 +101,13 @@ class MetadataRepository @Inject constructor(
             Candidate(it.id, listOf(it.name, it.originalName), TmdbMatcher.yearOf(it.firstAirDate), it.popularity)
         }
         val match = TmdbMatcher.best(title, year, candidates) ?: return null
-        val details = api.tv(match.id)
+        return showEntity(key, match.id)
+    }
+
+    private suspend fun showEntity(key: String, id: Int): MetadataEntity {
+        val details = api.tv(id)
         val overview = details.overview?.takeIf { it.isNotBlank() }
-            ?: api.tv(match.id, TmdbApi.FALLBACK_LANGUAGE, append = "").overview
+            ?: api.tv(id, TmdbApi.FALLBACK_LANGUAGE, append = "").overview
         return details.toEntity(key, overview)
     }
 
@@ -160,3 +197,13 @@ class MetadataRepository @Inject constructor(
         fun showKey(seriesKey: String) = "tv:$seriesKey"
     }
 }
+
+/** One search hit for the manual "wrong match?" screen. */
+data class MatchCandidate(
+    val id: Int,
+    val title: String,
+    val originalTitle: String?,
+    val year: Int?,
+    val posterPath: String?,
+    val overview: String?,
+)

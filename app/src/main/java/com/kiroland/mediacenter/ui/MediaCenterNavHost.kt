@@ -10,6 +10,8 @@ import androidx.navigation.compose.rememberNavController
 import com.kiroland.mediacenter.player.PlayerActivity
 import com.kiroland.mediacenter.ui.browser.BrowserScreen
 import com.kiroland.mediacenter.ui.home.HomeScreen
+import com.kiroland.mediacenter.data.library.db.MediaKind
+import com.kiroland.mediacenter.ui.library.FixMatchScreen
 import com.kiroland.mediacenter.ui.library.MovieScreen
 import com.kiroland.mediacenter.ui.library.SeriesScreen
 import kotlinx.serialization.Serializable
@@ -25,6 +27,10 @@ data class MovieRoute(val path: String)
 
 @Serializable
 data class SeriesRoute(val seriesKey: String)
+
+/** Pick the right TMDB entry for a metadata key; [kind] is a MediaKind name. */
+@Serializable
+data class FixMatchRoute(val key: String, val kind: String, val query: String)
 
 @Composable
 fun MediaCenterNavHost() {
@@ -54,10 +60,19 @@ fun MediaCenterNavHost() {
             )
         }
         composable<MovieRoute> {
-            MovieScreen(onPlay = play)
+            MovieScreen(
+                onPlay = play,
+                onFixMatch = { key, query -> navController.navigate(FixMatchRoute(key, MediaKind.MOVIE.name, query)) },
+            )
         }
         composable<SeriesRoute> {
-            SeriesScreen(onPlay = { path -> play(path, false) })
+            SeriesScreen(
+                onPlay = { path -> play(path, false) },
+                onFixMatch = { key, query -> navController.navigate(FixMatchRoute(key, MediaKind.EPISODE.name, query)) },
+            )
+        }
+        composable<FixMatchRoute> {
+            FixMatchScreen(onDone = { navController.popBackStack() })
         }
     }
 }
