@@ -17,6 +17,8 @@ sealed interface UploadResult {
 
 data class UploadStatus(val received: Long, val exists: Boolean)
 
+data class DeletionPreview(val isDirectory: Boolean, val files: Int, val bytes: Long)
+
 /**
  * Resumable chunked uploads straight to their destination folder.
  *
@@ -28,6 +30,8 @@ data class UploadStatus(val received: Long, val exists: Boolean)
  */
 class UploadStore(
     private val allowedRoots: () -> List<File>,
+    /** Folders that must survive deletes, with everything above them (the library folders). */
+    private val protectedFolders: () -> List<File> = { emptyList() },
     private val reserveBytes: Long = 256L * 1024 * 1024,
     private val freeSpace: (File) -> Long = { it.usableSpace },
 ) {
@@ -62,6 +66,7 @@ class UploadStore(
     ): UploadResult {
         if (!isSafeName(name)) return UploadResult.Rejected("Érvénytelen fájlnév: $name")
         if (total < 0 || offset < 0 || length < 0 || offset + length > total) return UploadResult.Rejected("Hibás méretadatok")
+        blockingFile(dir)?.let { return UploadResult.Rejected("Mappa helyett fájl van ezen a néven: ${it.name}") }
         val target = File(dir, name)
         if (target.exists()) return UploadResult.AlreadyExists
 
@@ -70,7 +75,7 @@ class UploadStore(
         if (received != offset) return UploadResult.OffsetMismatch(received)
 
         if (offset == 0L) {
-            dir.mkdirs()
+            if (!dir.isDirectory && !dir.mkdirs()) return UploadResult.Rejected("Nem sikerült létrehozni a mappát: ${dir.name}")
             val available = freeSpace(dir) - reserveBytes
             if (total > available) return UploadResult.NotEnoughSpace(total, available.coerceAtLeast(0))
         }
@@ -104,12 +109,45 @@ class UploadStore(
     /** Drops a half-uploaded file (the client cancelled it). */
     fun discard(dir: File, name: String): Boolean = isSafeName(name) && partFile(dir, name).delete()
 
+    /** What deleting [name] in [dir] would remove; null if it does not exist or may not be deleted. */
+    fun inspect(dir: File, name: String): DeletionPreview? {
+        val target = deletable(dir, name) ?: return null
+        if (target.isFile) return DeletionPreview(isDirectory = false, files = 1, bytes = target.length())
+        val files = target.walkBottomUp().filter { it.isFile }.toList()
+        return DeletionPreview(isDirectory = true, files = files.size, bytes = files.sumOf { it.length() })
+    }
+
+    /**
+     * Permanently deletes a file, or a folder with everything in it. Android has no recycle bin, so
+     * callers confirm with the user first. Allowed roots themselves can never be deleted.
+     */
+    fun delete(dir: File, name: String): Boolean {
+        val target = deletable(dir, name) ?: return false
+        return if (target.isDirectory) target.deleteRecursively() else target.delete()
+    }
+
+    private fun deletable(dir: File, name: String): File? {
+        if (!isSafeName(name)) return null
+        val target = runCatching { File(dir, name).canonicalFile }.getOrNull() ?: return null
+        if (!target.exists()) return null
+        val roots = allowedRoots().mapNotNull { runCatching { it.canonicalPath }.getOrNull() }
+        if (target.path in roots) return null
+        val protected = protectedFolders().mapNotNull { runCatching { it.canonicalPath }.getOrNull() }
+        if (protected.any { it == target.path || it.startsWith(target.path + File.separator) }) return null
+        val inside = roots.any { target.path.startsWith(it + File.separator) }
+        return target.takeIf { inside }
+    }
+
     fun createFolder(dir: File, name: String): File? {
         if (!isSafeName(name)) return null
         return File(dir, name).takeIf { it.isDirectory || it.mkdirs() }
     }
 
     private fun partFile(dir: File, name: String) = File(dir, ".$name$PART_SUFFIX")
+
+    /** The nearest existing path element of [dir] that is a file, i.e. where a folder should be. */
+    private fun blockingFile(dir: File): File? =
+        generateSequence(dir) { it.parentFile }.firstOrNull { it.exists() }?.takeIf { !it.isDirectory }
 
     companion object {
         const val PART_SUFFIX = ".mcpart"

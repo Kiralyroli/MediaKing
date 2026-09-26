@@ -68,7 +68,10 @@ class TransferRepository @Inject constructor(
     @Synchronized
     fun start() {
         if (server != null) return
-        val store = UploadStore(allowedRoots = { storage.volumeRoots() })
+        val store = UploadStore(
+            allowedRoots = { storage.volumeRoots() },
+            protectedFolders = { runBlocking { libraryDao.folders() }.map { File(it.path) } },
+        )
         val newServer = TransferServer(this, store) { context.assets.open("web/index.html").use { it.readBytes() } }
         try {
             val port = newServer.start()
@@ -139,6 +142,13 @@ class TransferRepository @Inject constructor(
                 received = (listOf(done) + state.received).take(20),
             )
         }
+        scheduleRescan()
+    }
+
+    @Synchronized
+    override fun onDeleted(file: File) {
+        val gone = file.path
+        _state.update { state -> state.copy(received = state.received.filterNot { it.path == gone || it.path.startsWith("$gone/") }) }
         scheduleRescan()
     }
 

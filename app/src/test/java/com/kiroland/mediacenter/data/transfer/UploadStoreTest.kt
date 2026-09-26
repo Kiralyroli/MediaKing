@@ -84,6 +84,47 @@ class UploadStoreTest {
     }
 
     @Test
+    fun `a file where a folder should be gives a clear error`() {
+        // What a dragged-in folder used to leave behind: an empty file with the folder's name.
+        File(root, "Show.S03").writeBytes(ByteArray(0))
+        val result = store.chunk(File(root, "Show.S03"), "S03E01.mkv", ByteArray(10), 0, 10)
+        assertEquals(UploadResult.Rejected("Mappa helyett fájl van ezen a néven: Show.S03"), result)
+    }
+
+    @Test
+    fun `files and whole folders can be deleted, with a preview first`() {
+        File(root, "old.mkv").writeBytes(ByteArray(100))
+        File(root, "Show/Season 1").mkdirs()
+        File(root, "Show/Season 1/e1.mkv").writeBytes(ByteArray(30))
+        File(root, "Show/Season 1/e2.mkv").writeBytes(ByteArray(20))
+
+        assertEquals(DeletionPreview(isDirectory = false, files = 1, bytes = 100), store.inspect(root, "old.mkv"))
+        assertEquals(DeletionPreview(isDirectory = true, files = 2, bytes = 50), store.inspect(root, "Show"))
+
+        assertTrue(store.delete(root, "old.mkv"))
+        assertTrue(store.delete(root, "Show"))
+        assertFalse(File(root, "old.mkv").exists())
+        assertFalse(File(root, "Show").exists())
+        assertFalse("already gone", store.delete(root, "old.mkv"))
+    }
+
+    @Test
+    fun `roots, library folders and their parents are never deleted`() {
+        val drive = root.parentFile!!
+        val library = File(drive, "Media/Filmek").apply { mkdirs() }
+        File(library, "keep.mkv").writeBytes(ByteArray(1))
+        val guarded = UploadStore(allowedRoots = { listOf(drive) }, protectedFolders = { listOf(library) }, reserveBytes = 0)
+
+        assertNull(guarded.inspect(drive.parentFile!!, drive.name))
+        assertFalse("the drive itself", guarded.delete(drive.parentFile!!, drive.name))
+        assertFalse("the library folder", guarded.delete(File(drive, "Media"), "Filmek"))
+        assertFalse("a folder containing it", guarded.delete(drive, "Media"))
+        assertFalse("climbing out", guarded.delete(library, ".."))
+        assertTrue(File(library, "keep.mkv").exists())
+        assertTrue("files inside stay deletable", guarded.delete(library, "keep.mkv"))
+    }
+
+    @Test
     fun `cancelled uploads can be discarded`() {
         store.chunk(root, "x.mkv", ByteArray(100), 0, 50)
         assertTrue(store.discard(root, "x.mkv"))

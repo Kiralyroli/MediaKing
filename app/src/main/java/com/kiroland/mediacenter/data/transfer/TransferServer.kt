@@ -54,6 +54,9 @@ data class StatusDto(val received: Long, val exists: Boolean)
 data class ChunkDto(val received: Long, val done: Boolean)
 
 @Serializable
+data class PreviewDto(val isDirectory: Boolean, val files: Int, val bytes: Long)
+
+@Serializable
 data class ErrorDto(val error: String, val received: Long? = null, val retryAfterMs: Long? = null)
 
 /** What the server needs from the app; implemented by [TransferRepository]. */
@@ -63,6 +66,7 @@ interface TransferHost {
     fun roots(): List<RootDto>
     fun onChunk(file: File, total: Long, receivedBefore: Long, bytes: Long)
     fun onFileDone(file: File)
+    fun onDeleted(file: File)
 }
 
 /**
@@ -175,6 +179,27 @@ class TransferServer(
                     call.respondError(HttpStatusCode.InsufficientStorage, "Nincs elég hely a meghajtón")
                 is UploadResult.Rejected -> call.respondError(HttpStatusCode.BadRequest, result.reason)
             }
+        }
+
+        get("/api/stat") {
+            if (!authorized(call)) return@get
+            val dir = targetDir(call) ?: return@get
+            val preview = withContext(Dispatchers.IO) { store.inspect(dir, call.parameters["name"].orEmpty()) }
+            if (preview == null) call.respondError(HttpStatusCode.NotFound, "Nem található, vagy nem törölhető")
+            else call.respondJson(PreviewDto(preview.isDirectory, preview.files, preview.bytes))
+        }
+
+        post("/api/delete") {
+            if (!authorized(call)) return@post
+            val dir = targetDir(call) ?: return@post
+            val name = call.parameters["name"].orEmpty()
+            val deleted = withContext(Dispatchers.IO) { store.delete(dir, name) }
+            if (!deleted) {
+                call.respondError(HttpStatusCode.Forbidden, "Nem törölhető (védett mappa, vagy már nem létezik)")
+                return@post
+            }
+            host.onDeleted(File(dir, name))
+            call.respondJson(ChunkDto(0, true))
         }
 
         delete("/api/upload") {

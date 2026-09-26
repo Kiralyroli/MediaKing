@@ -22,6 +22,8 @@
   button.primary, .button.primary { background: var(--accent); color: #00213f; font-weight: 600; }
   button:disabled { opacity: .5; cursor: default; }
   button.small { padding: 4px 12px; font-size: 13px; }
+  button.danger { background: transparent; color: var(--err); border: 1px solid color-mix(in srgb, var(--err) 45%, transparent); }
+  button.danger:hover { background: color-mix(in srgb, var(--err) 15%, transparent); }
   input[type=text] { font: inherit; width: 100%; padding: 10px 12px; border-radius: 8px; border: 1px solid var(--surface2); background: var(--bg); color: var(--text); }
   .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
   .muted { color: var(--muted); }
@@ -225,17 +227,61 @@ async function openFolder(root, path) {
   $("targetName").textContent = displayPath(path);
   renderCrumbs(root, path);
   const partials = new Map(listing.partials.map((p) => [p.name, p.received]));
+  // Library folders (e.g. Filmek) are protected on the TV as well; don't offer what would be refused.
+  const libraryPaths = new Set(roots.filter((r) => r.kind === "library").map((r) => r.path));
   $("listing").replaceChildren(
     ...listing.dirs.map((name) => el("li", { class: "dir", onclick: () => openFolder(root, path + "/" + name) },
-      "📁", el("span", { class: "name" }, name))),
+      "📁", el("span", { class: "name" }, name),
+      libraryPaths.has(path + "/" + name) ? el("span", { class: "size" }, "médiatár") : deleteButton(name))),
     ...listing.partials.map((p) => el("li", {}, "⏸", el("span", { class: "name muted" }, p.name),
-      el("span", { class: "size" }, "félbehagyva, " + formatBytes(p.received)))),
+      el("span", { class: "size" }, "félbehagyva, " + formatBytes(p.received)),
+      el("button", { class: "small danger", onclick: () => discardPartial(p) }, "Eldobás"))),
     ...listing.files.map((f) => el("li", {}, "🎞", el("span", { class: "name" }, f.name),
-      el("span", { class: "size" }, formatBytes(f.size)))),
+      el("span", { class: "size" }, formatBytes(f.size)), deleteButton(f.name))),
   );
   if (!listing.dirs.length && !listing.files.length && !partials.size) {
     $("listing").replaceChildren(el("li", { class: "muted" }, "Üres mappa"));
   }
+}
+
+function deleteButton(name) {
+  return el("button", {
+    class: "small danger",
+    title: "Törlés",
+    onclick: (e) => { e.stopPropagation(); removeEntry(name); },
+  }, "Törlés");
+}
+
+/** Permanent delete: Android has no recycle bin, so always show exactly what goes and ask first. */
+async function removeEntry(name) {
+  const where = { dir: current.path, name };
+  const stat = await api("stat?" + query(where));
+  if (!stat.ok) { alert(stat.body ? stat.body.error : "Nem törölhető"); return; }
+  const p = stat.body;
+  const what = p.isDirectory
+    ? "ezt a mappát, benne " + p.files + " fájllal (" + formatBytes(p.bytes) + ")"
+    : "ezt a fájlt (" + formatBytes(p.bytes) + ")";
+  if (!confirm("Végleg törlöd " + what + "?\n\n„" + name + "”\n\nA törlés nem vonható vissza.")) return;
+  const result = await api("delete?" + query(where), { method: "POST" });
+  if (!result.ok) alert(result.body ? result.body.error : "Nem sikerült törölni");
+  refreshRoots();
+  openFolder(current.root, current.path);
+}
+
+async function discardPartial(partial) {
+  if (!confirm("Eldobod a félbehagyott feltöltést?\n\n„" + partial.name + "” (" + formatBytes(partial.received) + ")")) return;
+  await api("upload?" + query({ dir: current.path, rel: "", name: partial.name }), { method: "DELETE" });
+  openFolder(current.root, current.path);
+}
+
+/** Free space changes after uploads and deletes. */
+async function refreshRoots() {
+  try {
+    const info = await api("info");
+    roots = info.body.roots;
+    if (current) current.root = roots.find((r) => r.path === current.root.path) || current.root;
+    renderRoots();
+  } catch (_) { /* keep the old numbers */ }
 }
 
 function displayPath(path) {
@@ -263,12 +309,16 @@ $("mkdirButton").addEventListener("click", async () => {
 });
 
 // --- queue ---
+/** Accepts File objects (pickers) or { file, rel } pairs (dropped folders). */
 function enqueue(files) {
   if (!current) return;
-  for (const file of files) {
+  for (const entry of files) {
+    const file = entry instanceof File ? entry : entry.file;
     if (SKIP_FILES.has(file.name)) continue;
     const relPath = file.webkitRelativePath || "";
-    const rel = relPath.includes("/") ? relPath.slice(0, relPath.lastIndexOf("/")) : "";
+    const rel = entry instanceof File
+      ? (relPath.includes("/") ? relPath.slice(0, relPath.lastIndexOf("/")) : "")
+      : entry.rel;
     queue.push({
       file, name: file.name, rel, dir: current.path, size: file.size, sent: 0, status: "várakozik",
       error: "", paused: false, xhr: null, speed: 0, sample: null,
@@ -283,7 +333,40 @@ $("folderInput").addEventListener("change", (e) => { enqueue(e.target.files); e.
 const drop = $("drop");
 drop.addEventListener("dragover", (e) => { e.preventDefault(); drop.classList.add("over"); });
 drop.addEventListener("dragleave", () => drop.classList.remove("over"));
-drop.addEventListener("drop", (e) => { e.preventDefault(); drop.classList.remove("over"); enqueue(e.dataTransfer.files); });
+drop.addEventListener("drop", async (e) => {
+  e.preventDefault();
+  drop.classList.remove("over");
+  // A dropped folder arrives in dataTransfer.files as a single empty "file" named like the folder;
+  // walk the entries instead so folders keep their structure. Entries must be taken synchronously.
+  const entries = [...e.dataTransfer.items]
+    .map((item) => item.webkitGetAsEntry && item.webkitGetAsEntry())
+    .filter(Boolean);
+  if (!entries.length) { enqueue(e.dataTransfer.files); return; }
+  const found = [];
+  try {
+    for (const entry of entries) await walkEntry(entry, "", found);
+  } catch (err) {
+    alert("Nem sikerült beolvasni a mappát: " + err);
+    return;
+  }
+  enqueue(found);
+});
+
+async function walkEntry(entry, parent, out) {
+  if (entry.isFile) {
+    const file = await new Promise((resolve, reject) => entry.file(resolve, reject));
+    out.push({ file, rel: parent });
+  } else if (entry.isDirectory) {
+    const path = parent ? parent + "/" + entry.name : entry.name;
+    const reader = entry.createReader();
+    // readEntries returns at most ~100 entries per call; keep reading until it returns none.
+    for (;;) {
+      const batch = await new Promise((resolve, reject) => reader.readEntries(resolve, reject));
+      if (!batch.length) break;
+      for (const child of batch) await walkEntry(child, path, out);
+    }
+  }
+}
 $("clearDone").addEventListener("click", () => {
   for (let i = queue.length - 1; i >= 0; i--) if (["kész", "már létezik"].includes(queue[i].status)) queue.splice(i, 1);
   renderQueue();
@@ -301,6 +384,7 @@ async function runQueue() {
   } finally {
     running = false;
   }
+  refreshRoots();
   if (current) openFolder(current.root, current.path);
 }
 
@@ -397,6 +481,7 @@ async function cancel(item) {
   queue.splice(queue.indexOf(item), 1);
   try { await api("upload?" + params(item), { method: "DELETE" }); } catch (_) { /* ignore */ }
   renderQueue();
+  refreshRoots();
   if (current) openFolder(current.root, current.path);
 }
 

@@ -32,6 +32,7 @@ class TransferServerTest {
         override fun roots() = listOf(RootDto(root.path, "Filmek", "library", 0, 0))
         override fun onChunk(file: File, total: Long, receivedBefore: Long, bytes: Long) = Unit
         override fun onFileDone(file: File) { done += file }
+        override fun onDeleted(file: File) = Unit
     }
 
     @Before
@@ -110,6 +111,18 @@ class TransferServerTest {
         val climb = request("PUT", "/api/upload?" + q("dir" to root.path, "rel" to "../..", "name" to "x.bin", "offset" to 0, "total" to 3), body = byteArrayOf(1, 2, 3))
         assertEquals(403, climb.status)
         assertFalse(File(outside, "x.bin").exists())
+    }
+
+    @Test
+    fun `delete needs the code and cannot touch the root`() {
+        File(root, "Régi.mkv").writeBytes(ByteArray(5))
+        val del = "/api/delete?" + q("dir" to root.path, "name" to "Régi.mkv")
+        assertEquals(401, request("POST", del, code = null).status)
+        assertTrue(request("GET", "/api/stat?" + q("dir" to root.path, "name" to "Régi.mkv")).body.contains("\"bytes\":5"))
+        assertEquals(200, request("POST", del).status)
+        assertFalse(File(root, "Régi.mkv").exists())
+        assertEquals(403, request("POST", "/api/delete?" + q("dir" to root.parent, "name" to root.name)).status)
+        assertTrue(root.exists())
     }
 
     @Test
