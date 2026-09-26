@@ -12,7 +12,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * The TMDB read access token. Published builds carry none, so it can be given on the upload page;
+ * The TMDB read access token. A build without local.properties carries none, so it can also be given on the upload page;
  * a token given there wins over the one built in from local.properties.
  */
 @Singleton
