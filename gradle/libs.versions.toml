@@ -18,6 +18,8 @@ junit = "4.13.2"
 room = "2.8.5"
 retrofit = "3.0.0"
 okhttp = "5.5.0"
+ktor = "3.4.3"
+zxing = "3.5.4"
 coil = "3.3.0" # 3.4+ needs Kotlin stdlib 2.3+, the project compiles with 2.2
 
 [libraries]
@@ -49,6 +51,9 @@ retrofit-kotlinx-serialization = { group = "com.squareup.retrofit2", name = "con
 okhttp = { group = "com.squareup.okhttp3", name = "okhttp", version.ref = "okhttp" }
 coil-compose = { group = "io.coil-kt.coil3", name = "coil-compose", version.ref = "coil" }
 coil-network-okhttp = { group = "io.coil-kt.coil3", name = "coil-network-okhttp", version.ref = "coil" }
+ktor-server-core = { group = "io.ktor", name = "ktor-server-core", version.ref = "ktor" }
+ktor-server-cio = { group = "io.ktor", name = "ktor-server-cio", version.ref = "ktor" }
+zxing-core = { group = "com.google.zxing", name = "core", version.ref = "zxing" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

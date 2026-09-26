@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.CloudUpload
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Movie
@@ -30,11 +31,13 @@ import com.kiroland.mediacenter.ui.library.LibraryHomeScreen
 import com.kiroland.mediacenter.ui.library.MoviesScreen
 import com.kiroland.mediacenter.ui.library.SeriesListScreen
 import com.kiroland.mediacenter.ui.storage.StorageScreen
+import com.kiroland.mediacenter.ui.transfer.TransferScreen
 
 private enum class HomeSection(val label: String, val icon: ImageVector) {
     Home("Kezdőlap", Icons.Outlined.Home),
     Movies("Filmek", Icons.Outlined.Movie),
     Series("Sorozatok", Icons.Outlined.Tv),
+    Upload("Feltöltés", Icons.Outlined.CloudUpload),
     Storage("Tárhelyek", Icons.Outlined.Storage),
     Diagnostics("Diagnosztika", Icons.Outlined.Info),
 }
@@ -72,6 +75,7 @@ fun HomeScreen(
             HomeSection.Home -> LibraryHomeScreen(onOpenMovie = onOpenMovie, onOpenSeries = onOpenSeries, onPlay = onPlay)
             HomeSection.Movies -> MoviesScreen(onOpenMovie = onOpenMovie)
             HomeSection.Series -> SeriesListScreen(onOpenSeries = onOpenSeries)
+            HomeSection.Upload -> TransferScreen()
             HomeSection.Storage -> StorageScreen(onOpenVolume = onOpenVolume)
             HomeSection.Diagnostics -> DiagnosticsScreen()
         }

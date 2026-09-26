@@ -31,14 +31,16 @@ class StorageRepository @Inject constructor(
     private val storageManager = context.getSystemService(StorageManager::class.java)
     private val collator = Collator.getInstance(Locale.forLanguageTag("hu-HU"))
 
+    /** Mount points of the internal shared storage and every attached drive. Blocking (lists /storage). */
+    fun volumeRoots(): List<File> = buildList {
+        add(Environment.getExternalStorageDirectory())
+        File("/storage").listFiles()
+            ?.filter { it.isDirectory && it.name !in IGNORED_STORAGE_DIRS }
+            ?.let(::addAll)
+    }.distinctBy { it.absolutePath }
+
     suspend fun volumes(): List<StorageVolumeInfo> = withContext(Dispatchers.IO) {
-        val roots = buildList {
-            add(Environment.getExternalStorageDirectory())
-            File("/storage").listFiles()
-                ?.filter { it.isDirectory && it.name !in IGNORED_STORAGE_DIRS }
-                ?.let(::addAll)
-        }
-        roots.distinctBy { it.absolutePath }
+        volumeRoots()
             .map { root ->
                 val volume = storageManager.getStorageVolume(root)
                 val stat = runCatching { StatFs(root.path) }.getOrNull()

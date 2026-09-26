@@ -1,0 +1,443 @@
+<!doctype html>
+<html lang="hu">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>My Media – feltöltés</title>
+<style>
+  :root {
+    --bg: #0e1116; --surface: #181d26; --surface2: #232a36; --text: #e6e9ef; --muted: #a9b2c3;
+    --accent: #4fa3ff; --ok: #5bd18b; --warn: #ffc857; --err: #ff6b6b; --radius: 12px;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  header { padding: 16px; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid var(--surface2); }
+  header .logo { width: 32px; height: 32px; border-radius: 8px; background: var(--surface2); display: grid; place-items: center; color: var(--accent); font-size: 18px; }
+  header h1 { font-size: 18px; margin: 0; }
+  header .device { color: var(--muted); font-size: 13px; margin-left: auto; text-align: right; }
+  main { max-width: 900px; margin: 0 auto; padding: 16px; display: grid; gap: 16px; }
+  section { background: var(--surface); border-radius: var(--radius); padding: 16px; }
+  h2 { font-size: 15px; margin: 0 0 12px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: .04em; }
+  button, .button { font: inherit; border: 0; border-radius: 999px; padding: 9px 16px; background: var(--surface2); color: var(--text); cursor: pointer; }
+  button.primary, .button.primary { background: var(--accent); color: #00213f; font-weight: 600; }
+  button:disabled { opacity: .5; cursor: default; }
+  button.small { padding: 4px 12px; font-size: 13px; }
+  input[type=text] { font: inherit; width: 100%; padding: 10px 12px; border-radius: 8px; border: 1px solid var(--surface2); background: var(--bg); color: var(--text); }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .muted { color: var(--muted); }
+  .error { color: var(--err); }
+  .hidden { display: none !important; }
+  .roots { display: flex; gap: 8px; flex-wrap: wrap; }
+  .root { text-align: left; border-radius: 10px; padding: 10px 14px; background: var(--surface2); }
+  .root.active { outline: 2px solid var(--accent); }
+  .root small { display: block; color: var(--muted); font-size: 12px; }
+  .crumbs { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; margin-bottom: 8px; }
+  .crumbs button { background: none; padding: 2px 6px; color: var(--accent); }
+  .list { list-style: none; margin: 0; padding: 0; }
+  .list li { display: flex; gap: 10px; align-items: center; padding: 8px 6px; border-radius: 8px; }
+  .list li.dir { cursor: pointer; }
+  .list li.dir:hover { background: var(--surface2); }
+  .list .name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .list .size { color: var(--muted); font-size: 13px; white-space: nowrap; }
+  .drop { border: 2px dashed var(--surface2); border-radius: var(--radius); padding: 24px; text-align: center; color: var(--muted); }
+  .drop.over { border-color: var(--accent); color: var(--text); }
+  .item { padding: 10px 0; border-bottom: 1px solid var(--surface2); }
+  .item:last-child { border-bottom: 0; }
+  .item .top { display: flex; gap: 8px; align-items: center; }
+  .item .title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .bar { height: 6px; background: var(--surface2); border-radius: 3px; overflow: hidden; margin: 6px 0 4px; }
+  .bar > div { height: 100%; width: 0; background: var(--accent); transition: width .3s; }
+  .item.done .bar > div { background: var(--ok); }
+  .item.failed .bar > div { background: var(--err); }
+  .meta { font-size: 13px; color: var(--muted); }
+  .pair { max-width: 420px; margin: 40px auto; display: grid; gap: 12px; }
+  .pair input { font-size: 22px; letter-spacing: .15em; text-transform: uppercase; text-align: center; }
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">▶</div>
+  <h1>My Media – feltöltés</h1>
+  <div class="device" id="device"></div>
+</header>
+
+<main>
+  <section id="pairing" class="pair hidden">
+    <h2>Párosítás</h2>
+    <p class="muted">Írd be a TV-n, a Feltöltés menüben látható kódot, vagy olvasd be a QR-kódot a telefonoddal.</p>
+    <input id="codeInput" type="text" autocomplete="off" placeholder="XXXX-XXXX" maxlength="9">
+    <button class="primary" id="codeButton">Csatlakozás</button>
+    <p class="error" id="pairError"></p>
+  </section>
+
+  <div id="app" class="hidden" style="display:grid;gap:16px">
+    <section>
+      <h2>Hová?</h2>
+      <div class="roots" id="roots"></div>
+    </section>
+
+    <section>
+      <div class="crumbs" id="crumbs"></div>
+      <div class="row" style="margin-bottom:8px">
+        <span class="muted" id="free"></span>
+        <span style="flex:1"></span>
+        <button class="small" id="mkdirButton">Új mappa</button>
+      </div>
+      <ul class="list" id="listing"></ul>
+    </section>
+
+    <section>
+      <h2>Feltöltés ide: <span id="targetName" style="text-transform:none;color:var(--text)"></span></h2>
+      <div class="drop" id="drop">
+        <p>Húzd ide a fájlokat, vagy</p>
+        <div class="row" style="justify-content:center">
+          <label class="button primary">Fájlok kiválasztása<input type="file" id="fileInput" multiple hidden></label>
+          <label class="button">Teljes mappa<input type="file" id="folderInput" webkitdirectory multiple hidden></label>
+        </div>
+      </div>
+      <p class="muted" style="font-size:13px">Tipp: feltöltés közben tartsd bekapcsolva a telefon kijelzőjét. Ha megszakad,
+        válaszd ki újra ugyanazt a fájlt ugyanide – onnan folytatja, ahol abbamaradt.</p>
+    </section>
+
+    <section id="queueSection" class="hidden">
+      <div class="row" style="margin-bottom:4px">
+        <h2 style="margin:0">Sor</h2>
+        <span style="flex:1"></span>
+        <span class="muted" id="queueSummary"></span>
+        <button class="small" id="clearDone">Készek törlése a listáról</button>
+      </div>
+      <div id="queue"></div>
+    </section>
+  </div>
+</main>
+
+<script>
+"use strict";
+const CHUNK = 8 * 1024 * 1024;
+const SKIP_FILES = new Set([".DS_Store", "Thumbs.db", "desktop.ini"]);
+const $ = (id) => document.getElementById(id);
+
+let code = localStorage.getItem("pairingCode") || "";
+let roots = [];
+let current = null; // { root, path }
+const queue = [];
+let running = false;
+
+// --- tiny DOM helper: text only, never innerHTML, so file names cannot inject markup ---
+function el(tag, props = {}, ...children) {
+  const node = document.createElement(tag);
+  for (const [key, value] of Object.entries(props)) {
+    if (key === "class") node.className = value;
+    else if (key.startsWith("on")) node.addEventListener(key.slice(2), value);
+    else node.setAttribute(key, value);
+  }
+  for (const child of children.flat()) {
+    if (child == null) continue;
+    node.append(child instanceof Node ? child : document.createTextNode(String(child)));
+  }
+  return node;
+}
+
+function formatBytes(bytes) {
+  if (bytes < 1024) return bytes + " B";
+  const units = ["KB", "MB", "GB", "TB"];
+  let value = bytes / 1024, unit = 0;
+  while (value >= 1024 && unit < units.length - 1) { value /= 1024; unit++; }
+  return value.toLocaleString("hu-HU", { maximumFractionDigits: value >= 100 ? 0 : 1 }) + " " + units[unit];
+}
+
+function formatEta(seconds) {
+  if (!isFinite(seconds) || seconds <= 0) return "";
+  if (seconds >= 3600) return Math.floor(seconds / 3600) + " ó " + Math.floor(seconds % 3600 / 60) + " p";
+  if (seconds >= 60) return Math.floor(seconds / 60) + " p";
+  return Math.ceil(seconds) + " mp";
+}
+
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+const query = (params) => new URLSearchParams(params).toString();
+
+// --- pairing ---
+(function takeCodeFromUrl() {
+  const match = location.hash.match(/code=([A-Za-z0-9-]+)/);
+  if (match) {
+    code = match[1];
+    localStorage.setItem("pairingCode", code);
+    history.replaceState(null, "", location.pathname);
+  }
+})();
+
+function showPairing(message) {
+  $("app").classList.add("hidden");
+  $("pairing").classList.remove("hidden");
+  $("pairError").textContent = message || "";
+  $("codeInput").focus();
+}
+
+$("codeButton").addEventListener("click", () => {
+  code = $("codeInput").value.trim();
+  localStorage.setItem("pairingCode", code);
+  start();
+});
+$("codeInput").addEventListener("keydown", (e) => { if (e.key === "Enter") $("codeButton").click(); });
+
+async function api(path, options = {}) {
+  const response = await fetch("/api/" + path, {
+    ...options,
+    headers: { "X-Pairing-Code": code, ...(options.headers || {}) },
+  });
+  let body = null;
+  try { body = await response.json(); } catch (_) { /* empty body */ }
+  if (response.status === 401 || response.status === 429) {
+    showPairing(body && body.error);
+    throw new Error("unauthorized");
+  }
+  return { status: response.status, ok: response.ok, body };
+}
+
+// --- browsing ---
+async function start() {
+  if (!code) { showPairing(); return; }
+  let info;
+  try { info = await api("info"); } catch (_) { return; }
+  $("pairing").classList.add("hidden");
+  $("app").classList.remove("hidden");
+  $("device").textContent = info.body.device;
+  roots = info.body.roots;
+  renderRoots();
+  if (!current && roots.length) openFolder(roots[0], roots[0].path);
+}
+
+function renderRoots() {
+  const box = $("roots");
+  box.replaceChildren(...roots.map((root) => el("button", {
+    class: "root" + (current && current.root.path === root.path ? " active" : ""),
+    onclick: () => openFolder(root, root.path),
+  }, root.kind === "library" ? "🎬 " + root.name : "💾 " + root.name, el("small", {}, formatBytes(root.freeBytes) + " szabad"))));
+}
+
+async function openFolder(root, path) {
+  current = { root, path };
+  renderRoots();
+  const result = await api("list?" + query({ dir: path }));
+  if (!result.ok) { $("listing").replaceChildren(el("li", { class: "error" }, result.body ? result.body.error : "Hiba")); return; }
+  const listing = result.body;
+  $("free").textContent = formatBytes(listing.freeBytes) + " szabad a meghajtón";
+  $("targetName").textContent = displayPath(path);
+  renderCrumbs(root, path);
+  const partials = new Map(listing.partials.map((p) => [p.name, p.received]));
+  $("listing").replaceChildren(
+    ...listing.dirs.map((name) => el("li", { class: "dir", onclick: () => openFolder(root, path + "/" + name) },
+      "📁", el("span", { class: "name" }, name))),
+    ...listing.partials.map((p) => el("li", {}, "⏸", el("span", { class: "name muted" }, p.name),
+      el("span", { class: "size" }, "félbehagyva, " + formatBytes(p.received)))),
+    ...listing.files.map((f) => el("li", {}, "🎞", el("span", { class: "name" }, f.name),
+      el("span", { class: "size" }, formatBytes(f.size)))),
+  );
+  if (!listing.dirs.length && !listing.files.length && !partials.size) {
+    $("listing").replaceChildren(el("li", { class: "muted" }, "Üres mappa"));
+  }
+}
+
+function displayPath(path) {
+  const root = current.root;
+  const rel = path.slice(root.path.length).replace(/^\//, "");
+  return root.name + (rel ? " / " + rel.split("/").join(" / ") : "");
+}
+
+function renderCrumbs(root, path) {
+  const rel = path.slice(root.path.length).split("/").filter(Boolean);
+  const crumbs = [el("button", { onclick: () => openFolder(root, root.path) }, root.name)];
+  rel.forEach((part, i) => {
+    const target = root.path + "/" + rel.slice(0, i + 1).join("/");
+    crumbs.push(el("span", { class: "muted" }, "›"), el("button", { onclick: () => openFolder(root, target) }, part));
+  });
+  $("crumbs").replaceChildren(...crumbs);
+}
+
+$("mkdirButton").addEventListener("click", async () => {
+  const name = prompt("Az új mappa neve:");
+  if (!name || !current) return;
+  const result = await api("mkdir?" + query({ dir: current.path, name: name.trim() }), { method: "POST" });
+  if (!result.ok) { alert(result.body ? result.body.error : "Nem sikerült létrehozni"); return; }
+  openFolder(current.root, current.path + "/" + result.body.name);
+});
+
+// --- queue ---
+function enqueue(files) {
+  if (!current) return;
+  for (const file of files) {
+    if (SKIP_FILES.has(file.name)) continue;
+    const relPath = file.webkitRelativePath || "";
+    const rel = relPath.includes("/") ? relPath.slice(0, relPath.lastIndexOf("/")) : "";
+    queue.push({
+      file, name: file.name, rel, dir: current.path, size: file.size, sent: 0, status: "várakozik",
+      error: "", paused: false, xhr: null, speed: 0, sample: null,
+    });
+  }
+  renderQueue();
+  runQueue();
+}
+
+$("fileInput").addEventListener("change", (e) => { enqueue(e.target.files); e.target.value = ""; });
+$("folderInput").addEventListener("change", (e) => { enqueue(e.target.files); e.target.value = ""; });
+const drop = $("drop");
+drop.addEventListener("dragover", (e) => { e.preventDefault(); drop.classList.add("over"); });
+drop.addEventListener("dragleave", () => drop.classList.remove("over"));
+drop.addEventListener("drop", (e) => { e.preventDefault(); drop.classList.remove("over"); enqueue(e.dataTransfer.files); });
+$("clearDone").addEventListener("click", () => {
+  for (let i = queue.length - 1; i >= 0; i--) if (["kész", "már létezik"].includes(queue[i].status)) queue.splice(i, 1);
+  renderQueue();
+});
+
+async function runQueue() {
+  if (running) return;
+  running = true;
+  try {
+    let next;
+    while ((next = queue.find((item) => item.status === "várakozik"))) {
+      await upload(next);
+      renderQueue();
+    }
+  } finally {
+    running = false;
+  }
+  if (current) openFolder(current.root, current.path);
+}
+
+function params(item, extra = {}) {
+  return query({ dir: item.dir, rel: item.rel, name: item.name, ...extra });
+}
+
+async function upload(item) {
+  item.status = "feltöltés";
+  item.error = "";
+  renderQueue();
+  let status;
+  try { status = await api("upload/status?" + params(item)); } catch (_) { item.status = "hiba"; return; }
+  if (!status.ok) { fail(item, status.body && status.body.error); return; }
+  if (status.body.exists) { item.status = "már létezik"; return; }
+  let offset = status.body.received;
+  item.sent = offset;
+  let failures = 0;
+
+  while (true) {
+    if (item.paused) { item.status = "szünetel"; return; }
+    const end = Math.min(offset + CHUNK, item.size);
+    let result = null;
+    try { result = await putChunk(item, offset, end); } catch (_) { /* network error or abort */ }
+    if (item.paused) { item.status = "szünetel"; return; }
+
+    if (result && result.status === 200) {
+      failures = 0;
+      offset = result.body.received;
+      item.sent = offset;
+      if (result.body.done) { item.status = "kész"; item.sent = item.size; return; }
+      continue;
+    }
+    if (result && result.status === 409) {
+      if (result.body && result.body.received != null) { offset = result.body.received; item.sent = offset; continue; }
+      item.status = "már létezik";
+      return;
+    }
+    if (result && result.status === 401) { item.status = "várakozik"; showPairing("Újra párosítás szükséges."); return; }
+    if (result && [400, 403, 507].includes(result.status)) { fail(item, result.body && result.body.error); return; }
+
+    // Network trouble (Wi-Fi hiccup, TV busy): back off, then ask the TV where to continue.
+    if (++failures > 8) { fail(item, "A kapcsolat többször megszakadt"); return; }
+    item.status = "újrapróbálás";
+    renderQueue();
+    await sleep(Math.min(30000, 1000 * 2 ** failures));
+    try {
+      const again = await api("upload/status?" + params(item));
+      if (again.ok) { offset = again.body.received; item.sent = offset; }
+    } catch (_) { /* keep trying */ }
+    item.status = "feltöltés";
+  }
+}
+
+function fail(item, message) {
+  item.status = "hiba";
+  item.error = message || "Ismeretlen hiba";
+}
+
+function putChunk(item, offset, end) {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    item.xhr = xhr;
+    xhr.open("PUT", "/api/upload?" + params(item, { offset, total: item.size }));
+    xhr.setRequestHeader("X-Pairing-Code", code);
+    xhr.setRequestHeader("Content-Type", "application/octet-stream");
+    xhr.upload.onprogress = (e) => { item.sent = offset + e.loaded; measure(item); renderProgress(item); };
+    xhr.onload = () => {
+      let body = null;
+      try { body = JSON.parse(xhr.responseText); } catch (_) { /* not json */ }
+      resolve({ status: xhr.status, body });
+    };
+    xhr.onerror = () => reject(new Error("network"));
+    xhr.onabort = () => reject(new Error("abort"));
+    xhr.send(item.file.slice(offset, end));
+  });
+}
+
+function measure(item) {
+  const now = performance.now();
+  if (!item.sample) { item.sample = { t: now, bytes: item.sent }; return; }
+  const dt = (now - item.sample.t) / 1000;
+  if (dt < 1) return;
+  const instant = (item.sent - item.sample.bytes) / dt;
+  item.speed = item.speed ? item.speed * 0.7 + instant * 0.3 : instant;
+  item.sample = { t: now, bytes: item.sent };
+}
+
+function pause(item) { item.paused = true; if (item.xhr) item.xhr.abort(); renderQueue(); }
+function resume(item) { item.paused = false; item.status = "várakozik"; item.sample = null; renderQueue(); runQueue(); }
+async function cancel(item) {
+  item.paused = true;
+  if (item.xhr) item.xhr.abort();
+  queue.splice(queue.indexOf(item), 1);
+  try { await api("upload?" + params(item), { method: "DELETE" }); } catch (_) { /* ignore */ }
+  renderQueue();
+  if (current) openFolder(current.root, current.path);
+}
+
+function renderQueue() {
+  $("queueSection").classList.toggle("hidden", queue.length === 0);
+  $("queue").replaceChildren(...queue.map((item) => {
+    const actions = [];
+    if (["feltöltés", "újrapróbálás", "várakozik"].includes(item.status)) actions.push(el("button", { class: "small", onclick: () => pause(item) }, "Szünet"));
+    if (["szünetel", "hiba"].includes(item.status)) actions.push(el("button", { class: "small", onclick: () => resume(item) }, "Folytatás"));
+    if (!["kész", "már létezik"].includes(item.status)) actions.push(el("button", { class: "small", onclick: () => cancel(item) }, "Mégse"));
+    item.node = el("div", { class: "item" + (item.status === "kész" ? " done" : item.status === "hiba" ? " failed" : "") },
+      el("div", { class: "top" }, el("span", { class: "title" }, (item.rel ? item.rel + "/" : "") + item.name), ...actions),
+      el("div", { class: "bar" }, el("div")),
+      el("div", { class: "meta" }));
+    renderProgress(item);
+    return item.node;
+  }));
+  const total = queue.reduce((sum, i) => sum + i.size, 0);
+  const sent = queue.reduce((sum, i) => sum + i.sent, 0);
+  $("queueSummary").textContent = queue.length ? formatBytes(sent) + " / " + formatBytes(total) : "";
+}
+
+function renderProgress(item) {
+  if (!item.node) return;
+  const fraction = item.size ? item.sent / item.size : (item.status === "kész" ? 1 : 0);
+  item.node.querySelector(".bar > div").style.width = (fraction * 100).toFixed(1) + "%";
+  const parts = [formatBytes(item.sent) + " / " + formatBytes(item.size), item.status];
+  if (item.status === "feltöltés" && item.speed > 0) {
+    parts.push(formatBytes(item.speed) + "/s");
+    const eta = formatEta((item.size - item.sent) / item.speed);
+    if (eta) parts.push("még kb. " + eta);
+  }
+  if (item.error) parts.push(item.error);
+  item.node.querySelector(".meta").textContent = parts.join(" · ");
+}
+
+window.addEventListener("beforeunload", (e) => {
+  if (queue.some((i) => ["feltöltés", "újrapróbálás", "várakozik"].includes(i.status))) { e.preventDefault(); e.returnValue = ""; }
+});
+
+start();
+</script>
+</body>
+</html>

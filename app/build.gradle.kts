@@ -80,6 +80,10 @@ dependencies {
     implementation(libs.coil.compose)
     implementation(libs.coil.network.okhttp)
 
+    implementation(libs.ktor.server.core)
+    implementation(libs.ktor.server.cio)
+    implementation(libs.zxing.core)
+
     implementation(libs.media3.exoplayer)
     implementation(libs.media3.ui)
     // Software decoders for AC3/E-AC3/DTS/TrueHD: the target TV has no hardware decoder for them.
