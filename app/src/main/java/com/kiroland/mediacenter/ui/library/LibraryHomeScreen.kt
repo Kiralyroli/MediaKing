@@ -84,7 +84,11 @@ fun LibraryHomeScreen(
     val recentSeries = series.orEmpty().sortedByDescending { it.latestAddedAt }.take(20)
 
     // The grid shows up to three things to continue, topped up with the newest films.
-    val features = (continueWatching.map { it.toFeature(onPlay) } + recentMovies.map { it.toNewFeature(onOpenMovie) }).take(3)
+    val continuing = continueWatching.mapTo(HashSet()) { it.item.media.path }
+    val features = (
+        continueWatching.map { it.toFeature(onPlay) } +
+            recentMovies.filterNot { it.media.path in continuing }.map { it.toNewFeature(onOpenMovie) }
+    ).take(3)
     val shownPaths = continueWatching.take(3).map { it.item.media.path }.toSet()
     val moreToContinue = continueWatching.filterNot { it.item.media.path in shownPaths }
     val firstItem = remember { FocusRequester() }
@@ -243,13 +247,16 @@ private fun LiveTile(channels: List<LiveNow>, onPlay: (LiveNow) -> Unit, onOpenL
             ) {
                 Column(Modifier.padding(horizontal = 10.dp, vertical = 5.dp)) {
                     Text(channel.name, style = MaterialTheme.typography.titleMedium)
-                    Text(
-                        channel.now ?: "—",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = androidx.tv.material3.LocalContentColor.current.copy(alpha = 0.75f),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
+                    // Empty until the guide has loaded.
+                    channel.now?.let {
+                        Text(
+                            it,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = androidx.tv.material3.LocalContentColor.current.copy(alpha = 0.75f),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
                 }
             }
         }

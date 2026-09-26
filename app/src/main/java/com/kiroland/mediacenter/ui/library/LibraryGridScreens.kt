@@ -91,9 +91,10 @@ private fun PosterGrid(
 ) {
     val first = remember { FocusRequester() }
     LazyVerticalGrid(
-        columns = GridCells.Adaptive(PosterWidth + 8.dp),
+        // Four or five across next to the side menu.
+        columns = GridCells.Adaptive(110.dp),
         modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(horizontal = 48.dp, vertical = 36.dp),
+        contentPadding = PaddingValues(horizontal = 32.dp, vertical = 32.dp),
         horizontalArrangement = Arrangement.spacedBy(20.dp),
         verticalArrangement = Arrangement.spacedBy(24.dp),
     ) {

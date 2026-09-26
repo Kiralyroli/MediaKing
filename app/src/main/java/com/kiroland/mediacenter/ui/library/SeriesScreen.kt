@@ -207,7 +207,7 @@ private fun MissingEpisode(row: EpisodeRow.Missing, today: String, modifier: Mod
     ListItem(
         selected = false,
         onClick = {},
-        modifier = modifier.alpha(MISSING_ALPHA),
+        modifier = modifier,
         shape = RowShape,
         colors = rowColors(missing = true),
         headlineContent = {
@@ -251,7 +251,8 @@ private val RowShape @Composable get() = ListItemDefaults.shape(Shapes.Card)
 @Composable
 private fun rowColors(missing: Boolean = false) = ListItemDefaults.colors(
     containerColor = if (missing) Color.Transparent else SurfaceColor.copy(alpha = 0.85f),
-    contentColor = TextPrimary,
-    focusedContainerColor = TextPrimary,
-    focusedContentColor = OnAccent,
+    // Missing episodes stay dimmed even when focused: they cannot be played.
+    contentColor = if (missing) TextPrimary.copy(alpha = MISSING_ALPHA) else TextPrimary,
+    focusedContainerColor = if (missing) SurfaceColor else TextPrimary,
+    focusedContentColor = if (missing) TextPrimary.copy(alpha = 0.75f) else OnAccent,
 )

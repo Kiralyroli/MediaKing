@@ -20,6 +20,7 @@ import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.launch
 import okhttp3.OkHttpClient
 import okio.Path.Companion.toOkioPath
+import com.kiroland.mediacenter.data.epg.EpgRepository
 import javax.inject.Inject
 
 @HiltAndroidApp
@@ -30,6 +31,8 @@ class MediaCenterApp : Application(), SingletonImageLoader.Factory {
     @Inject @ApplicationScope lateinit var appScope: CoroutineScope
     @Inject lateinit var okHttpClient: OkHttpClient
     @Inject lateinit var settings: SettingsRepository
+    // Created here so the add-on guides start loading with the app, not when Live TV first opens.
+    @Inject lateinit var epg: EpgRepository
 
     override fun onCreate() {
         super.onCreate()

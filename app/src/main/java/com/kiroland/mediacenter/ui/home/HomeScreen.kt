@@ -104,11 +104,11 @@ fun HomeScreen(
                 .width(210.dp)
                 .fillMaxHeight()
                 .background(SidebarColor)
-                .padding(horizontal = 14.dp, vertical = 26.dp)
+                .padding(horizontal = 14.dp, vertical = 20.dp)
                 .selectableGroup()
                 .focusProperties { onEnter = { current.requestFocus() } }
                 .focusGroup(),
-            verticalArrangement = Arrangement.spacedBy(6.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
             Text(
                 buildAnnotatedString {
@@ -117,7 +117,7 @@ fun HomeScreen(
                     append("media")
                 },
                 style = MaterialTheme.typography.headlineSmall,
-                modifier = Modifier.padding(start = 10.dp, bottom = 18.dp),
+                modifier = Modifier.padding(start = 10.dp, bottom = 10.dp),
             )
             HomeSection.entries.filter { it.inDrawer }.forEach { item ->
                 NavPill(
@@ -160,7 +160,7 @@ fun HomeScreen(
 private fun NavPill(item: HomeSection, selected: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
     Surface(
         onClick = onClick,
-        modifier = modifier.fillMaxWidth().height(48.dp),
+        modifier = modifier.fillMaxWidth().height(42.dp),
         shape = ClickableSurfaceDefaults.shape(Shapes.Pill),
         colors = ClickableSurfaceDefaults.colors(
             containerColor = if (selected) MaterialTheme.colorScheme.primary else Color.Transparent,
