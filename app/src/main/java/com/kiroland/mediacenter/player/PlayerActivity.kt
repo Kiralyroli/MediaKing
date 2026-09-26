@@ -31,6 +31,7 @@ import androidx.media3.ui.PlayerView
 import androidx.media3.ui.TrackSelectionDialogBuilder
 import com.kiroland.mediacenter.data.library.LibraryRepository
 import com.kiroland.mediacenter.data.addons.AddonRepository
+import com.kiroland.mediacenter.data.epg.EpgRepository
 import com.kiroland.mediacenter.data.settings.SettingsRepository
 import com.kiroland.mediacenter.di.ApplicationScope
 import com.kiroland.mediacenter.ui.library.episodeCode
@@ -58,6 +59,7 @@ class PlayerActivity : ComponentActivity() {
     @Inject @ApplicationScope lateinit var appScope: CoroutineScope
     @Inject lateinit var addons: AddonRepository
     @Inject lateinit var settings: SettingsRepository
+    @Inject lateinit var epg: EpgRepository
 
     private lateinit var playerView: PlayerView
     private var player: ExoPlayer? = null
@@ -204,7 +206,9 @@ class PlayerActivity : ComponentActivity() {
         exoPlayer.setMediaItem(item)
         exoPlayer.prepare()
         exoPlayer.playWhenReady = true
-        Toast.makeText(this, channel?.name ?: ref.channelId, Toast.LENGTH_SHORT).show()
+        val onNow = channel?.let { epg.nowNext(ref.addonId, it).first?.title }
+        val label = listOfNotNull(channel?.name ?: ref.channelId, onNow?.let { "Most: $it" }).joinToString("\n")
+        Toast.makeText(this, label, Toast.LENGTH_SHORT).show()
     }
 
     /**

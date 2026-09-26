@@ -29,11 +29,28 @@ Azonos `id`-jű kiegészítő telepítése frissíti a régit. Eltávolítás a 
 | `id` | Egyedi azonosító: kisbetű, szám, `.`, `-`, `_` (pl. `example.test-streams`) |
 | `name`, `version`, `description` | Megjelenített név, verziószám, rövid leírás |
 | `headers` | Alapértelmezett fejlécek minden `get` lépéshez (pl. `User-Agent`) |
-| `channels[]` | `id`, `name`, opcionálisan `color` (`#RRGGBB`), `group` (sor címe az Élő TV-ben), `url` (fix stream-cím), `vars` (sablonértékek), `builtin` |
+| `playlist` | Egy M3U lejátszási lista címe: a benne lévő csatornák is megjelennek (a `channels` mellett) |
+| `epg` | Egy XMLTV műsorújság címe (lehet `.gz`); ha hiányzik, a lista fejlécében lévő `x-tvg-url`-t használja |
+| `channels[]` | `id`, `name`, opcionálisan `color` (`#RRGGBB`), `logo` (kép URL), `group` (sor címe az Élő TV-ben), `url` (fix stream-cím), `epgId` (a csatorna azonosítója a műsorújságban), `vars` (sablonértékek), `builtin` |
 | `channels[].builtin` | Egy beépített csempe azonosítója (`m1`, `m2`, `m4`, `m4plus`, `m5`, `duna`, `dunaworld`): a csempe ezzel a csatornával indul a beépített lejátszóban, ahelyett hogy külön sorban jelenne meg |
 | `resolve[]` | Lépések a fix `url` nélküli csatornákhoz (lásd lent) |
 | `stream.mimeType` | pl. `application/x-mpegURL`, ha a cím nem árulkodó |
 | `stream.headers` | Fejlécek, amelyeket a lejátszó a stream letöltésekor küld |
+
+## Lejátszási lista és műsorújság
+
+```json
+{
+  "id": "example.iptv",
+  "name": "Saját IPTV",
+  "playlist": "https://example.org/lista.m3u",
+  "epg": "https://example.org/musor.xml.gz"
+}
+```
+
+A lista `#EXTINF` soraiból a `tvg-id` (műsorújság-azonosító), `tvg-logo` (logó) és `group-title` (sor az Élő TV-ben)
+kerül át. A műsorújságból az Élő TV csempéi a „Most” és a következő műsort mutatják; 6 óránként frissül, és csak
+egy napnyi ablakot tart meg.
 
 ## Feloldási lépések
 

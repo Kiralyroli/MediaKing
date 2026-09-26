@@ -51,6 +51,12 @@ import com.kiroland.mediacenter.data.addons.AddonRepository
 import com.kiroland.mediacenter.data.live.LiveTvLauncher
 import com.kiroland.mediacenter.data.live.LiveTvPlanner
 import com.kiroland.mediacenter.data.live.PublicChannels
+import com.kiroland.mediacenter.data.epg.EpgRepository
+import com.kiroland.mediacenter.data.epg.Programme
+import coil3.compose.AsyncImage
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.style.TextOverflow
+import kotlinx.coroutines.delay
 import com.kiroland.mediacenter.data.settings.SettingsRepository
 import com.kiroland.mediacenter.player.PlayerActivity
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -63,9 +69,14 @@ class LiveTvViewModel @Inject constructor(
     private val settings: SettingsRepository,
     private val launcher: LiveTvLauncher,
     private val addonRepository: AddonRepository,
+    private val epg: EpgRepository,
 ) : ViewModel() {
     val addons: StateFlow<List<AddonManifest>> = addonRepository.addons
+    /** Channels per add-on, including those from M3U playlists. */
+    val catalog: StateFlow<Map<String, List<AddonChannel>>> = addonRepository.catalog
+    val guides: StateFlow<Map<String, Map<String, List<Programme>>>> = epg.guides
 
+    fun nowNext(addonId: String, channel: AddonChannel, now: Long) = epg.nowNext(addonId, channel, now)
 
     fun installed(): Set<String> = launcher.installed()
     fun hasBrowser(): Boolean = launcher.hasBrowser()
@@ -92,11 +103,27 @@ fun LiveTvScreen(viewModel: LiveTvViewModel = hiltViewModel()) {
     val tuner = LiveTvPlanner.tunerApp(installed)?.takeIf { showAntenna }
     // Recomposes when add-ons are installed or removed (e.g. from the upload page).
     val installedAddons by viewModel.addons.collectAsStateWithLifecycle()
+    val catalog by viewModel.catalog.collectAsStateWithLifecycle()
+    // Read so tiles recompose when a guide arrives; now/next itself is computed per tile.
+    val guides by viewModel.guides.collectAsStateWithLifecycle()
+    // Minute clock for "now / next".
+    var now by remember { mutableStateOf(System.currentTimeMillis()) }
+    LaunchedEffect(Unit) {
+        while (true) {
+            delay(60_000)
+            now = System.currentTimeMillis()
+        }
+    }
+    fun guideLines(addonId: String, channel: AddonChannel): Pair<String?, String?> {
+        if (guides.isEmpty()) return null to null
+        val (current, next) = viewModel.nowNext(addonId, channel, now)
+        return current?.let { "Most: ${it.title}" } to next?.let { "${clock(it.start)} ${it.title}" }
+    }
     val anyInApp = PublicChannels.all.any { viewModel.addonFor(it) != null }
     // Add-on channels that are not attached to a built-in tile get rows of their own.
     val builtinIds = PublicChannels.all.map { it.id }.toSet()
     val addonRows = installedAddons
-        .flatMap { addon -> addon.channels.filter { it.builtin !in builtinIds }.map { addon to it } }
+        .flatMap { addon -> catalog[addon.id].orEmpty().filter { it.builtin !in builtinIds }.map { addon to it } }
         .groupBy { (addon, channel) -> channel.group ?: addon.name }
     val firstTile = remember { FocusRequester() }
 
@@ -129,10 +156,12 @@ fun LiveTvScreen(viewModel: LiveTvViewModel = hiltViewModel()) {
                 ) {
                     itemsIndexed(PublicChannels.all, key = { _, it -> it.id }) { index, channel ->
                         val viaAddon = remember(installedAddons) { viewModel.addonFor(channel) }
+                        val (nowLine, nextLine) = viaAddon?.let { guideLines(it.first.id, it.second) } ?: (null to null)
                         Tile(
                             title = channel.name,
+                            detail = nextLine,
                             caption = if (viaAddon != null) {
-                                "Lejátszás itt · ${viaAddon.first.name}"
+                                nowLine ?: "Lejátszás itt · ${viaAddon.first.name}"
                             } else {
                                 when (LiveTvPlanner.mode(channel, installed, hasBrowser)) {
                                     LaunchMode.MEDIAKLIKK -> "Médiaklikk"
@@ -170,9 +199,12 @@ fun LiveTvScreen(viewModel: LiveTvViewModel = hiltViewModel()) {
                         horizontalArrangement = Arrangement.spacedBy(20.dp),
                     ) {
                         itemsIndexed(entries, key = { _, (a, c) -> a.id + "/" + c.id }) { _, (addon, channel) ->
+                            val (nowLine, nextLine) = guideLines(addon.id, channel)
                             Tile(
                                 title = channel.name,
-                                caption = "Lejátszás itt · ${addon.name}",
+                                logo = channel.logo,
+                                caption = nowLine ?: "Lejátszás itt · ${addon.name}",
+                                detail = nextLine,
                                 color = channel.color?.let(::parseColor) ?: DEFAULT_TILE_COLOR,
                                 onClick = { context.startActivity(PlayerActivity.liveIntent(context, addon.id, channel.id)) },
                             )
@@ -234,6 +266,8 @@ fun LiveTvScreen(viewModel: LiveTvViewModel = hiltViewModel()) {
 private fun Tile(
     title: String,
     caption: String,
+    detail: String? = null,
+    logo: String? = null,
     color: Long,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
@@ -248,16 +282,26 @@ private fun Tile(
                     .background(Brush.linearGradient(listOf(base, base.copy(alpha = 0.55f).compositeOverBlack()))),
                 contentAlignment = Alignment.Center,
             ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    icon?.invoke()
-                    Text(title, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, color = Color.White)
+                if (logo != null) {
+                    AsyncImage(logo, contentDescription = title, contentScale = ContentScale.Fit, modifier = Modifier.fillMaxSize().padding(20.dp))
+                } else {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        icon?.invoke()
+                        Text(title, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, color = Color.White)
+                    }
                 }
             }
         }
         Spacer(Modifier.height(10.dp))
-        Text(caption, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(caption, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        detail?.let {
+            Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f), maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
     }
 }
+
+private fun clock(millis: Long): String =
+    java.text.SimpleDateFormat("HH:mm", java.util.Locale.forLanguageTag("hu-HU")).format(java.util.Date(millis))
 
 private fun Color.compositeOverBlack(): Color = Color(red * alpha, green * alpha, blue * alpha, 1f)
 
