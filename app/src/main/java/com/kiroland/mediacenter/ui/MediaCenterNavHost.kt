@@ -14,6 +14,7 @@ import com.kiroland.mediacenter.data.library.db.MediaKind
 import com.kiroland.mediacenter.ui.library.FixMatchScreen
 import com.kiroland.mediacenter.ui.library.MovieScreen
 import com.kiroland.mediacenter.ui.library.SeriesScreen
+import com.kiroland.mediacenter.ui.live.GuideScreen
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -27,6 +28,9 @@ data class MovieRoute(val path: String)
 
 @Serializable
 data class SeriesRoute(val seriesKey: String)
+
+@Serializable
+data object GuideRoute
 
 /** Pick the right TMDB entry for a metadata key; [kind] is a MediaKind name. */
 @Serializable
@@ -51,6 +55,7 @@ fun MediaCenterNavHost() {
                 onOpenMovie = { path -> navController.navigate(MovieRoute(path)) },
                 onOpenSeries = { key -> navController.navigate(SeriesRoute(key)) },
                 onPlay = { path -> play(path, false) },
+                onOpenGuide = { navController.navigate(GuideRoute) },
             )
         }
         composable<BrowserRoute> {
@@ -71,6 +76,7 @@ fun MediaCenterNavHost() {
                 onFixMatch = { key, query -> navController.navigate(FixMatchRoute(key, MediaKind.EPISODE.name, query)) },
             )
         }
+        composable<GuideRoute> { GuideScreen() }
         composable<FixMatchRoute> {
             FixMatchScreen(onDone = { navController.popBackStack() })
         }

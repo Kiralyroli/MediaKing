@@ -28,7 +28,7 @@ Portfólióprojekt, egy valódi Xiaomi Mi TV-n (Android 10) fejlesztve és teszt
   - a beérkezett fájlok után automatikus médiatár-frissítés
 - **Élő TV** – közmédia-csatornák csempéi: a hivatalos Médiaklikk-appban vagy a mediaklikk.hu élő oldalán nyílnak meg;
   a TV beépített tunere (ha van antenna); kiegészítőkkel a beépített lejátszóban, csatornaváltással;
-  műsorújság (XMLTV): a csempéken és csatornaváltáskor a „Most” és a következő műsor
+  műsorújság (XMLTV): a csempéken és csatornaváltáskor a „Most” és a következő műsor, teljes idősávos műsorújság-nézet
 - **Kiegészítők** – deklaratív JSON-bővítmények élő csatornákhoz (nem futtatnak kódot), M3U-lejátszási listák és XMLTV-műsorújság, telepítés a feltöltő oldalról;
   formátum: [docs/addons.md](docs/addons.md)
 - **Beállítások** – automatikus következő rész és feliratválasztás, antennás adás, feltöltő automatikus indítása, metaadatok újratöltése
@@ -87,7 +87,7 @@ Token nélkül is működik, csak poszterek és leírások nélkül.
 
 ## Tervek
 
-- `.strm` fájlok, teljes műsorújság-nézet
+- `.strm` fájlok
 
 ## Köszönet
 

@@ -66,6 +66,7 @@ fun HomeScreen(
     onOpenMovie: (String) -> Unit,
     onOpenSeries: (String) -> Unit,
     onPlay: (String) -> Unit,
+    onOpenGuide: () -> Unit,
 ) {
     var section by rememberSaveable { mutableStateOf(HomeSection.Home) }
     // Sections reached from Settings keep "Beállítások" highlighted in the drawer.
@@ -101,7 +102,7 @@ fun HomeScreen(
             HomeSection.Home -> LibraryHomeScreen(onOpenMovie = onOpenMovie, onOpenSeries = onOpenSeries, onPlay = onPlay)
             HomeSection.Movies -> MoviesScreen(onOpenMovie = onOpenMovie)
             HomeSection.Series -> SeriesListScreen(onOpenSeries = onOpenSeries)
-            HomeSection.LiveTv -> LiveTvScreen()
+            HomeSection.LiveTv -> LiveTvScreen(onOpenGuide = onOpenGuide)
             HomeSection.Upload -> TransferScreen()
             HomeSection.Addons -> AddonsScreen()
             HomeSection.Storage -> StorageScreen(onOpenVolume = onOpenVolume)

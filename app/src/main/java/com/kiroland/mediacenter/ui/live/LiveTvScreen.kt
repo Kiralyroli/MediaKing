@@ -18,6 +18,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.CalendarViewDay
 import androidx.compose.material.icons.outlined.SettingsInputAntenna
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -93,7 +94,7 @@ class LiveTvViewModel @Inject constructor(
 }
 
 @Composable
-fun LiveTvScreen(viewModel: LiveTvViewModel = hiltViewModel()) {
+fun LiveTvScreen(onOpenGuide: () -> Unit, viewModel: LiveTvViewModel = hiltViewModel()) {
     val context = LocalContext.current
     // Re-check on every return: the user may have just installed Médiaklikk from the store.
     var installed by remember { mutableStateOf(viewModel.installed()) }
@@ -144,6 +145,13 @@ fun LiveTvScreen(viewModel: LiveTvViewModel = hiltViewModel()) {
                     },
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+                if (guides.isNotEmpty()) {
+                    OutlinedButton(onClick = onOpenGuide, modifier = Modifier.padding(top = 6.dp)) {
+                        Icon(Icons.Outlined.CalendarViewDay, contentDescription = null, modifier = Modifier.size(20.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text("Műsorújság")
+                    }
+                }
             }
         }
 
