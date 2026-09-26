@@ -1,6 +1,6 @@
 package com.kiroland.mediacenter.di
 
-import com.kiroland.mediacenter.BuildConfig
+import com.kiroland.mediacenter.data.metadata.TmdbCredentials
 import com.kiroland.mediacenter.data.metadata.tmdb.TmdbApi
 import dagger.Module
 import dagger.Provides
@@ -27,13 +27,13 @@ object NetworkModule {
 
     @Provides
     @Singleton
-    fun provideTmdbApi(okHttp: OkHttpClient): TmdbApi {
+    fun provideTmdbApi(okHttp: OkHttpClient, credentials: TmdbCredentials): TmdbApi {
         // The token only goes to api.themoviedb.org; image requests use the shared client without it.
         val tmdbClient = okHttp.newBuilder()
             .addInterceptor { chain ->
                 chain.proceed(
                     chain.request().newBuilder()
-                        .header("Authorization", "Bearer ${BuildConfig.TMDB_TOKEN}")
+                        .header("Authorization", "Bearer ${credentials.token}")
                         .header("Accept", "application/json")
                         .build(),
                 )

@@ -40,6 +40,12 @@ class TransferServerTest {
             .onSuccess { installed += it }
         override suspend fun installAddonFromUrl(url: String) = Result.failure<AddonDto>(IllegalStateException("offline"))
         override fun removeAddon(id: String) = installed.removeIf { it.id == id }
+        var token = ""
+        override fun tmdbStatus() = TmdbDto(token.isNotEmpty(), "user".takeIf { token.isNotEmpty() })
+        override suspend fun setTmdbToken(token: String) =
+            if (token == "good-token") { this.token = token; Result.success(tmdbStatus()) }
+            else Result.failure(IllegalArgumentException("rejected"))
+        override fun clearTmdbToken(): TmdbDto { token = ""; return tmdbStatus() }
     }
 
     @Before
@@ -144,6 +150,18 @@ class TransferServerTest {
         assertTrue(request("GET", "/api/addons").body.contains("\"id\":\"demo\""))
         assertEquals(200, request("DELETE", "/api/addons?id=demo").status)
         assertEquals(404, request("DELETE", "/api/addons?id=demo").status)
+    }
+
+    @Test
+    fun `the TMDB token is set, rejected and cleared behind the pairing code`() {
+        assertEquals(401, request("POST", "/api/tmdb", code = null, body = "good-token".toByteArray()).status)
+        assertEquals(400, request("POST", "/api/tmdb", body = "nope".toByteArray()).status)
+        val ok = request("POST", "/api/tmdb", body = "good-token".toByteArray())
+        assertEquals(200, ok.status)
+        assertTrue(ok.body.contains("\"configured\":true"))
+        // The token itself is never echoed back.
+        assertTrue(!request("GET", "/api/tmdb").body.contains("good-token"))
+        assertTrue(request("DELETE", "/api/tmdb").body.contains("\"configured\":false"))
     }
 
     @Test

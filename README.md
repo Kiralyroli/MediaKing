@@ -1,5 +1,7 @@
 # My Media – Android TV Media Center
 
+[![CI](https://github.com/Kiralyroli/android-tv-media-center/actions/workflows/ci.yml/badge.svg)](https://github.com/Kiralyroli/android-tv-media-center/actions/workflows/ci.yml)
+
 Saját médiaközpont Android TV-re: a TV-re kötött USB-s HDD filmjeit és sorozatait rendezett,
 posztereket és magyar leírásokat mutató médiatárrá alakítja, és saját lejátszóval játssza le őket.
 Portfólióprojekt, egy valódi Xiaomi Mi TV-n (Android 10) fejlesztve és tesztelve.
@@ -34,6 +36,14 @@ Portfólióprojekt, egy valódi Xiaomi Mi TV-n (Android 10) fejlesztve és teszt
 - **Beállítások** – automatikus következő rész és feliratválasztás, antennás adás, feltöltő automatikus indítása, metaadatok újratöltése
 - **Fájlböngésző** távirányítóra optimalizálva, **diagnosztika** (kodekek, tárhelyek írástesztje)
 
+## Telepítés
+
+1. Töltsd le a legfrissebb APK-t a [Releases](https://github.com/Kiralyroli/android-tv-media-center/releases) oldalról.
+2. Telepítsd a TV-re: `adb install my-media-….apk`, vagy pendrive-ról egy fájlkezelővel
+   (ehhez engedélyezni kell az ismeretlen forrásból való telepítést).
+3. A poszterekhez és leírásokhoz add meg a TMDB-tokened: **Feltöltés → Bekapcsolás**, majd a böngészőben
+   a **Filmadatok (TMDB)** résznél. A token csak a TV-n tárolódik.
+
 ## Wi-Fi-s feltöltés használata
 
 1. A TV-n: **Feltöltés → Bekapcsolás**. Megjelenik a cím (pl. `http://192.168.1.3:8080`), a párosítási kód és egy QR-kód.
@@ -57,6 +67,7 @@ app/src/main/java/com/kiroland/mediacenter/          (webes felület: app/src/ma
 ├── data/transfer    feltöltő szerver, folytatható feltöltés, párosítás, előtérszolgáltatás
 ├── data/live        Élő TV: csatornák, hivatalos appok és tuner indítása
 ├── data/addons      kiegészítők: formátum, ellenőrzés, feloldó motor, tárolás
+├── data/epg         műsorújság: XMLTV-olvasó, frissítés, idősáv-elrendezés
 ├── media            fájlnév-felismerő, kodekvizsgáló
 ├── player           lejátszó, feliratkezelés, sávnevek
 └── ui               képernyők (Compose for TV)
@@ -77,7 +88,14 @@ a verziókezelésből kizárt `local.properties` fájlba:
 tmdb.token=eyJ...
 ```
 
-Token nélkül is működik, csak poszterek és leírások nélkül.
+Token nélkül is működik, csak poszterek és leírások nélkül; a feltöltő oldalon megadott token felülírja ezt.
+
+### Kiadás
+
+Minden push a `main` ágra lefordítja az appot és lefuttatja a teszteket (GitHub Actions). Egy `v*` tag
+(pl. `git tag v0.2.0 && git push --tags`) aláírt APK-t tesz a Releases oldalra. Ehhez a repó titkai között kell:
+`RELEASE_KEYSTORE_BASE64`, `RELEASE_KEYSTORE_PASSWORD`, `RELEASE_KEY_ALIAS`, `RELEASE_KEY_PASSWORD`.
+A kiadott APK-ban nincs TMDB-token.
 
 ### Android 10-es TV-ken
 

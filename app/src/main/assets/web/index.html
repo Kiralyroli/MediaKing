@@ -116,6 +116,19 @@
       <p class="error" id="addonError"></p>
     </section>
 
+    <section>
+      <h2>Filmadatok (TMDB)</h2>
+      <p class="muted" style="margin-top:0">A posztereket, leírásokat és szereplőket a TMDB adja. Ehhez egy ingyenes
+        <b>API Read Access Token</b> kell a themoviedb.org fiókbeállításaiból (API menü). A token csak a TV-n tárolódik.</p>
+      <p id="tmdbStatus"></p>
+      <div class="row">
+        <input type="password" id="tmdbToken" placeholder="API Read Access Token" autocomplete="off" style="flex:1;min-width:200px">
+        <button id="tmdbSave">Mentés</button>
+        <button id="tmdbClear" class="danger hidden">Törlés</button>
+      </div>
+      <p class="error" id="tmdbError"></p>
+    </section>
+
     <section id="queueSection" class="hidden">
       <div class="row" style="margin-bottom:4px">
         <h2 style="margin:0">Sor</h2>
@@ -222,6 +235,7 @@ async function start() {
   roots = info.body.roots;
   renderRoots();
   loadAddons();
+  loadTmdb();
   if (!current && roots.length) openFolder(roots[0], roots[0].path);
 }
 
@@ -570,6 +584,34 @@ async function removeAddon(addon) {
   if (!confirm("Eltávolítod ezt a kiegészítőt?\n\n„" + addon.name + "”")) return;
   showAddonResult(await api("addons?" + query({ id: addon.id }), { method: "DELETE" }));
 }
+
+
+// --- TMDB token ---
+async function loadTmdb(result) {
+  if (!result) { try { result = await api("tmdb"); } catch (_) { return; } }
+  if (!result.ok) return;
+  const s = result.body;
+  $("tmdbStatus").textContent = !s.configured ? "⚠️ Nincs token: a médiatár poszterek és leírások nélkül működik."
+    : s.source === "user" ? "✅ Token beállítva (ezen az oldalon megadva)." : "✅ Az alkalmazásba épített token van használatban.";
+  $("tmdbClear").classList.toggle("hidden", s.source !== "user");
+}
+
+$("tmdbSave").addEventListener("click", async () => {
+  const token = $("tmdbToken").value.trim();
+  if (!token) return;
+  $("tmdbSave").disabled = true;
+  $("tmdbError").textContent = "";
+  try {
+    const result = await api("tmdb", { method: "POST", headers: { "Content-Type": "text/plain" }, body: token });
+    if (result.ok) { $("tmdbToken").value = ""; loadTmdb(result); }
+    else $("tmdbError").textContent = result.body ? result.body.error : "Nem sikerült";
+  } finally { $("tmdbSave").disabled = false; }
+});
+
+$("tmdbClear").addEventListener("click", async () => {
+  if (!confirm("Törlöd a megadott TMDB-tokent?")) return;
+  loadTmdb(await api("tmdb", { method: "DELETE" }));
+});
 
 window.addEventListener("beforeunload", (e) => {
   if (queue.some((i) => ["feltöltés", "újrapróbálás", "várakozik"].includes(i.status))) { e.preventDefault(); e.returnValue = ""; }

@@ -1,7 +1,6 @@
 package com.kiroland.mediacenter.data.metadata
 
 import android.util.Log
-import com.kiroland.mediacenter.BuildConfig
 import com.kiroland.mediacenter.data.library.db.EpisodeMetadataEntity
 import com.kiroland.mediacenter.data.library.db.MediaKind
 import com.kiroland.mediacenter.data.library.db.MetadataDao
@@ -20,8 +19,9 @@ import javax.inject.Singleton
 class MetadataRepository @Inject constructor(
     private val dao: MetadataDao,
     private val api: TmdbApi,
+    private val credentials: TmdbCredentials,
 ) {
-    val isConfigured: Boolean get() = BuildConfig.TMDB_TOKEN.isNotBlank()
+    val isConfigured: Boolean get() = credentials.isConfigured
 
     fun episodes(tvId: Int): Flow<List<EpisodeMetadataEntity>> = dao.observeEpisodes(tvId)
 

@@ -63,6 +63,10 @@ data class AddonDto(val id: String, val name: String, val version: Int, val desc
 @Serializable
 data class ErrorDto(val error: String, val received: Long? = null, val retryAfterMs: Long? = null)
 
+/** [source]: "user" (given on this page), "build" (built into the app) or null (no metadata). */
+@Serializable
+data class TmdbDto(val configured: Boolean, val source: String? = null)
+
 /** What the server needs from the app; implemented by [TransferRepository]. */
 interface TransferHost {
     val pairingCode: String
@@ -76,6 +80,10 @@ interface TransferHost {
     fun installAddon(text: String): Result<AddonDto>
     suspend fun installAddonFromUrl(url: String): Result<AddonDto>
     fun removeAddon(id: String): Boolean
+
+    fun tmdbStatus(): TmdbDto
+    suspend fun setTmdbToken(token: String): Result<TmdbDto>
+    fun clearTmdbToken(): TmdbDto
 }
 
 /**
@@ -83,6 +91,7 @@ interface TransferHost {
  * Every /api call must carry the pairing code in the X-Pairing-Code header.
  */
 private const val MAX_ADDON_BYTES = 256L * 1024
+private const val MAX_TOKEN_BYTES = 4L * 1024
 
 class TransferServer(
     private val host: TransferHost,
@@ -241,6 +250,27 @@ class TransferServer(
             if (!authorized(call)) return@delete
             if (host.removeAddon(call.parameters["id"].orEmpty())) call.respondJson(ChunkDto(0, true))
             else call.respondError(HttpStatusCode.NotFound, "Nincs ilyen kiegészítő")
+        }
+
+        get("/api/tmdb") {
+            if (!authorized(call)) return@get
+            call.respondJson(host.tmdbStatus())
+        }
+
+        post("/api/tmdb") {
+            if (!authorized(call)) return@post
+            if ((call.request.contentLength() ?: 0) > MAX_TOKEN_BYTES) {
+                call.receiveChannel().discard()
+                call.respondError(HttpStatusCode.PayloadTooLarge, "Túl hosszú")
+                return@post
+            }
+            host.setTmdbToken(call.receiveText())
+                .fold({ call.respondJson(it) }, { call.respondError(HttpStatusCode.BadRequest, it.message ?: "Nem sikerült") })
+        }
+
+        delete("/api/tmdb") {
+            if (!authorized(call)) return@delete
+            call.respondJson(host.clearTmdbToken())
         }
 
         delete("/api/upload") {

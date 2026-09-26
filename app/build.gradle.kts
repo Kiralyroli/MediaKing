@@ -17,8 +17,9 @@ android {
         // The target TV runs Android 10; older devices are out of scope.
         minSdk = 29
         targetSdk = 36
-        versionCode = 1
-        versionName = "0.1"
+        // CI sets these from the tag and run number; local builds stay 0.1 (1).
+        versionCode = System.getenv("VERSION_CODE")?.toIntOrNull() ?: 1
+        versionName = System.getenv("VERSION_NAME") ?: "0.1"
         // TV boxes are ARM; dropping x86 halves the FFmpeg payload.
         ndk { abiFilters += listOf("armeabi-v7a", "arm64-v8a") }
 
@@ -29,13 +30,25 @@ android {
         buildConfigField("String", "TMDB_TOKEN", "\"${localProperties.getProperty("tmdb.token", "")}\"")
     }
 
+    signingConfigs {
+        // Published releases: the keystore comes from repository secrets (.github/workflows/release.yml).
+        System.getenv("RELEASE_KEYSTORE")?.let { path ->
+            create("release") {
+                storeFile = file(path)
+                storePassword = System.getenv("RELEASE_KEYSTORE_PASSWORD")
+                keyAlias = System.getenv("RELEASE_KEY_ALIAS")
+                keyPassword = System.getenv("RELEASE_KEY_PASSWORD")
+            }
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
-            // Sideload only for now: signed with the debug key.
-            signingConfig = signingConfigs.getByName("debug")
+            // Without the release keystore (local builds) the debug key signs, so they update the dev install.
+            signingConfig = signingConfigs.findByName("release") ?: signingConfigs.getByName("debug")
         }
     }
 

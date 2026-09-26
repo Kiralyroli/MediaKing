@@ -7,6 +7,7 @@ import android.os.StatFs
 import android.util.Log
 import com.kiroland.mediacenter.data.addons.AddonManifest
 import com.kiroland.mediacenter.data.addons.AddonRepository
+import com.kiroland.mediacenter.data.metadata.TmdbCredentials
 import com.kiroland.mediacenter.data.library.LibraryScanner
 import com.kiroland.mediacenter.data.library.db.LibraryDao
 import com.kiroland.mediacenter.data.storage.StorageRepository
@@ -54,6 +55,7 @@ class TransferRepository @Inject constructor(
     private val libraryDao: LibraryDao,
     private val scanner: LibraryScanner,
     private val addonRepository: AddonRepository,
+    private val tmdb: TmdbCredentials,
     @param:ApplicationScope private val scope: CoroutineScope,
 ) : TransferHost {
 
@@ -163,6 +165,19 @@ class TransferRepository @Inject constructor(
         addonRepository.installFromUrl(url).map { it.toDto() }
 
     override fun removeAddon(id: String): Boolean = addonRepository.remove(id)
+
+    override fun tmdbStatus() = TmdbDto(tmdb.isConfigured, tmdb.source?.name?.lowercase())
+
+    override suspend fun setTmdbToken(token: String): Result<TmdbDto> = tmdb.set(token).map {
+        // Fetch what was missing: the scan ends with a metadata pass.
+        scanner.scanAll()
+        tmdbStatus()
+    }
+
+    override fun clearTmdbToken(): TmdbDto {
+        tmdb.clear()
+        return tmdbStatus()
+    }
 
     private fun AddonManifest.toDto() = AddonDto(id, name, version, description, channels.size)
 
