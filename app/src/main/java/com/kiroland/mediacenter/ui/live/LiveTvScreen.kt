@@ -40,6 +40,9 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.tv.material3.Card
+import androidx.tv.material3.CardDefaults
+import com.kiroland.mediacenter.ui.theme.FocusBorder
+import com.kiroland.mediacenter.ui.theme.Shapes
 import androidx.tv.material3.Icon
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.OutlinedButton
@@ -282,7 +285,13 @@ private fun Tile(
     icon: (@Composable () -> Unit)? = null,
 ) {
     Column(modifier.width(230.dp)) {
-        Card(onClick = onClick, modifier = Modifier.fillMaxWidth().aspectRatio(16f / 9f)) {
+        Card(
+            onClick = onClick,
+            modifier = Modifier.fillMaxWidth().aspectRatio(16f / 9f),
+            shape = CardDefaults.shape(Shapes.Tile),
+            border = CardDefaults.border(focusedBorder = FocusBorder),
+            scale = CardDefaults.scale(focusedScale = 1.05f),
+        ) {
             val base = Color(color)
             Box(
                 Modifier

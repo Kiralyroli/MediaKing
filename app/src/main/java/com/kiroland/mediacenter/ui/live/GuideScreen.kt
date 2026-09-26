@@ -225,7 +225,7 @@ private fun GuideCell(
             .fillMaxHeight()
             .padding(horizontal = 2.dp)
             .onFocusChanged { if (it.isFocused) onFocus() },
-        shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(6.dp)),
+        shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(12.dp)),
         colors = ClickableSurfaceDefaults.colors(
             containerColor = when {
                 onAir -> MaterialTheme.colorScheme.secondaryContainer

@@ -33,13 +33,18 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.tv.material3.ExperimentalTvMaterial3Api
-import androidx.tv.material3.FilterChip
 import androidx.tv.material3.Icon
 import androidx.tv.material3.ListItem
+import androidx.tv.material3.ListItemDefaults
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.OutlinedButton
 import androidx.tv.material3.Text
 import com.kiroland.mediacenter.data.library.EpisodeRow
+import com.kiroland.mediacenter.ui.theme.OnAccent
+import com.kiroland.mediacenter.ui.theme.Shapes
+import com.kiroland.mediacenter.ui.theme.SurfaceColor
+import com.kiroland.mediacenter.ui.theme.TextPrimary
+import androidx.compose.ui.graphics.Color
 import com.kiroland.mediacenter.data.metadata.tmdb.TmdbImages
 import com.kiroland.mediacenter.util.formatBytes
 import com.kiroland.mediacenter.util.formatDuration
@@ -122,20 +127,17 @@ fun SeriesScreen(
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
                     items(seasons, key = { it.season }) { season ->
-                        FilterChip(
+                        val listed = season.listedEpisodes
+                        PillButton(
+                            text = when {
+                                season.isMissing -> "${seasonLabel(season.season)} · nincs meg"
+                                listed != null && season.ownedCount < listed -> "${seasonLabel(season.season)} · ${season.ownedCount}/$listed"
+                                else -> seasonLabel(season.season)
+                            },
                             selected = season.season == selectedSeason,
                             onClick = { selectedSeason = season.season },
-                            modifier = if (season.isMissing) Modifier.alpha(MISSING_ALPHA) else Modifier,
-                        ) {
-                            val listed = season.listedEpisodes
-                            Text(
-                                when {
-                                    season.isMissing -> "${seasonLabel(season.season)} · nincs meg"
-                                    listed != null && season.ownedCount < listed -> "${seasonLabel(season.season)} · ${season.ownedCount}/$listed"
-                                    else -> seasonLabel(season.season)
-                                },
-                            )
-                        }
+                            dimmed = season.isMissing,
+                        )
                     }
                 }
             }
@@ -159,6 +161,8 @@ fun SeriesScreen(
                         onClick = { onPlay(media.path) },
                         onLongClick = { viewModel.toggleWatched(item) },
                         modifier = focus,
+                        shape = RowShape,
+                        colors = rowColors(),
                         headlineContent = {
                             Text(
                                 "${episodeCode(media.season, media.episode, media.episodeEnd)} · ${info?.name ?: media.fileName}",
@@ -204,6 +208,8 @@ private fun MissingEpisode(row: EpisodeRow.Missing, today: String, modifier: Mod
         selected = false,
         onClick = {},
         modifier = modifier.alpha(MISSING_ALPHA),
+        shape = RowShape,
+        colors = rowColors(missing = true),
         headlineContent = {
             Text(
                 listOfNotNull(episodeCode(row.season, row.episode), row.info?.name).joinToString(" · "),
@@ -239,3 +245,13 @@ private fun formatAirDate(isoDate: String?): String = runCatching {
 }.getOrDefault(isoDate.orEmpty())
 
 private const val MISSING_ALPHA = 0.5f
+
+private val RowShape @Composable get() = ListItemDefaults.shape(Shapes.Card)
+
+@Composable
+private fun rowColors(missing: Boolean = false) = ListItemDefaults.colors(
+    containerColor = if (missing) Color.Transparent else SurfaceColor.copy(alpha = 0.85f),
+    contentColor = TextPrimary,
+    focusedContainerColor = TextPrimary,
+    focusedContentColor = OnAccent,
+)
