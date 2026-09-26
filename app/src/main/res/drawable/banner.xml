@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 320x180 launcher banner: dark background, film strip with a play mark. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="320dp"
+    android:height="180dp"
+    android:viewportWidth="320"
+    android:viewportHeight="180">
+    <path android:fillColor="#0E1116" android:pathData="M0,0h320v180h-320z" />
+    <path android:fillColor="#1C2230" android:pathData="M96,50h128v80h-128z" />
+    <path android:fillColor="#0E1116"
+        android:pathData="M102,56h10v8h-10zM122,56h10v8h-10zM142,56h10v8h-10zM162,56h10v8h-10zM182,56h10v8h-10zM202,56h10v8h-10zM102,116h10v8h-10zM122,116h10v8h-10zM142,116h10v8h-10zM162,116h10v8h-10zM182,116h10v8h-10zM202,116h10v8h-10z" />
+    <path android:fillColor="#4FA3FF" android:pathData="M150,74L150,106L176,90Z" />
+</vector>
