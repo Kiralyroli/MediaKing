@@ -12,19 +12,29 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -82,6 +92,17 @@ fun SearchScreen(
     val results by viewModel.results.collectAsStateWithLifecycle()
     var fieldFocused by remember { mutableStateOf(false) }
     val field = remember { FocusRequester() }
+    // The result that was opened, to put focus back on it when coming back.
+    var opened by rememberSaveable { mutableStateOf<String?>(null) }
+    val openedCard = remember { FocusRequester() }
+    val cardModifier = { key: String -> if (key == opened) Modifier.focusRequester(openedCard) else Modifier }
+    val focusManager = LocalFocusManager.current
+    val keyboard = LocalSoftwareKeyboardController.current
+    // A text field keeps D-pad focus on TV; leave it towards the results explicitly.
+    val toResults = {
+        keyboard?.hide()
+        focusManager.moveFocus(FocusDirection.Down)
+    }
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -98,6 +119,7 @@ fun SearchScreen(
                     textStyle = MaterialTheme.typography.titleLarge.copy(color = MaterialTheme.colorScheme.onSurface),
                     cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                    keyboardActions = KeyboardActions(onSearch = { toResults() }),
                     decorationBox = { inner ->
                         if (query.isEmpty()) {
                             Text("Cím, eredeti cím, szereplő…", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -107,6 +129,9 @@ fun SearchScreen(
                     modifier = Modifier
                         .width(720.dp)
                         .focusRequester(field)
+                        .onPreviewKeyEvent { event ->
+                            if (event.type == KeyEventType.KeyDown && event.key == Key.DirectionDown) toResults() else false
+                        }
                         .onFocusChanged { fieldFocused = it.isFocused }
                         .clip(RoundedCornerShape(10.dp))
                         .background(MaterialTheme.colorScheme.surfaceVariant)
@@ -127,7 +152,8 @@ fun SearchScreen(
                         imageUrl = TmdbImages.poster(item.metadata?.posterPath),
                         progress = item.progressFraction,
                         watched = item.isWatched,
-                        onClick = { onOpenMovie(item.media.path) },
+                        onClick = { opened = item.media.path; onOpenMovie(item.media.path) },
+                        modifier = cardModifier(item.media.path),
                     )
                 }
             }
@@ -139,11 +165,20 @@ fun SearchScreen(
                         title = summary.title,
                         subtitle = "${summary.seasonCount} évad · ${summary.episodeCount} rész",
                         imageUrl = TmdbImages.poster(summary.metadata?.posterPath),
-                        onClick = { onOpenSeries(summary.seriesKey) },
+                        onClick = { opened = summary.seriesKey; onOpenSeries(summary.seriesKey) },
+                        modifier = cardModifier(summary.seriesKey),
                     )
                 }
             }
         }
     }
-    LaunchedEffect(Unit) { runCatching { field.requestFocus() } }
+    // Only on a fresh search; coming back from a result focuses that result instead.
+    LaunchedEffect(Unit) { if (query.isEmpty()) runCatching { field.requestFocus() } }
+    LaunchedEffect(results) {
+        val key = opened ?: return@LaunchedEffect
+        if (results.movies.any { it.media.path == key } || results.series.any { it.seriesKey == key }) {
+            runCatching { openedCard.requestFocus() }
+            opened = null
+        }
+    }
 }

@@ -1,5 +1,6 @@
 package com.kiroland.mediacenter.ui.home
 
+import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -18,11 +19,15 @@ import androidx.compose.material.icons.outlined.Storage
 import androidx.compose.material.icons.outlined.Tv
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.Icon
@@ -65,13 +70,17 @@ fun HomeScreen(
     var section by rememberSaveable { mutableStateOf(HomeSection.Home) }
     // Sections reached from Settings keep "Beállítások" highlighted in the drawer.
     val drawerSection = if (section.inDrawer) section else HomeSection.Settings
+    // Entering the drawer lands on the current section, not on whichever item is nearest.
+    val current = remember { FocusRequester() }
     NavigationDrawer(
         drawerContent = {
             Column(
                 modifier = Modifier
                     .fillMaxHeight()
                     .padding(12.dp)
-                    .selectableGroup(),
+                    .selectableGroup()
+                    .focusProperties { onEnter = { current.requestFocus() } }
+                    .focusGroup(),
                 verticalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterVertically),
             ) {
                 HomeSection.entries.filter { it.inDrawer }.forEach { item ->
@@ -79,6 +88,7 @@ fun HomeScreen(
                         selected = item == drawerSection,
                         onClick = { section = item },
                         leadingContent = { Icon(item.icon, contentDescription = null) },
+                        modifier = if (item == drawerSection) Modifier.focusRequester(current) else Modifier,
                     ) {
                         Text(item.label)
                     }

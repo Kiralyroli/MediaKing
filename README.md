@@ -9,8 +9,11 @@ Portfólióprojekt, egy valódi Xiaomi Mi TV-n (Android 10) fejlesztve és teszt
 - **Médiatár** – a kijelölt mappák átfésülése, filmek és sorozatok felismerése a fájl- és mappanevekből
   (`Charmed.1998.S01.1080p…/Charmed.S01E07….mkv` → Bűbájos boszorkák, 1998, 1. évad 7. rész)
 - **TMDB-metaadatok** magyarul – cím, leírás, poszter, háttérkép, műfaj, szereplők, epizódcímek;
-  saját pontozó illesztővel, mert a TMDB első találata gyakran rossz (a „Life” keresésre „No Game No Life”)
+  saját pontozó illesztővel, mert a TMDB első találata gyakran rossz (a „Life” keresésre „No Game No Life”);
+  rossz találatnál kézi javítás („Nem ez a film?”)
 - **Kezdőlap** – Folytatás (félbehagyott filmek, sorozatoknál a következő rész), legutóbb hozzáadott filmek, sorozatok
+- **Android TV kezdőképernyő** – a „Következő” (Watch Next) sorban a félbehagyott film vagy a következő rész, onnan egy gombnyomással folytatható
+- **Keresés** cím, eredeti cím, szereplő vagy rendező szerint, ékezetek nélkül is
 - **Lejátszó** (Media3 / ExoPlayer)
   - pozíció mentése és folytatás, automatikus következő epizód
   - AC3 / E-AC3 / DTS / TrueHD: passthrough a TV felé, ahol nincs, FFmpeg szoftveres dekóder
@@ -24,9 +27,11 @@ Portfólióprojekt, egy valódi Xiaomi Mi TV-n (Android 10) fejlesztve és teszt
   - törlés előnézettel és megerősítéssel; meghajtók és médiatár-mappák védettek, meglévő fájl sosem íródik felül
   - a beérkezett fájlok után automatikus médiatár-frissítés
 - **Élő TV** – közmédia-csatornák csempéi: a hivatalos Médiaklikk-appban vagy a mediaklikk.hu élő oldalán nyílnak meg;
-  a TV beépített tunere (ha van antenna); kiegészítőkkel a beépített lejátszóban, csatornaváltással
-- **Kiegészítők** – deklaratív JSON-bővítmények élő csatornákhoz (nem futtatnak kódot), telepítés a feltöltő oldalról;
+  a TV beépített tunere (ha van antenna); kiegészítőkkel a beépített lejátszóban, csatornaváltással;
+  műsorújság (XMLTV): a csempéken és csatornaváltáskor a „Most” és a következő műsor
+- **Kiegészítők** – deklaratív JSON-bővítmények élő csatornákhoz (nem futtatnak kódot), M3U-lejátszási listák és XMLTV-műsorújság, telepítés a feltöltő oldalról;
   formátum: [docs/addons.md](docs/addons.md)
+- **Beállítások** – automatikus következő rész és feliratválasztás, antennás adás, feltöltő automatikus indítása, metaadatok újratöltése
 - **Fájlböngésző** távirányítóra optimalizálva, **diagnosztika** (kodekek, tárhelyek írástesztje)
 
 ## Wi-Fi-s feltöltés használata
@@ -82,8 +87,7 @@ Token nélkül is működik, csak poszterek és leírások nélkül.
 
 ## Tervek
 
-- Android TV „Watch Next” integráció
-- M3U / XMLTV lejátszási listák mint kiegészítő-típus, `.strm` fájlok
+- `.strm` fájlok, teljes műsorújság-nézet
 
 ## Köszönet
 
