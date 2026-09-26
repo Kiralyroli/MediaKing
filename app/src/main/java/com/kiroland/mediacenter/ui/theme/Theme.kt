@@ -8,7 +8,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.ExperimentalTextApi
+import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontVariation
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -18,6 +21,7 @@ import androidx.tv.material3.Surface
 import androidx.tv.material3.SurfaceDefaults
 import androidx.tv.material3.Typography
 import androidx.tv.material3.darkColorScheme
+import com.kiroland.mediacenter.R
 
 // "D2" design: deep blue-grey ground, coral accent, teal second accent, big rounded tiles.
 val Accent = Color(0xFFFF8A65)
@@ -50,9 +54,18 @@ object Shapes {
 /** The focus ring every tile and card shares. */
 val FocusBorder = Border(BorderStroke(3.dp, Accent))
 
-// Space Grotesk / Manrope in the design; the system face until the font files are bundled.
-val DisplayFont: FontFamily = FontFamily.SansSerif
-val BodyFont: FontFamily = FontFamily.SansSerif
+/** Every weight from one variable font file (licences: docs/licenses). */
+@OptIn(ExperimentalTextApi::class)
+private fun variableFamily(resId: Int, vararg weights: FontWeight) = FontFamily(
+    weights.map { weight ->
+        Font(resId, weight, variationSettings = FontVariation.Settings(FontVariation.weight(weight.weight)))
+    },
+)
+
+val DisplayFont: FontFamily = variableFamily(R.font.space_grotesk, FontWeight.Medium, FontWeight.SemiBold, FontWeight.Bold)
+val BodyFont: FontFamily = variableFamily(
+    R.font.manrope, FontWeight.Normal, FontWeight.Medium, FontWeight.SemiBold, FontWeight.Bold, FontWeight.ExtraBold,
+)
 
 private val colors = darkColorScheme(
     primary = Accent,

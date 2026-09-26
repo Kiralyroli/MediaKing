@@ -105,3 +105,5 @@ Minden push a `main` ágra lefordítja az appot és lefuttatja a teszteket (GitH
 - Film- és sorozatadatok: [TMDB](https://www.themoviedb.org).
   *This product uses the TMDB API but is not endorsed or certified by TMDB.*
 - FFmpeg-dekóder: [Jellyfin media3-ffmpeg-decoder](https://github.com/jellyfin/jellyfin-androidx-media)
+- Betűtípusok: [Space Grotesk](https://github.com/floriankarsten/space-grotesk) és [Manrope](https://github.com/googlefonts/manrope),
+  SIL Open Font License 1.1 ([docs/licenses](docs/licenses)).
