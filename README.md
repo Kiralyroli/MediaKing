@@ -23,6 +23,10 @@ Portfólióprojekt, egy valódi Xiaomi Mi TV-n (Android 10) fejlesztve és teszt
   - fájlok, teljes mappák, húzd-és-ejtsd; haladás, sebesség, hátralévő idő, szünet/folytatás
   - törlés előnézettel és megerősítéssel; meghajtók és médiatár-mappák védettek, meglévő fájl sosem íródik felül
   - a beérkezett fájlok után automatikus médiatár-frissítés
+- **Élő TV** – közmédia-csatornák csempéi: a hivatalos Médiaklikk-appban vagy a mediaklikk.hu élő oldalán nyílnak meg;
+  a TV beépített tunere (ha van antenna); kiegészítőkkel a beépített lejátszóban, csatornaváltással
+- **Kiegészítők** – deklaratív JSON-bővítmények élő csatornákhoz (nem futtatnak kódot), telepítés a feltöltő oldalról;
+  formátum: [docs/addons.md](docs/addons.md)
 - **Fájlböngésző** távirányítóra optimalizálva, **diagnosztika** (kodekek, tárhelyek írástesztje)
 
 ## Wi-Fi-s feltöltés használata
@@ -46,6 +50,8 @@ app/src/main/java/com/kiroland/mediacenter/          (webes felület: app/src/ma
 ├── data/library     Room-adatbázis, átfésülő, médiatár-repository
 ├── data/metadata    TMDB API, illesztő, metaadat-kiegészítő
 ├── data/transfer    feltöltő szerver, folytatható feltöltés, párosítás, előtérszolgáltatás
+├── data/live        Élő TV: csatornák, hivatalos appok és tuner indítása
+├── data/addons      kiegészítők: formátum, ellenőrzés, feloldó motor, tárolás
 ├── media            fájlnév-felismerő, kodekvizsgáló
 ├── player           lejátszó, feliratkezelés, sávnevek
 └── ui               képernyők (Compose for TV)
@@ -77,7 +83,7 @@ Token nélkül is működik, csak poszterek és leírások nélkül.
 ## Tervek
 
 - Android TV „Watch Next” integráció
-- M3U / `.strm` online források
+- M3U / XMLTV lejátszási listák mint kiegészítő-típus, `.strm` fájlok
 
 ## Köszönet
 
