@@ -43,7 +43,8 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.io.File
+import com.kiroland.mediacenter.data.network.SmbClient
+import com.kiroland.mediacenter.data.storage.MediaFiles
 import javax.inject.Inject
 
 /**
@@ -60,6 +61,8 @@ class PlayerActivity : ComponentActivity() {
     @Inject lateinit var addons: AddonRepository
     @Inject lateinit var settings: SettingsRepository
     @Inject lateinit var epg: EpgRepository
+    @Inject lateinit var smb: SmbClient
+    @Inject lateinit var mediaFiles: MediaFiles
 
     private lateinit var playerView: PlayerView
     private var player: ExoPlayer? = null
@@ -149,6 +152,10 @@ class PlayerActivity : ComponentActivity() {
         live?.let { addons.find(it.addonId)?.stream?.headers }?.takeIf { it.isNotEmpty() }?.let { headers ->
             val http = DefaultHttpDataSource.Factory().setDefaultRequestProperties(headers)
             builder.setMediaSourceFactory(DefaultMediaSourceFactory(DefaultDataSource.Factory(this, http)))
+        }
+        if (live == null) {
+            // Library files may sit on a network share.
+            builder.setMediaSourceFactory(DefaultMediaSourceFactory(LibraryDataSourceFactory(this, smb)))
         }
         val exoPlayer = builder.build().apply {
             // Subtitles are picked by SubtitleChooser once the audio track is known.
@@ -294,11 +301,10 @@ class PlayerActivity : ComponentActivity() {
     }
 
     private suspend fun load(exoPlayer: ExoPlayer, path: String, startMs: Long) {
-        val file = File(path)
-        val subtitles = withContext(Dispatchers.IO) { SubtitleLoader.findSidecars(file, cacheDir) }
+        val subtitles = withContext(Dispatchers.IO) { SubtitleLoader.findSidecars(path, mediaFiles, cacheDir) }
         if (player !== exoPlayer) return
         val mediaItem = MediaItem.Builder()
-            .setUri(Uri.fromFile(file))
+            .setUri(playbackUri(path))
             .setSubtitleConfigurations(subtitles)
             .build()
         resumePositionMs = startMs

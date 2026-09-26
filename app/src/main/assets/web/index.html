@@ -129,6 +129,26 @@
       <p class="error" id="tmdbError"></p>
     </section>
 
+    <section>
+      <h2>Hálózati mappák</h2>
+      <p class="muted" style="margin-top:0">Egy számítógép vagy NAS megosztott mappája (SMB) a médiatárba, másolás nélkül:
+        a TV onnan játssza le a filmeket. A gépnek bekapcsolva kell lennie. A jelszó csak a TV-n tárolódik.</p>
+      <ul class="list" id="networkList"></ul>
+      <div class="row" style="margin-top:12px">
+        <input type="text" id="netHost" placeholder="Gép neve vagy IP-címe (pl. DESKTOP-ABC)" style="flex:1;min-width:180px">
+        <input type="text" id="netShare" placeholder="Megosztás (pl. filmek)" style="flex:1;min-width:140px">
+        <input type="text" id="netPath" placeholder="Almappa (nem kötelező)" style="flex:1;min-width:140px">
+      </div>
+      <div class="row" style="margin-top:8px">
+        <input type="text" id="netUser" placeholder="Felhasználónév (üresen: vendég)" autocomplete="off" style="flex:1;min-width:180px">
+        <input type="password" id="netPassword" placeholder="Jelszó" autocomplete="new-password" style="flex:1;min-width:140px">
+        <button id="netAdd" class="primary">Hozzáadás a médiatárhoz</button>
+      </div>
+      <p class="muted" style="font-size:13px">Windowson a felhasználónév általában a Microsoft-fiók e-mail-címe vagy a helyi
+        felhasználónév; a jelszó az ahhoz tartozó jelszó (nem a PIN-kód).</p>
+      <p class="error" id="netError"></p>
+    </section>
+
     <section id="queueSection" class="hidden">
       <div class="row" style="margin-bottom:4px">
         <h2 style="margin:0">Sor</h2>
@@ -236,6 +256,7 @@ async function start() {
   renderRoots();
   loadAddons();
   loadTmdb();
+  loadNetwork();
   if (!current && roots.length) openFolder(roots[0], roots[0].path);
 }
 
@@ -585,6 +606,45 @@ async function removeAddon(addon) {
   showAddonResult(await api("addons?" + query({ id: addon.id }), { method: "DELETE" }));
 }
 
+
+// --- network folders ---
+async function loadNetwork() {
+  let result;
+  try { result = await api("network"); } catch (_) { return; }
+  const list = result.ok ? result.body : [];
+  $("networkList").replaceChildren(...(list.length ? list.map((f) => el("li", {},
+    "🖧", el("span", { class: "name" }, f.root + " ", el("span", { class: "muted" }, f.username ? "· " + f.username : "· vendég")),
+    el("span", { class: "size" }, f.items + " videó"),
+    el("button", { class: "small danger", onclick: () => removeNetwork(f) }, "Eltávolítás"))) : [el("li", { class: "muted" }, "Nincs hálózati mappa")]));
+}
+
+$("netAdd").addEventListener("click", async () => {
+  const request = {
+    host: $("netHost").value.trim(), share: $("netShare").value.trim(), path: $("netPath").value.trim(),
+    username: $("netUser").value.trim(), password: $("netPassword").value,
+  };
+  if (!request.host || !request.share) { $("netError").textContent = "Add meg a gép nevét és a megosztást"; return; }
+  $("netAdd").disabled = true;
+  $("netError").textContent = "Kapcsolódás…";
+  try {
+    const result = await api("network", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(request) });
+    if (result.ok) {
+      $("netError").textContent = "";
+      $("netPassword").value = "";
+      $("netPath").value = "";
+      loadNetwork();
+    } else {
+      $("netError").textContent = result.body ? result.body.error : "Nem sikerült";
+    }
+  } finally { $("netAdd").disabled = false; }
+});
+
+async function removeNetwork(folder) {
+  if (!confirm("Kiveszed a médiatárból ezt a hálózati mappát?\n\n" + folder.root + "\n\nA fájlokhoz nem nyúl, csak a TV felejti el őket.")) return;
+  const result = await api("network?" + query({ root: folder.root }), { method: "DELETE" });
+  $("netError").textContent = result.ok ? "" : (result.body ? result.body.error : "Nem sikerült");
+  loadNetwork();
+}
 
 // --- TMDB token ---
 async function loadTmdb(result) {

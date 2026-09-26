@@ -67,6 +67,20 @@ data class ErrorDto(val error: String, val received: Long? = null, val retryAfte
 @Serializable
 data class TmdbDto(val configured: Boolean, val source: String? = null)
 
+/** A network folder to add; an empty password keeps the one already saved for the share. */
+@Serializable
+data class NetworkFolderRequest(
+    val host: String,
+    val share: String,
+    val path: String = "",
+    val username: String = "",
+    val password: String = "",
+    val domain: String = "",
+)
+
+@Serializable
+data class NetworkFolderDto(val root: String, val username: String = "", val items: Int = 0)
+
 /** What the server needs from the app; implemented by [TransferRepository]. */
 interface TransferHost {
     val pairingCode: String
@@ -84,6 +98,10 @@ interface TransferHost {
     fun tmdbStatus(): TmdbDto
     suspend fun setTmdbToken(token: String): Result<TmdbDto>
     fun clearTmdbToken(): TmdbDto
+
+    suspend fun networkFolders(): List<NetworkFolderDto>
+    suspend fun addNetworkFolder(request: NetworkFolderRequest): Result<NetworkFolderDto>
+    suspend fun removeNetworkFolder(root: String): Boolean
 }
 
 /**
@@ -271,6 +289,33 @@ class TransferServer(
         delete("/api/tmdb") {
             if (!authorized(call)) return@delete
             call.respondJson(host.clearTmdbToken())
+        }
+
+        get("/api/network") {
+            if (!authorized(call)) return@get
+            call.respondJson(host.networkFolders())
+        }
+
+        post("/api/network") {
+            if (!authorized(call)) return@post
+            if ((call.request.contentLength() ?: 0) > MAX_TOKEN_BYTES) {
+                call.receiveChannel().discard()
+                call.respondError(HttpStatusCode.PayloadTooLarge, "Túl nagy kérés")
+                return@post
+            }
+            val request = runCatching { json.decodeFromString<NetworkFolderRequest>(call.receiveText()) }.getOrNull()
+            if (request == null) {
+                call.respondError(HttpStatusCode.BadRequest, "Hibás kérés")
+                return@post
+            }
+            host.addNetworkFolder(request)
+                .fold({ call.respondJson(it) }, { call.respondError(HttpStatusCode.BadRequest, it.message ?: "Nem sikerült") })
+        }
+
+        delete("/api/network") {
+            if (!authorized(call)) return@delete
+            if (host.removeNetworkFolder(call.parameters["root"].orEmpty())) call.respondJson(ChunkDto(0, true))
+            else call.respondError(HttpStatusCode.NotFound, "Nincs ilyen hálózati mappa")
         }
 
         delete("/api/upload") {

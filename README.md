@@ -16,6 +16,8 @@ Portfólióprojekt, egy valódi Xiaomi Mi TV-n (Android 10) fejlesztve és teszt
 - **Kezdőlap** – Folytatás (félbehagyott filmek, sorozatoknál a következő rész), legutóbb hozzáadott filmek, sorozatok
 - **Android TV kezdőképernyő** – a „Következő” (Watch Next) sorban a félbehagyott film vagy a következő rész, onnan egy gombnyomással folytatható
 - **Keresés** cím, eredeti cím, szereplő vagy rendező szerint, ékezetek nélkül is
+- **Hálózati mappák (SMB)** – számítógép vagy NAS megosztott mappája a médiatárban, másolás nélkül; lejátszás közvetlenül
+  a hálózatról (előreolvasó pufferrel), feliratokkal együtt; beállítás a feltöltő oldalon, kapcsolatpróbával
 - **Lejátszó** (Media3 / ExoPlayer)
   - pozíció mentése és folytatás, automatikus következő epizód
   - AC3 / E-AC3 / DTS / TrueHD: passthrough a TV felé, ahol nincs, FFmpeg szoftveres dekóder
@@ -57,11 +59,12 @@ Ha a böngésző szerint a TV „visszautasította a csatlakozást”, a szerver
 
 Kotlin · Jetpack Compose for TV · Hilt · Room (automatikus migrációval) · Coroutines/Flow ·
 Navigation (típusos útvonalak) · Media3 ExoPlayer + FFmpeg extension · Retrofit + kotlinx.serialization ·
-Coil 3 · Ktor (CIO) szerver előtérszolgáltatásban · ZXing · JUnit (egység- és valódi HTTP-s integrációs tesztek)
+Coil 3 · Ktor (CIO) szerver előtérszolgáltatásban · smbj (SMB2/3) · ZXing · JUnit (egység- és valódi HTTP-s integrációs tesztek)
 
 ```
 app/src/main/java/com/kiroland/mediacenter/          (webes felület: app/src/main/assets/web)
 ├── data/storage     tárhelyek, fájllistázás, írásteszt
+├── data/network     SMB-megosztások: kliens, útvonalak, mentett belépések
 ├── data/library     Room-adatbázis, átfésülő, médiatár-repository
 ├── data/metadata    TMDB API, illesztő, metaadat-kiegészítő
 ├── data/transfer    feltöltő szerver, folytatható feltöltés, párosítás, előtérszolgáltatás

@@ -20,7 +20,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
-import java.io.File
+import com.kiroland.mediacenter.data.storage.FsEntry
+import com.kiroland.mediacenter.data.storage.MediaFiles
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -31,12 +32,13 @@ sealed interface ScanState {
 
 /**
  * Walks library folders and mirrors their video files into the database. Read-only on disk.
- * A folder that cannot be listed (drive unplugged) is skipped, never emptied.
+ * A folder that cannot be listed (drive unplugged, PC switched off) is skipped, never emptied.
  */
 @Singleton
 class LibraryScanner @Inject constructor(
     private val dao: LibraryDao,
     private val metadata: MetadataRepository,
+    private val files: MediaFiles,
     @param:ApplicationScope private val scope: CoroutineScope,
 ) {
     private val mutex = Mutex()
@@ -75,48 +77,58 @@ class LibraryScanner @Inject constructor(
     }
 
     private suspend fun scan(root: String) = withContext(Dispatchers.IO) {
-        val rootDir = File(root)
-        if (rootDir.list() == null) {
+        val top = files.list(root)
+        if (top == null) {
             Log.i(TAG, "Skipping unavailable library folder $root")
             return@withContext
         }
         _state.value = ScanState.Scanning(root, 0)
 
-        val files = mutableListOf<Pair<File, List<String>>>()
-        collect(rootDir, emptyList(), files)
+        val found = mutableListOf<Pair<FsEntry, List<String>>>()
+        val complete = collect(root, top, emptyList(), found)
 
         val known = dao.pathsInRoot(root).associate { it.path to it.addedAt }
-        val entities = files.map { (file, dirs) -> toEntity(file, dirs, root, known[file.absolutePath]) }
+        val entities = found.map { (file, dirs) -> toEntity(file, dirs, root, known[file.path]) }
         dao.upsertMedia(entities)
 
         val present = entities.mapTo(HashSet()) { it.path }
-        val gone = known.keys.filterNot { it in present }
+        // A folder that could not be read halfway (network hiccup) must not look like deleted files.
+        val gone = if (complete) known.keys.filterNot { it in present } else emptyList()
+        if (!complete) Log.w(TAG, "Scan of $root was incomplete; nothing removed")
         if (gone.isNotEmpty()) gone.chunked(500).forEach { dao.deleteMedia(it) }
         Log.i(TAG, "Scanned $root: ${entities.size} items, ${gone.size} removed")
     }
 
-    private fun collect(dir: File, dirs: List<String>, into: MutableList<Pair<File, List<String>>>) {
-        if (dirs.size > MAX_DEPTH) return
-        val children = dir.listFiles() ?: return
+    /** @return false if some subfolder could not be listed. */
+    private fun collect(dir: String, children: List<FsEntry>, dirs: List<String>, into: MutableList<Pair<FsEntry, List<String>>>): Boolean {
+        var complete = true
+        if (dirs.size > MAX_DEPTH) return true
         for (child in children) {
             if (StorageRepository.isHidden(child.name)) continue
             if (child.isDirectory) {
                 if (child.name.equals("sample", ignoreCase = true)) continue
-                collect(child, dirs + child.name, into)
+                val grandchildren = files.list(child.path)
+                if (grandchildren != null) {
+                    complete = collect(child.path, grandchildren, dirs + child.name, into) && complete
+                } else if (MediaFiles.isNetwork(child.path)) {
+                    // Locally an unreadable folder stays unreadable (system folders); on a share it is a hiccup.
+                    complete = false
+                }
             } else if (MediaType.fromFileName(child.name) == MediaType.VIDEO && !isSample(child)) {
                 into += child to dirs
-                _state.value = ScanState.Scanning(dir.absolutePath, into.size)
+                _state.value = ScanState.Scanning(dir, into.size)
             }
         }
+        return complete
     }
 
-    private fun toEntity(file: File, dirs: List<String>, root: String, knownAddedAt: Long?): MediaEntity {
-        val lastModified = file.lastModified()
+    private fun toEntity(file: FsEntry, dirs: List<String>, root: String, knownAddedAt: Long?): MediaEntity {
+        val lastModified = file.lastModified
         val base = MediaEntity(
-            path = file.absolutePath,
+            path = file.path,
             libraryRoot = root,
             fileName = file.name,
-            sizeBytes = file.length(),
+            sizeBytes = file.size,
             lastModified = lastModified,
             kind = MediaKind.MOVIE,
             title = "",
@@ -146,8 +158,8 @@ class LibraryScanner @Inject constructor(
         }
     }
 
-    private fun isSample(file: File): Boolean =
-        SAMPLE.containsMatchIn(file.nameWithoutExtension) && file.length() < 300L * 1024 * 1024
+    private fun isSample(file: FsEntry): Boolean =
+        SAMPLE.containsMatchIn(file.nameWithoutExtension) && file.size < 300L * 1024 * 1024
 
     private companion object {
         const val TAG = "LibraryScanner"

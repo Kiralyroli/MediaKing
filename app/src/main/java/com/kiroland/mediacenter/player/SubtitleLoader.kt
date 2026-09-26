@@ -5,6 +5,8 @@ import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MimeTypes
 import com.kiroland.mediacenter.media.MediaType
+import com.kiroland.mediacenter.data.storage.FsEntry
+import com.kiroland.mediacenter.data.storage.MediaFiles
 import java.io.File
 import java.nio.ByteBuffer
 import java.nio.charset.CharacterCodingException
@@ -23,17 +25,16 @@ data class SubtitleInfo(val language: String?, val forced: Boolean, val sdh: Boo
  */
 object SubtitleLoader {
 
-    fun findSidecars(video: File, cacheDir: File): List<MediaItem.SubtitleConfiguration> {
-        val dir = video.parentFile ?: return emptyList()
-        val baseName = video.nameWithoutExtension
-        val children = dir.listFiles().orEmpty()
-        val soleVideo = children.count { it.isFile && MediaType.fromFileName(it.name) == MediaType.VIDEO && !isSample(it.name) } <= 1
+    fun findSidecars(videoPath: String, files: MediaFiles, cacheDir: File): List<MediaItem.SubtitleConfiguration> {
+        val children = files.list(MediaFiles.parentOf(videoPath)).orEmpty()
+        val baseName = MediaFiles.nameOf(videoPath).substringBeforeLast('.')
+        val soleVideo = children.count { !it.isDirectory && MediaType.fromFileName(it.name) == MediaType.VIDEO && !isSample(it.name) } <= 1
 
         val candidates = buildList {
-            children.filter { it.isFile && isSubtitle(it) }.forEach { add(it to null) }
+            children.filter { !it.isDirectory && isSubtitle(it) }.forEach { add(it to null) }
             if (soleVideo) {
                 children.filter { it.isDirectory && !isSample(it.name) }.forEach { sub ->
-                    sub.listFiles().orEmpty().filter { it.isFile && isSubtitle(it) }.forEach { add(it to sub.name) }
+                    files.list(sub.path).orEmpty().filter { !it.isDirectory && isSubtitle(it) }.forEach { add(it to sub.name) }
                 }
             }
         }.filter { (file, _) -> soleVideo || file.name.startsWith(baseName, ignoreCase = true) }
@@ -43,8 +44,8 @@ object SubtitleLoader {
         return candidates.mapNotNull { (file, folder) ->
             val extension = file.extension.lowercase()
             val converted = runCatching {
-                File(outDir, "${file.absolutePath.hashCode().toUInt()}.$extension").apply {
-                    writeText(decode(file.readBytes()), Charsets.UTF_8)
+                File(outDir, "${file.path.hashCode().toUInt()}.$extension").apply {
+                    writeText(decode(files.readBytes(file.path, MAX_SUBTITLE_BYTES)), Charsets.UTF_8)
                 }
             }.getOrNull() ?: return@mapNotNull null
             val info = describe(file.nameWithoutExtension, baseName, folder)
@@ -107,7 +108,9 @@ object SubtitleLoader {
     private fun tokens(text: String): List<String> =
         text.lowercase().split('.', '_', '-', ' ', '[', ']', '(', ')').filter { it.isNotEmpty() }
 
-    private fun isSubtitle(file: File) = file.extension.lowercase() in MIME_BY_EXTENSION
+    private fun isSubtitle(file: FsEntry) = file.extension.lowercase() in MIME_BY_EXTENSION
+
+    private const val MAX_SUBTITLE_BYTES = 10L * 1024 * 1024
 
     private fun isSample(name: String) = Regex("""(?i)(^|[ ._-])sample([ ._-]|$)""").containsMatchIn(name.substringBeforeLast('.'))
 

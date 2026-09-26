@@ -46,6 +46,10 @@ class TransferServerTest {
             if (token == "good-token") { this.token = token; Result.success(tmdbStatus()) }
             else Result.failure(IllegalArgumentException("rejected"))
         override fun clearTmdbToken(): TmdbDto { token = ""; return tmdbStatus() }
+        override suspend fun networkFolders() = emptyList<NetworkFolderDto>()
+        override suspend fun addNetworkFolder(request: NetworkFolderRequest) =
+            if (request.host == "nas") Result.success(NetworkFolderDto("smb://nas/${request.share}")) else Result.failure(IllegalArgumentException("Nincs ilyen gép"))
+        override suspend fun removeNetworkFolder(root: String) = false
     }
 
     @Before
@@ -162,6 +166,18 @@ class TransferServerTest {
         // The token itself is never echoed back.
         assertTrue(!request("GET", "/api/tmdb").body.contains("good-token"))
         assertTrue(request("DELETE", "/api/tmdb").body.contains("\"configured\":false"))
+    }
+
+    @Test
+    fun `network folders are added through the host`() {
+        val body = """{"host":"nas","share":"filmek","username":"u","password":"p"}""".toByteArray()
+        assertEquals(401, request("POST", "/api/network", code = null, body = body).status)
+        val ok = request("POST", "/api/network", body = body)
+        assertEquals(200, ok.status)
+        assertTrue(ok.body.contains("smb://nas/filmek"))
+        assertEquals(400, request("POST", "/api/network", body = """{"host":"pc","share":"x"}""".toByteArray()).status)
+        assertEquals(400, request("POST", "/api/network", body = "not json".toByteArray()).status)
+        assertEquals(404, request("DELETE", "/api/network?root=smb://nas/filmek").status)
     }
 
     @Test

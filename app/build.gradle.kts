@@ -96,6 +96,8 @@ dependencies {
     implementation(libs.ktor.server.core)
     implementation(libs.ktor.server.cio)
     implementation(libs.zxing.core)
+    // SMB2/3 client for network folders (pure Java; crypto through its bundled BouncyCastle provider).
+    implementation(libs.smbj)
     implementation(libs.tvprovider)
 
     implementation(libs.media3.exoplayer)

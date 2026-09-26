@@ -8,12 +8,18 @@ import android.util.Log
 import com.kiroland.mediacenter.data.addons.AddonManifest
 import com.kiroland.mediacenter.data.addons.AddonRepository
 import com.kiroland.mediacenter.data.metadata.TmdbCredentials
+import com.kiroland.mediacenter.data.library.LibraryRepository
+import com.kiroland.mediacenter.data.network.NetworkShare
+import com.kiroland.mediacenter.data.network.NetworkShareRepository
+import com.kiroland.mediacenter.data.network.SmbClient
+import com.kiroland.mediacenter.data.network.SmbPath
 import com.kiroland.mediacenter.data.library.LibraryScanner
 import com.kiroland.mediacenter.data.library.db.LibraryDao
 import com.kiroland.mediacenter.data.storage.StorageRepository
 import com.kiroland.mediacenter.di.ApplicationScope
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -22,6 +28,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
 import java.io.File
 import java.net.Inet4Address
 import javax.inject.Inject
@@ -56,6 +63,9 @@ class TransferRepository @Inject constructor(
     private val scanner: LibraryScanner,
     private val addonRepository: AddonRepository,
     private val tmdb: TmdbCredentials,
+    private val libraryRepository: LibraryRepository,
+    private val networkShares: NetworkShareRepository,
+    private val smb: SmbClient,
     @param:ApplicationScope private val scope: CoroutineScope,
 ) : TransferHost {
 
@@ -177,6 +187,49 @@ class TransferRepository @Inject constructor(
     override fun clearTmdbToken(): TmdbDto {
         tmdb.clear()
         return tmdbStatus()
+    }
+
+    override suspend fun networkFolders(): List<NetworkFolderDto> = libraryDao.folders()
+        .filter { SmbPath.isSmb(it.path) }
+        .map { folder ->
+            val smb = SmbPath.parse(folder.path)
+            NetworkFolderDto(
+                root = folder.path,
+                username = smb?.let { networkShares.find(it.host, it.share)?.username }.orEmpty(),
+                items = libraryDao.pathsInRoot(folder.path).size,
+            )
+        }
+
+    override suspend fun addNetworkFolder(request: NetworkFolderRequest): Result<NetworkFolderDto> = runCatching {
+        val host = request.host.trim().removePrefix("\\\\").removePrefix("smb://").trimEnd('/', '\\')
+        require(SmbPath.isHost(host)) { "Hibás gépnév vagy IP-cím" }
+        val share = request.share.trim().trim('/', '\\')
+        require(share.isNotEmpty() && share.none { it == '/' || it == '\\' }) { "Add meg a megosztás nevét" }
+        val sub = request.path.trim().replace('\\', '/').trim('/')
+        val root = SmbPath.parse("smb://$host/$share/$sub") ?: throw IllegalArgumentException("Hibás mappa")
+        val saved = networkShares.find(host, share)
+        // Adding a second folder of the same share does not need the password again.
+        val password = request.password.ifEmpty { saved?.takeIf { it.username == request.username.trim() }?.password.orEmpty() }
+        val credentials = NetworkShare(host, share, request.username.trim(), password, request.domain.trim())
+        withContext(Dispatchers.IO) { smb.test(credentials, root).getOrThrow() }
+        networkShares.save(credentials)
+        smb.forget(host, share)
+        libraryRepository.addFolder(root.uri)
+        NetworkFolderDto(root.uri, credentials.username)
+    }
+
+    override suspend fun removeNetworkFolder(root: String): Boolean {
+        val smbRoot = SmbPath.parse(root) ?: return false
+        if (libraryDao.folders().none { it.path == root }) return false
+        libraryRepository.removeFolder(root)
+        val shareStillUsed = libraryDao.folders().any { folder ->
+            SmbPath.parse(folder.path)?.let { it.host.equals(smbRoot.host, true) && it.share.equals(smbRoot.share, true) } == true
+        }
+        if (!shareStillUsed) {
+            networkShares.remove(smbRoot.host, smbRoot.share)
+            smb.forget(smbRoot.host, smbRoot.share)
+        }
+        return true
     }
 
     private fun AddonManifest.toDto() = AddonDto(id, name, version, description, channels.size)
