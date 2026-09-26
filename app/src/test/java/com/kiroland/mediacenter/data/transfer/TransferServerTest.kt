@@ -33,6 +33,13 @@ class TransferServerTest {
         override fun onChunk(file: File, total: Long, receivedBefore: Long, bytes: Long) = Unit
         override fun onFileDone(file: File) { done += file }
         override fun onDeleted(file: File) = Unit
+        val installed = mutableListOf<AddonDto>()
+        override fun addons() = installed.toList()
+        override fun installAddon(text: String) = com.kiroland.mediacenter.data.addons.AddonParser.parse(text)
+            .map { AddonDto(it.id, it.name, it.version, it.description, it.channels.size) }
+            .onSuccess { installed += it }
+        override suspend fun installAddonFromUrl(url: String) = Result.failure<AddonDto>(IllegalStateException("offline"))
+        override fun removeAddon(id: String) = installed.removeIf { it.id == id }
     }
 
     @Before
@@ -123,6 +130,20 @@ class TransferServerTest {
         assertFalse(File(root, "Régi.mkv").exists())
         assertEquals(403, request("POST", "/api/delete?" + q("dir" to root.parent, "name" to root.name)).status)
         assertTrue(root.exists())
+    }
+
+    @Test
+    fun `add-ons are installed, validated and removed`() {
+        val good = """{"id":"demo","name":"Demo","channels":[{"id":"a","name":"A","url":"https://x/a.m3u8"}]}"""
+        assertEquals(401, request("POST", "/api/addons", code = null, body = good.toByteArray()).status)
+        val ok = request("POST", "/api/addons", body = good.toByteArray())
+        assertEquals(200, ok.status)
+        assertTrue(ok.body, ok.body.contains("\"channels\":1"))
+        val bad = request("POST", "/api/addons", body = "{}".toByteArray())
+        assertEquals(400, bad.status)
+        assertTrue(request("GET", "/api/addons").body.contains("\"id\":\"demo\""))
+        assertEquals(200, request("DELETE", "/api/addons?id=demo").status)
+        assertEquals(404, request("DELETE", "/api/addons?id=demo").status)
     }
 
     @Test

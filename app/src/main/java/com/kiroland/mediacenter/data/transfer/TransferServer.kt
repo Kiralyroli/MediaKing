@@ -8,6 +8,7 @@ import io.ktor.server.engine.EmbeddedServer
 import io.ktor.server.engine.embeddedServer
 import io.ktor.server.request.contentLength
 import io.ktor.server.request.receiveChannel
+import io.ktor.server.request.receiveText
 import io.ktor.server.response.header
 import io.ktor.server.response.respondBytes
 import io.ktor.server.response.respondText
@@ -57,6 +58,9 @@ data class ChunkDto(val received: Long, val done: Boolean)
 data class PreviewDto(val isDirectory: Boolean, val files: Int, val bytes: Long)
 
 @Serializable
+data class AddonDto(val id: String, val name: String, val version: Int, val description: String? = null, val channels: Int)
+
+@Serializable
 data class ErrorDto(val error: String, val received: Long? = null, val retryAfterMs: Long? = null)
 
 /** What the server needs from the app; implemented by [TransferRepository]. */
@@ -67,12 +71,19 @@ interface TransferHost {
     fun onChunk(file: File, total: Long, receivedBefore: Long, bytes: Long)
     fun onFileDone(file: File)
     fun onDeleted(file: File)
+
+    fun addons(): List<AddonDto>
+    fun installAddon(text: String): Result<AddonDto>
+    suspend fun installAddonFromUrl(url: String): Result<AddonDto>
+    fun removeAddon(id: String): Boolean
 }
 
 /**
  * The HTTP side of Wi-Fi uploads: serves the web page and a small JSON API.
  * Every /api call must carry the pairing code in the X-Pairing-Code header.
  */
+private const val MAX_ADDON_BYTES = 256L * 1024
+
 class TransferServer(
     private val host: TransferHost,
     private val store: UploadStore,
@@ -200,6 +211,36 @@ class TransferServer(
             }
             host.onDeleted(File(dir, name))
             call.respondJson(ChunkDto(0, true))
+        }
+
+        get("/api/addons") {
+            if (!authorized(call)) return@get
+            call.respondJson(host.addons())
+        }
+
+        post("/api/addons") {
+            if (!authorized(call)) return@post
+            val length = call.request.contentLength() ?: 0
+            if (length > MAX_ADDON_BYTES) {
+                call.receiveChannel().discard()
+                call.respondError(HttpStatusCode.PayloadTooLarge, "Túl nagy fájl egy kiegészítőhöz")
+                return@post
+            }
+            val text = call.receiveText()
+            val result = withContext(Dispatchers.IO) { host.installAddon(text) }
+            result.fold({ call.respondJson(it) }, { call.respondError(HttpStatusCode.BadRequest, it.message ?: "Hibás kiegészítő") })
+        }
+
+        post("/api/addons/url") {
+            if (!authorized(call)) return@post
+            val result = host.installAddonFromUrl(call.parameters["url"].orEmpty())
+            result.fold({ call.respondJson(it) }, { call.respondError(HttpStatusCode.BadRequest, it.message ?: "Nem sikerült") })
+        }
+
+        delete("/api/addons") {
+            if (!authorized(call)) return@delete
+            if (host.removeAddon(call.parameters["id"].orEmpty())) call.respondJson(ChunkDto(0, true))
+            else call.respondError(HttpStatusCode.NotFound, "Nincs ilyen kiegészítő")
         }
 
         delete("/api/upload") {

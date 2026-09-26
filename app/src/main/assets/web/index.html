@@ -101,6 +101,21 @@
         válaszd ki újra ugyanazt a fájlt ugyanide – onnan folytatja, ahol abbamaradt.</p>
     </section>
 
+    <section>
+      <h2>Kiegészítők</h2>
+      <p class="muted" style="margin-top:0">Élő csatornákat adnak az Élő TV menühöz. Egy kiegészítő egy <code>.json</code> leíró fájl
+        (formátum: <code>docs/addons.md</code>); nem futtat kódot. Azonos azonosítójú kiegészítő telepítése frissíti a régit.</p>
+      <ul class="list" id="addonList"></ul>
+      <div class="row" style="margin-top:12px">
+        <label class="button primary">Kiegészítő telepítése fájlból<input type="file" id="addonFile" accept=".json,application/json" hidden></label>
+      </div>
+      <div class="row" style="margin-top:8px">
+        <input type="text" id="addonUrl" placeholder="https://…/kiegeszito.json" style="flex:1;min-width:200px">
+        <button id="addonUrlButton">Telepítés URL-ről</button>
+      </div>
+      <p class="error" id="addonError"></p>
+    </section>
+
     <section id="queueSection" class="hidden">
       <div class="row" style="margin-bottom:4px">
         <h2 style="margin:0">Sor</h2>
@@ -206,6 +221,7 @@ async function start() {
   $("device").textContent = info.body.device;
   roots = info.body.roots;
   renderRoots();
+  loadAddons();
   if (!current && roots.length) openFolder(roots[0], roots[0].path);
 }
 
@@ -516,6 +532,43 @@ function renderProgress(item) {
   }
   if (item.error) parts.push(item.error);
   item.node.querySelector(".meta").textContent = parts.join(" · ");
+}
+
+// --- add-ons ---
+async function loadAddons() {
+  let result;
+  try { result = await api("addons"); } catch (_) { return; }
+  const list = result.ok ? result.body : [];
+  $("addonList").replaceChildren(...(list.length ? list.map((a) => el("li", {},
+    "🧩", el("span", { class: "name" }, a.name + " ", el("span", { class: "muted" }, "v" + a.version + " · " + a.id)),
+    el("span", { class: "size" }, a.channels + " csatorna"),
+    el("button", { class: "small danger", onclick: () => removeAddon(a) }, "Eltávolítás"))) : [el("li", { class: "muted" }, "Nincs telepített kiegészítő")]));
+}
+
+function showAddonResult(result) {
+  $("addonError").textContent = result.ok ? "" : (result.body ? result.body.error : "Nem sikerült");
+  if (result.ok) loadAddons();
+}
+
+$("addonFile").addEventListener("change", async (e) => {
+  const file = e.target.files[0];
+  e.target.value = "";
+  if (!file) return;
+  const text = await file.text();
+  showAddonResult(await api("addons", { method: "POST", headers: { "Content-Type": "application/json" }, body: text }));
+});
+
+$("addonUrlButton").addEventListener("click", async () => {
+  const url = $("addonUrl").value.trim();
+  if (!url) return;
+  const result = await api("addons/url?" + query({ url }), { method: "POST" });
+  if (result.ok) $("addonUrl").value = "";
+  showAddonResult(result);
+});
+
+async function removeAddon(addon) {
+  if (!confirm("Eltávolítod ezt a kiegészítőt?\n\n„" + addon.name + "”")) return;
+  showAddonResult(await api("addons?" + query({ id: addon.id }), { method: "DELETE" }));
 }
 
 window.addEventListener("beforeunload", (e) => {

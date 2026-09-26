@@ -46,22 +46,27 @@ import androidx.tv.material3.OutlinedButton
 import androidx.tv.material3.Text
 import com.kiroland.mediacenter.data.live.LaunchMode
 import com.kiroland.mediacenter.data.live.LiveChannel
-import com.kiroland.mediacenter.data.live.LiveStreamResolver
+import com.kiroland.mediacenter.data.addons.AddonChannel
+import com.kiroland.mediacenter.data.addons.AddonManifest
+import com.kiroland.mediacenter.data.addons.AddonRepository
 import com.kiroland.mediacenter.data.live.LiveTvLauncher
 import com.kiroland.mediacenter.data.live.LiveTvPlanner
 import com.kiroland.mediacenter.data.live.PublicChannels
 import com.kiroland.mediacenter.player.PlayerActivity
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
-import java.util.Optional
+import kotlinx.coroutines.flow.StateFlow
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import javax.inject.Inject
 
 @HiltViewModel
 class LiveTvViewModel @Inject constructor(
     @param:ApplicationContext context: Context,
     private val launcher: LiveTvLauncher,
-    private val resolver: Optional<LiveStreamResolver>,
+    private val addonRepository: AddonRepository,
 ) : ViewModel() {
+    val addons: StateFlow<List<AddonManifest>> = addonRepository.addons
+
     private val prefs = context.getSharedPreferences("live_tv", Context.MODE_PRIVATE)
 
     fun installed(): Set<String> = launcher.installed()
@@ -69,8 +74,8 @@ class LiveTvViewModel @Inject constructor(
     fun open(channel: LiveChannel) = launcher.open(channel)
     fun openTuner() = launcher.openTuner()
 
-    /** True when this build can play the channel in the app's own player. */
-    fun playsInApp(channel: LiveChannel): Boolean = resolver.map { it.supports(channel) }.orElse(false)
+    /** The installed add-on channel that plays this built-in tile in the app's own player, if any. */
+    fun addonFor(channel: LiveChannel): Pair<AddonManifest, AddonChannel>? = addonRepository.forBuiltin(channel.id)
 
     /** The tuner needs an antenna and a channel scan, which not every home has: off unless asked for. */
     var showAntenna: Boolean
@@ -91,7 +96,14 @@ fun LiveTvScreen(viewModel: LiveTvViewModel = hiltViewModel()) {
     var showAntenna by remember { mutableStateOf(viewModel.showAntenna) }
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { installed = viewModel.installed() }
     val tuner = LiveTvPlanner.tunerApp(installed)?.takeIf { showAntenna }
-    val anyInApp = PublicChannels.all.any(viewModel::playsInApp)
+    // Recomposes when add-ons are installed or removed (e.g. from the upload page).
+    val installedAddons by viewModel.addons.collectAsStateWithLifecycle()
+    val anyInApp = PublicChannels.all.any { viewModel.addonFor(it) != null }
+    // Add-on channels that are not attached to a built-in tile get rows of their own.
+    val builtinIds = PublicChannels.all.map { it.id }.toSet()
+    val addonRows = installedAddons
+        .flatMap { addon -> addon.channels.filter { it.builtin !in builtinIds }.map { addon to it } }
+        .groupBy { (addon, channel) -> channel.group ?: addon.name }
     val firstTile = remember { FocusRequester() }
 
     LazyColumn(
@@ -122,11 +134,11 @@ fun LiveTvScreen(viewModel: LiveTvViewModel = hiltViewModel()) {
                     horizontalArrangement = Arrangement.spacedBy(20.dp),
                 ) {
                     itemsIndexed(PublicChannels.all, key = { _, it -> it.id }) { index, channel ->
-                        val inApp = viewModel.playsInApp(channel)
+                        val viaAddon = remember(installedAddons) { viewModel.addonFor(channel) }
                         Tile(
                             title = channel.name,
-                            caption = if (inApp) {
-                                "Lejátszás itt"
+                            caption = if (viaAddon != null) {
+                                "Lejátszás itt · ${viaAddon.first.name}"
                             } else {
                                 when (LiveTvPlanner.mode(channel, installed, hasBrowser)) {
                                     LaunchMode.MEDIAKLIKK -> "Médiaklikk"
@@ -139,7 +151,9 @@ fun LiveTvScreen(viewModel: LiveTvViewModel = hiltViewModel()) {
                             modifier = if (index == 0) Modifier.focusRequester(firstTile) else Modifier,
                             onClick = {
                                 when {
-                                    inApp -> context.startActivity(PlayerActivity.liveIntent(context, channel))
+                                    viaAddon != null -> context.startActivity(
+                                        PlayerActivity.liveIntent(context, viaAddon.first.id, viaAddon.second.id),
+                                    )
                                     !viewModel.open(channel) -> Toast.makeText(
                                         context,
                                         "Nem sikerült megnyitni: nincs Médiaklikk alkalmazás és böngésző sem.",
@@ -148,6 +162,27 @@ fun LiveTvScreen(viewModel: LiveTvViewModel = hiltViewModel()) {
                                 }
                             },
                         )
+                    }
+                }
+            }
+        }
+
+        addonRows.forEach { (title, entries) ->
+            item(key = "addon-row-$title") {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text(title, style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(start = 48.dp))
+                    LazyRow(
+                        contentPadding = PaddingValues(horizontal = 48.dp, vertical = 8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(20.dp),
+                    ) {
+                        itemsIndexed(entries, key = { _, (a, c) -> a.id + "/" + c.id }) { _, (addon, channel) ->
+                            Tile(
+                                title = channel.name,
+                                caption = "Lejátszás itt · ${addon.name}",
+                                color = channel.color?.let(::parseColor) ?: DEFAULT_TILE_COLOR,
+                                onClick = { context.startActivity(PlayerActivity.liveIntent(context, addon.id, channel.id)) },
+                            )
+                        }
                     }
                 }
             }
@@ -231,3 +266,8 @@ private fun Tile(
 }
 
 private fun Color.compositeOverBlack(): Color = Color(red * alpha, green * alpha, blue * alpha, 1f)
+
+private const val DEFAULT_TILE_COLOR = 0xFF455A64
+
+/** "#RRGGBB" (validated at install time) as an opaque ARGB long. */
+private fun parseColor(hex: String): Long? = hex.removePrefix("#").toLongOrNull(16)?.let { 0xFF000000 or it }

@@ -5,6 +5,8 @@ import android.net.ConnectivityManager
 import android.os.Build
 import android.os.StatFs
 import android.util.Log
+import com.kiroland.mediacenter.data.addons.AddonManifest
+import com.kiroland.mediacenter.data.addons.AddonRepository
 import com.kiroland.mediacenter.data.library.LibraryScanner
 import com.kiroland.mediacenter.data.library.db.LibraryDao
 import com.kiroland.mediacenter.data.storage.StorageRepository
@@ -51,6 +53,7 @@ class TransferRepository @Inject constructor(
     private val storage: StorageRepository,
     private val libraryDao: LibraryDao,
     private val scanner: LibraryScanner,
+    private val addonRepository: AddonRepository,
     @param:ApplicationScope private val scope: CoroutineScope,
 ) : TransferHost {
 
@@ -151,6 +154,17 @@ class TransferRepository @Inject constructor(
         _state.update { state -> state.copy(received = state.received.filterNot { it.path == gone || it.path.startsWith("$gone/") }) }
         scheduleRescan()
     }
+
+    override fun addons(): List<AddonDto> = addonRepository.addons.value.map { it.toDto() }
+
+    override fun installAddon(text: String): Result<AddonDto> = addonRepository.install(text).map { it.toDto() }
+
+    override suspend fun installAddonFromUrl(url: String): Result<AddonDto> =
+        addonRepository.installFromUrl(url).map { it.toDto() }
+
+    override fun removeAddon(id: String): Boolean = addonRepository.remove(id)
+
+    private fun AddonManifest.toDto() = AddonDto(id, name, version, description, channels.size)
 
     /** One rescan after a burst of uploads settles, not one per file. */
     private fun scheduleRescan() {

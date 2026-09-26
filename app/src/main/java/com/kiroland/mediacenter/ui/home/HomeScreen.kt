@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.CloudUpload
+import androidx.compose.material.icons.outlined.Extension
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.LiveTv
@@ -27,6 +28,7 @@ import androidx.tv.material3.NavigationDrawer
 import androidx.tv.material3.NavigationDrawerItem
 import androidx.tv.material3.Text
 import com.kiroland.mediacenter.data.storage.StorageVolumeInfo
+import com.kiroland.mediacenter.ui.addons.AddonsScreen
 import com.kiroland.mediacenter.ui.diagnostics.DiagnosticsScreen
 import com.kiroland.mediacenter.ui.library.LibraryHomeScreen
 import com.kiroland.mediacenter.ui.live.LiveTvScreen
@@ -41,6 +43,7 @@ private enum class HomeSection(val label: String, val icon: ImageVector) {
     Series("Sorozatok", Icons.Outlined.Tv),
     LiveTv("Élő TV", Icons.Outlined.LiveTv),
     Upload("Feltöltés", Icons.Outlined.CloudUpload),
+    Addons("Kiegészítők", Icons.Outlined.Extension),
     Storage("Tárhelyek", Icons.Outlined.Storage),
     Diagnostics("Diagnosztika", Icons.Outlined.Info),
 }
@@ -80,6 +83,7 @@ fun HomeScreen(
             HomeSection.Series -> SeriesListScreen(onOpenSeries = onOpenSeries)
             HomeSection.LiveTv -> LiveTvScreen()
             HomeSection.Upload -> TransferScreen()
+            HomeSection.Addons -> AddonsScreen()
             HomeSection.Storage -> StorageScreen(onOpenVolume = onOpenVolume)
             HomeSection.Diagnostics -> DiagnosticsScreen()
         }

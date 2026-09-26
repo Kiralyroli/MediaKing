@@ -17,7 +17,6 @@ import androidx.lifecycle.lifecycleScope
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
-import androidx.media3.common.MimeTypes
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.common.TrackSelectionOverride
@@ -25,12 +24,13 @@ import androidx.media3.common.Tracks
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.datasource.DefaultDataSource
+import androidx.media3.datasource.DefaultHttpDataSource
+import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.ui.PlayerView
 import androidx.media3.ui.TrackSelectionDialogBuilder
 import com.kiroland.mediacenter.data.library.LibraryRepository
-import com.kiroland.mediacenter.data.live.LiveChannel
-import com.kiroland.mediacenter.data.live.LiveStreamResolver
-import com.kiroland.mediacenter.data.live.PublicChannels
+import com.kiroland.mediacenter.data.addons.AddonRepository
 import com.kiroland.mediacenter.di.ApplicationScope
 import com.kiroland.mediacenter.ui.library.episodeCode
 import dagger.hilt.android.AndroidEntryPoint
@@ -42,7 +42,6 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
-import java.util.Optional
 import javax.inject.Inject
 
 /**
@@ -56,8 +55,7 @@ class PlayerActivity : ComponentActivity() {
     @Inject lateinit var library: LibraryRepository
     // Progress writes must survive the activity finishing.
     @Inject @ApplicationScope lateinit var appScope: CoroutineScope
-    // Present only in builds that ship a resolver; without one, live channels never reach this screen.
-    @Inject lateinit var liveResolver: Optional<LiveStreamResolver>
+    @Inject lateinit var addons: AddonRepository
 
     private lateinit var playerView: PlayerView
     private var player: ExoPlayer? = null
@@ -69,15 +67,18 @@ class PlayerActivity : ComponentActivity() {
     private var playWhenReady = true
     private var subtitlesChosenFor: String? = null
 
-    /** Set when playing a live channel instead of a file: no progress, no next episode, channel zapping. */
-    private var liveChannel: LiveChannel? = null
+    /** An add-on channel being played live: no progress, no next episode, channel zapping. */
+    private data class LiveRef(val addonId: String, val channelId: String)
+
+    private var live: LiveRef? = null
     private var lastLiveRecoveryMs = 0L
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        val liveId = savedInstanceState?.getString(STATE_LIVE) ?: intent.getStringExtra(EXTRA_LIVE)
-        liveChannel = liveId?.let { id -> PublicChannels.all.firstOrNull { it.id == id } }
-        currentPath = liveChannel?.let { liveKey(it) }
+        val addonId = savedInstanceState?.getString(STATE_ADDON) ?: intent.getStringExtra(EXTRA_ADDON)
+        val channelId = savedInstanceState?.getString(STATE_CHANNEL) ?: intent.getStringExtra(EXTRA_CHANNEL)
+        live = if (addonId != null && channelId != null) LiveRef(addonId, channelId) else null
+        currentPath = live?.let { liveKey(it) }
             ?: savedInstanceState?.getString(STATE_PATH)
             ?: requireNotNull(intent.getStringExtra(EXTRA_PATH))
         if (savedInstanceState != null) {
@@ -114,7 +115,10 @@ class PlayerActivity : ComponentActivity() {
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
         outState.putString(STATE_PATH, currentPath)
-        liveChannel?.let { outState.putString(STATE_LIVE, it.id) }
+        live?.let {
+            outState.putString(STATE_ADDON, it.addonId)
+            outState.putString(STATE_CHANNEL, it.channelId)
+        }
         outState.putLong(STATE_POSITION, player?.currentPosition ?: resumePositionMs ?: 0L)
         outState.putBoolean(STATE_PLAY_WHEN_READY, player?.playWhenReady ?: playWhenReady)
     }
@@ -136,7 +140,13 @@ class PlayerActivity : ComponentActivity() {
         val renderersFactory = DefaultRenderersFactory(this)
             .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON)
             .setEnableDecoderFallback(true)
-        val exoPlayer = ExoPlayer.Builder(this, renderersFactory).build().apply {
+        val builder = ExoPlayer.Builder(this, renderersFactory)
+        // An add-on may need headers (Referer, User-Agent) on the stream requests themselves.
+        live?.let { addons.find(it.addonId)?.stream?.headers }?.takeIf { it.isNotEmpty() }?.let { headers ->
+            val http = DefaultHttpDataSource.Factory().setDefaultRequestProperties(headers)
+            builder.setMediaSourceFactory(DefaultMediaSourceFactory(DefaultDataSource.Factory(this, http)))
+        }
+        val exoPlayer = builder.build().apply {
             // Subtitles are picked by SubtitleChooser once the audio track is known.
             trackSelectionParameters = trackSelectionParameters.buildUpon()
                 .setPreferredAudioLanguages("hu", "en")
@@ -147,13 +157,13 @@ class PlayerActivity : ComponentActivity() {
                 }
 
                 override fun onPlayerError(error: PlaybackException) {
-                    if (liveChannel != null && recoverLive(this@apply)) return
+                    if (live != null && recoverLive(this@apply)) return
                     Toast.makeText(this@PlayerActivity, "Lejátszási hiba: ${error.errorCodeName}", Toast.LENGTH_LONG).show()
                 }
 
                 override fun onPlaybackStateChanged(playbackState: Int) {
                     if (playbackState != Player.STATE_ENDED) return
-                    if (liveChannel != null) recoverLive(this@apply) else onEnded()
+                    if (live != null) recoverLive(this@apply) else onEnded()
                 }
             })
         }
@@ -161,8 +171,8 @@ class PlayerActivity : ComponentActivity() {
         playerView.player = exoPlayer
         subtitlesChosenFor = null
 
-        liveChannel?.let { channel ->
-            lifecycleScope.launch { loadLive(exoPlayer, channel) }
+        live?.let { ref ->
+            lifecycleScope.launch { loadLive(exoPlayer, ref) }
             return
         }
         lifecycleScope.launch {
@@ -174,23 +184,25 @@ class PlayerActivity : ComponentActivity() {
         }
     }
 
-    private suspend fun loadLive(exoPlayer: ExoPlayer, channel: LiveChannel) {
-        val url = liveResolver.orElse(null)?.resolve(channel)
-        if (player !== exoPlayer || liveChannel != channel) return // Released or zapped meanwhile.
-        if (url == null) {
-            Toast.makeText(this, "Nem sikerült elindítani: ${channel.name}", Toast.LENGTH_LONG).show()
+    private suspend fun loadLive(exoPlayer: ExoPlayer, ref: LiveRef) {
+        val addon = addons.find(ref.addonId)
+        val channel = addon?.channels?.firstOrNull { it.id == ref.channelId }
+        val result = runCatching { addons.resolve(ref.addonId, ref.channelId) }
+        if (player !== exoPlayer || live != ref) return // Released or zapped meanwhile.
+        val url = result.getOrElse { error ->
+            Toast.makeText(this, "Nem sikerült elindítani: ${channel?.name ?: ref.channelId}\n${error.message}", Toast.LENGTH_LONG).show()
             finish()
             return
         }
         val item = MediaItem.Builder()
             .setUri(url)
-            .setMimeType(MimeTypes.APPLICATION_M3U8)
-            .setMediaMetadata(MediaMetadata.Builder().setTitle(channel.name).build())
+            .apply { addon?.stream?.mimeType?.let(::setMimeType) }
+            .setMediaMetadata(MediaMetadata.Builder().setTitle(channel?.name).build())
             .build()
         exoPlayer.setMediaItem(item)
         exoPlayer.prepare()
         exoPlayer.playWhenReady = true
-        Toast.makeText(this, channel.name, Toast.LENGTH_SHORT).show()
+        Toast.makeText(this, channel?.name ?: ref.channelId, Toast.LENGTH_SHORT).show()
     }
 
     /**
@@ -198,17 +210,17 @@ class PlayerActivity : ComponentActivity() {
      * the live window), resolve a fresh address. At most every 20 s, so a real outage does not loop.
      */
     private fun recoverLive(exoPlayer: ExoPlayer): Boolean {
-        val channel = liveChannel ?: return false
+        val ref = live ?: return false
         val now = System.currentTimeMillis()
         if (now - lastLiveRecoveryMs < LIVE_RECOVERY_INTERVAL_MS) return false
         lastLiveRecoveryMs = now
-        lifecycleScope.launch { loadLive(exoPlayer, channel) }
+        lifecycleScope.launch { loadLive(exoPlayer, ref) }
         return true
     }
 
     /** Up/down (with the controls hidden) and the remote's channel keys switch channels while live. */
     private fun handleZapping(event: KeyEvent): Boolean {
-        val current = liveChannel ?: return false
+        val current = live ?: return false
         val step = when (event.keyCode) {
             KeyEvent.KEYCODE_CHANNEL_UP -> 1
             KeyEvent.KEYCODE_CHANNEL_DOWN -> -1
@@ -217,12 +229,12 @@ class PlayerActivity : ComponentActivity() {
             else -> return false
         }
         if (event.action != KeyEvent.ACTION_UP) return true
-        val resolver = liveResolver.orElse(null) ?: return true
-        val channels = PublicChannels.all.filter(resolver::supports)
-        val index = channels.indexOf(current).coerceAtLeast(0)
-        val next = channels[(index + step).mod(channels.size)]
+        // Zapping stays within the add-on the channel came from, in its own order.
+        val channels = addons.find(current.addonId)?.channels ?: return true
+        val index = channels.indexOfFirst { it.id == current.channelId }.coerceAtLeast(0)
+        val next = LiveRef(current.addonId, channels[(index + step).mod(channels.size)].id)
         val exoPlayer = player ?: return true
-        liveChannel = next
+        live = next
         currentPath = liveKey(next)
         subtitlesChosenFor = null
         lastLiveRecoveryMs = 0L
@@ -231,7 +243,7 @@ class PlayerActivity : ComponentActivity() {
         return true
     }
 
-    private fun liveKey(channel: LiveChannel) = "live:${channel.id}"
+    private fun liveKey(ref: LiveRef) = "live:${ref.addonId}/${ref.channelId}"
 
     /** Runs once per loaded file; later track changes are the user's own choices. */
     private fun autoSelectSubtitles(exoPlayer: ExoPlayer, tracks: Tracks) {
@@ -299,7 +311,7 @@ class PlayerActivity : ComponentActivity() {
     }
 
     private fun saveProgress(exoPlayer: ExoPlayer) {
-        if (liveChannel != null) return // Nothing to resume in a live broadcast.
+        if (live != null) return // Nothing to resume in a live broadcast.
         val duration = exoPlayer.duration.takeIf { it != C.TIME_UNSET } ?: return
         val path = currentPath
         val position = exoPlayer.currentPosition
@@ -425,8 +437,10 @@ class PlayerActivity : ComponentActivity() {
 
     companion object {
         private const val EXTRA_PATH = "path"
-        private const val EXTRA_LIVE = "liveChannel"
-        private const val STATE_LIVE = "liveChannel"
+        private const val EXTRA_ADDON = "addon"
+        private const val EXTRA_CHANNEL = "channel"
+        private const val STATE_ADDON = "addon"
+        private const val STATE_CHANNEL = "channel"
         private const val LIVE_RECOVERY_INTERVAL_MS = 20_000L
         private const val EXTRA_FROM_START = "fromStart"
         private const val STATE_PATH = "path"
@@ -441,9 +455,11 @@ class PlayerActivity : ComponentActivity() {
             KeyEvent.KEYCODE_MEDIA_AUDIO_TRACK,
         )
 
-        /** Plays a live channel through the build's [LiveStreamResolver]. */
-        fun liveIntent(context: Context, channel: LiveChannel): Intent =
-            Intent(context, PlayerActivity::class.java).putExtra(EXTRA_LIVE, channel.id)
+        /** Plays an add-on's live channel. */
+        fun liveIntent(context: Context, addonId: String, channelId: String): Intent =
+            Intent(context, PlayerActivity::class.java)
+                .putExtra(EXTRA_ADDON, addonId)
+                .putExtra(EXTRA_CHANNEL, channelId)
 
         fun intent(context: Context, path: String, fromStart: Boolean = false): Intent =
             Intent(context, PlayerActivity::class.java)

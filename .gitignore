@@ -9,6 +9,3 @@ local.properties
 .DS_Store
 captures/
 
-# Personal build: private live-stream resolvers, never published.
-app/src/personal/
-app/src/testPersonal/
