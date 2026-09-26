@@ -8,6 +8,8 @@ import com.kiroland.mediacenter.data.library.ContinueItem
 import com.kiroland.mediacenter.data.library.LibraryRepository
 import com.kiroland.mediacenter.data.library.ScanState
 import com.kiroland.mediacenter.data.library.SeriesSummary
+import com.kiroland.mediacenter.data.library.SeasonOverview
+import com.kiroland.mediacenter.data.library.SeriesOverview
 import com.kiroland.mediacenter.data.library.db.LibraryFolderEntity
 import com.kiroland.mediacenter.data.library.db.EpisodeMetadataEntity
 import com.kiroland.mediacenter.data.library.db.MediaWithProgress
@@ -17,6 +19,7 @@ import com.kiroland.mediacenter.ui.SeriesRoute
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
@@ -68,16 +71,22 @@ class SeriesViewModel @Inject constructor(
     private val episodesFlow = repository.seriesEpisodes(seriesKey)
     val episodes: StateFlow<List<MediaWithProgress>?> = episodesFlow.stateIn(this, null)
 
-    /** TMDB episode names and texts keyed by (season, episode); empty until fetched. */
+    private val tvId = episodesFlow.map { list -> list.firstNotNullOfOrNull { it.metadata?.tmdbId } }.distinctUntilChanged()
+
     @OptIn(ExperimentalCoroutinesApi::class)
-    val episodeInfo: StateFlow<Map<Pair<Int, Int>, EpisodeMetadataEntity>> = episodesFlow
-        .map { list -> list.firstNotNullOfOrNull { it.metadata?.tmdbId } }
-        .distinctUntilChanged()
-        .flatMapLatest { tvId ->
-            if (tvId == null) flowOf(emptyList()) else metadataRepository.episodes(tvId)
-        }
+    private val tmdbEpisodes = tvId.flatMapLatest { id -> if (id == null) flowOf(emptyList()) else metadataRepository.episodes(id) }
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    private val tmdbSeasons = tvId.flatMapLatest { id -> if (id == null) flowOf(emptyList()) else metadataRepository.seasons(id) }
+
+    /** TMDB episode names and texts keyed by (season, episode); empty until fetched. */
+    val episodeInfo: StateFlow<Map<Pair<Int, Int>, EpisodeMetadataEntity>> = tmdbEpisodes
         .map { list -> list.associateBy { it.season to it.episode } }
         .stateIn(this, emptyMap())
+
+    /** Every season and episode: the library's files plus what TMDB lists but the library lacks. */
+    val overview: StateFlow<List<SeasonOverview>?> =
+        combine(episodesFlow, tmdbSeasons, tmdbEpisodes, SeriesOverview::build).stateIn(this, null)
 
     fun toggleWatched(item: MediaWithProgress) {
         viewModelScope.launch { repository.markWatched(item.media.path, !item.isWatched) }

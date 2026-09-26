@@ -15,6 +15,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.outlined.PlayCircle
 import androidx.compose.material.icons.outlined.ManageSearch
+import androidx.compose.material.icons.outlined.RemoveCircleOutline
+import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -23,6 +25,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.text.style.TextOverflow
@@ -36,9 +39,13 @@ import androidx.tv.material3.ListItem
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.OutlinedButton
 import androidx.tv.material3.Text
+import com.kiroland.mediacenter.data.library.EpisodeRow
 import com.kiroland.mediacenter.data.metadata.tmdb.TmdbImages
 import com.kiroland.mediacenter.util.formatBytes
 import com.kiroland.mediacenter.util.formatDuration
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
@@ -49,20 +56,26 @@ fun SeriesScreen(
 ) {
     val episodes by viewModel.episodes.collectAsStateWithLifecycle()
     val episodeInfo by viewModel.episodeInfo.collectAsStateWithLifecycle()
+    val overview by viewModel.overview.collectAsStateWithLifecycle()
     val all = episodes ?: return
-    if (all.isEmpty()) {
+    val seasons = overview ?: return
+    if (all.isEmpty() || seasons.isEmpty()) {
         Text("A sorozat epizódjai nem érhetők el.", Modifier.padding(48.dp))
         return
     }
     val meta = all.firstNotNullOfOrNull { it.metadata?.takeIf { m -> m.tmdbId != null } }
     val title = meta?.title ?: all.first().media.title
-    val seasons = all.mapNotNull { it.media.season }.distinct().sorted()
+    val ownedSeasons = seasons.count { !it.isMissing }
+    val listedEpisodes = seasons.sumOf { it.listedEpisodes ?: it.ownedCount }
     // Open on the first season that still has something unwatched.
-    val defaultSeason = all.firstOrNull { !it.isWatched }?.media?.season ?: seasons.first()
+    val defaultSeason = all.firstOrNull { !it.isWatched }?.media?.season ?: seasons.first { !it.isMissing }.season
     var selectedSeason by rememberSaveable { mutableStateOf(defaultSeason) }
-    val inSeason = all.filter { it.media.season == selectedSeason }
-    val focusIndex = inSeason.indexOfFirst { !it.isWatched }.coerceAtLeast(0)
+    val current = seasons.firstOrNull { it.season == selectedSeason } ?: seasons.first()
+    val rows = current.rows
+    val focusIndex = rows.indexOfFirst { it is EpisodeRow.Owned && !it.item.isWatched }
+        .takeIf { it >= 0 } ?: rows.indexOfFirst { it is EpisodeRow.Owned }.coerceAtLeast(0)
     val episodeFocus = remember { FocusRequester() }
+    val today = remember { LocalDate.now().toString() }
 
     Backdrop(TmdbImages.backdrop(meta?.backdropPath)) {
         Column(
@@ -79,9 +92,11 @@ fun SeriesScreen(
                 Text(
                     listOfNotNull(
                         factsLine(meta?.year, meta).ifBlank { null },
-                        "${seasons.size} évad",
+                        "$ownedSeasons évad",
                         "${all.size} rész",
                         "${all.count { it.isWatched }} megnézve",
+                        // What exists beyond the library, per TMDB.
+                        "összesen ${seasons.size} évad, $listedEpisodes rész".takeIf { seasons.size > ownedSeasons || listedEpisodes > all.size },
                     ).joinToString(" · "),
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -106,9 +121,20 @@ fun SeriesScreen(
                     contentPadding = PaddingValues(horizontal = 56.dp),
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
-                    items(seasons) { season ->
-                        FilterChip(selected = season == selectedSeason, onClick = { selectedSeason = season }) {
-                            Text("$season. évad")
+                    items(seasons, key = { it.season }) { season ->
+                        FilterChip(
+                            selected = season.season == selectedSeason,
+                            onClick = { selectedSeason = season.season },
+                            modifier = if (season.isMissing) Modifier.alpha(MISSING_ALPHA) else Modifier,
+                        ) {
+                            val listed = season.listedEpisodes
+                            Text(
+                                when {
+                                    season.isMissing -> "${seasonLabel(season.season)} · nincs meg"
+                                    listed != null && season.ownedCount < listed -> "${seasonLabel(season.season)} · ${season.ownedCount}/$listed"
+                                    else -> seasonLabel(season.season)
+                                },
+                            )
                         }
                     }
                 }
@@ -118,7 +144,13 @@ fun SeriesScreen(
                 contentPadding = PaddingValues(start = 48.dp, end = 48.dp, bottom = 48.dp),
                 verticalArrangement = Arrangement.spacedBy(4.dp),
             ) {
-                itemsIndexed(inSeason, key = { _, it -> it.media.path }) { index, item ->
+                itemsIndexed(rows, key = { _, row -> rowKey(row) }) { index, row ->
+                    val focus = if (index == focusIndex) Modifier.focusRequester(episodeFocus) else Modifier
+                    if (row is EpisodeRow.Missing) {
+                        MissingEpisode(row, today, focus)
+                        return@itemsIndexed
+                    }
+                    val item = (row as EpisodeRow.Owned).item
                     val media = item.media
                     val info = episodeInfo[(media.season ?: 0) to (media.episode ?: 0)]
                     val progress = item.progressFraction
@@ -126,7 +158,7 @@ fun SeriesScreen(
                         selected = false,
                         onClick = { onPlay(media.path) },
                         onLongClick = { viewModel.toggleWatched(item) },
-                        modifier = if (index == focusIndex) Modifier.focusRequester(episodeFocus) else Modifier,
+                        modifier = focus,
                         headlineContent = {
                             Text(
                                 "${episodeCode(media.season, media.episode, media.episodeEnd)} · ${info?.name ?: media.fileName}",
@@ -159,3 +191,51 @@ fun SeriesScreen(
     }
     LaunchedEffect(selectedSeason) { runCatching { episodeFocus.requestFocus() } }
 }
+
+/**
+ * An episode TMDB lists but the library lacks: shown so one can see it exists, not playable.
+ * Still focusable, so the D-pad can reach its title and text.
+ */
+@Composable
+private fun MissingEpisode(row: EpisodeRow.Missing, today: String, modifier: Modifier) {
+    val airDate = row.airDate
+    val upcoming = airDate != null && airDate > today
+    ListItem(
+        selected = false,
+        onClick = {},
+        modifier = modifier.alpha(MISSING_ALPHA),
+        headlineContent = {
+            Text(
+                listOfNotNull(episodeCode(row.season, row.episode), row.info?.name).joinToString(" · "),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        },
+        supportingContent = {
+            Text(
+                listOfNotNull(
+                    if (upcoming) "Még nem jelent meg · ${formatAirDate(airDate)}" else "Nincs meg",
+                    row.info?.overview,
+                ).joinToString(" · "),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        },
+        leadingContent = {
+            Icon(if (upcoming) Icons.Outlined.Schedule else Icons.Outlined.RemoveCircleOutline, contentDescription = null)
+        },
+    )
+}
+
+private fun rowKey(row: EpisodeRow): String = when (row) {
+    is EpisodeRow.Owned -> row.item.media.path
+    is EpisodeRow.Missing -> "missing-${row.season}-${row.episode}"
+}
+
+private fun seasonLabel(season: Int) = if (season == 0) "Különkiadások" else "$season. évad"
+
+private fun formatAirDate(isoDate: String?): String = runCatching {
+    LocalDate.parse(isoDate).format(DateTimeFormatter.ofPattern("yyyy. MMMM d.", Locale.forLanguageTag("hu-HU")))
+}.getOrDefault(isoDate.orEmpty())
+
+private const val MISSING_ALPHA = 0.5f

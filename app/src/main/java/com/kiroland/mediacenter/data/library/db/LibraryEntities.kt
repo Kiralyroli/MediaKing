@@ -69,6 +69,21 @@ data class EpisodeMetadataEntity(
     val runtimeMinutes: Int?,
 )
 
+/**
+ * A show's seasons as TMDB lists them, including the ones not in the library.
+ * [episodesFetchedAt] is null while the season's episode list still has to be (re)loaded.
+ */
+@Entity(tableName = "season_metadata", primaryKeys = ["tvId", "season"])
+data class SeasonMetadataEntity(
+    val tvId: Int,
+    val season: Int,
+    val name: String?,
+    val episodeCount: Int,
+    val airDate: String?,
+    val fetchedAt: Long,
+    val episodesFetchedAt: Long? = null,
+)
+
 /** Keyed by path, not by media row, so progress survives rescans and a drive being unplugged. */
 @Entity(tableName = "watch_progress")
 data class WatchProgressEntity(

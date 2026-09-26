@@ -41,6 +41,42 @@ interface MetadataDao {
     @Query("SELECT * FROM episode_metadata WHERE tvId = :tvId ORDER BY season, episode")
     fun observeEpisodes(tvId: Int): Flow<List<EpisodeMetadataEntity>>
 
+    // --- Seasons, including those not in the library ---
+
+    /** Matched shows whose season list is missing or older than [before]. */
+    @Query(
+        """SELECT DISTINCT md.tmdbId FROM metadata md
+           WHERE md.key LIKE 'tv:%' AND md.tmdbId IS NOT NULL
+             AND md.key IN (SELECT metadataKey FROM media WHERE metadataKey IS NOT NULL)
+             AND NOT EXISTS (SELECT 1 FROM season_metadata s WHERE s.tvId = md.tmdbId AND s.fetchedAt > :before)""",
+    )
+    suspend fun showsToRefresh(before: Long): List<Int>
+
+    @Query("SELECT * FROM season_metadata WHERE tvId = :tvId")
+    suspend fun seasons(tvId: Int): List<SeasonMetadataEntity>
+
+    @Query("SELECT * FROM season_metadata WHERE tvId = :tvId ORDER BY season")
+    fun observeSeasons(tvId: Int): Flow<List<SeasonMetadataEntity>>
+
+    @Upsert
+    suspend fun upsertSeasons(seasons: List<SeasonMetadataEntity>)
+
+    @Query("DELETE FROM season_metadata WHERE tvId = :tvId AND season NOT IN (:keep)")
+    suspend fun deleteSeasonsExcept(tvId: Int, keep: List<Int>)
+
+    /** Listed seasons whose episodes are not loaded yet (specials only once they are in the library). */
+    @Query(
+        """SELECT s.tvId AS tvId, s.season AS season FROM season_metadata s
+           WHERE s.episodesFetchedAt IS NULL AND s.episodeCount > 0 AND s.season > 0""",
+    )
+    suspend fun listedSeasonsToFetch(): List<SeasonToFetch>
+
+    @Query("UPDATE season_metadata SET episodesFetchedAt = :at WHERE tvId = :tvId AND season = :season")
+    suspend fun markEpisodesFetched(tvId: Int, season: Int, at: Long)
+
+    @Query("DELETE FROM season_metadata")
+    suspend fun clearSeasons()
+
     @Query("DELETE FROM metadata")
     suspend fun clearMetadata()
 

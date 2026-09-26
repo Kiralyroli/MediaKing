@@ -120,10 +120,19 @@ data class TvDetails(
     val genres: List<Genre> = emptyList(),
     @SerialName("created_by") val createdBy: List<Creator> = emptyList(),
     val credits: Credits? = null,
+    val seasons: List<SeasonSummary> = emptyList(),
 )
 
 @Serializable
 data class SeasonDetails(val episodes: List<EpisodeDetails> = emptyList())
+
+@Serializable
+data class SeasonSummary(
+    @SerialName("season_number") val seasonNumber: Int,
+    val name: String? = null,
+    @SerialName("episode_count") val episodeCount: Int = 0,
+    @SerialName("air_date") val airDate: String? = null,
+)
 
 @Serializable
 data class EpisodeDetails(

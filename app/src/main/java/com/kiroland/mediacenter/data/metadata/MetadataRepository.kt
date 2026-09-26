@@ -5,7 +5,9 @@ import com.kiroland.mediacenter.data.library.db.EpisodeMetadataEntity
 import com.kiroland.mediacenter.data.library.db.MediaKind
 import com.kiroland.mediacenter.data.library.db.MetadataDao
 import com.kiroland.mediacenter.data.library.db.MetadataEntity
+import com.kiroland.mediacenter.data.library.db.SeasonMetadataEntity
 import com.kiroland.mediacenter.data.metadata.tmdb.MovieDetails
+import com.kiroland.mediacenter.data.metadata.tmdb.SeasonSummary
 import com.kiroland.mediacenter.data.metadata.tmdb.TmdbApi
 import com.kiroland.mediacenter.data.metadata.tmdb.TvDetails
 import com.kiroland.mediacenter.media.parse.MediaNameParser
@@ -25,15 +27,47 @@ class MetadataRepository @Inject constructor(
 
     fun episodes(tvId: Int): Flow<List<EpisodeMetadataEntity>> = dao.observeEpisodes(tvId)
 
+    fun seasons(tvId: Int): Flow<List<SeasonMetadataEntity>> = dao.observeSeasons(tvId)
+
     suspend fun enrichMissing() {
         if (!isConfigured) return
         val retryAfter = System.currentTimeMillis() - NOT_FOUND_RETRY_MS
         for (key in dao.keysToFetch(retryAfter)) {
             runLogged("lookup $key") { lookup(key) }
         }
-        for (season in dao.seasonsToFetch()) {
+        // New seasons and episodes appear while a show runs: re-read the season lists weekly.
+        for (tvId in dao.showsToRefresh(System.currentTimeMillis() - SEASONS_REFRESH_MS)) {
+            runLogged("seasons $tvId") { storeSeasons(tvId, api.tv(tvId, append = "").seasons) }
+        }
+        fetchPendingSeasons()
+    }
+
+    /** Episode lists of library seasons and of every season TMDB lists, once each (again when a season grows). */
+    private suspend fun fetchPendingSeasons() {
+        for (season in (dao.seasonsToFetch() + dao.listedSeasonsToFetch()).distinct()) {
             runLogged("season ${season.tvId}/${season.season}") { fetchSeason(season.tvId, season.season) }
         }
+    }
+
+    private suspend fun storeSeasons(tvId: Int, summaries: List<SeasonSummary>) {
+        val now = System.currentTimeMillis()
+        val known = dao.seasons(tvId).associateBy { it.season }
+        dao.upsertSeasons(
+            summaries.map { s ->
+                val old = known[s.seasonNumber]
+                SeasonMetadataEntity(
+                    tvId = tvId,
+                    season = s.seasonNumber,
+                    name = s.name,
+                    episodeCount = s.episodeCount,
+                    airDate = s.airDate,
+                    fetchedAt = now,
+                    // A season that grew (still airing) gets its episode list reloaded.
+                    episodesFetchedAt = old?.episodesFetchedAt?.takeIf { old.episodeCount == s.episodeCount },
+                )
+            },
+        )
+        dao.deleteSeasonsExcept(tvId, summaries.map { it.seasonNumber })
     }
 
     /** TMDB search for the "wrong match?" screen; the user picks the right one. */
@@ -51,16 +85,13 @@ class MetadataRepository @Inject constructor(
     /** Replaces the match for [key]; kept until the user reloads all metadata. Episode data follows. */
     suspend fun applyMatch(key: String, kind: MediaKind, tmdbId: Int) {
         dao.upsert(if (kind == MediaKind.MOVIE) movieEntity(key, tmdbId) else showEntity(key, tmdbId))
-        if (kind == MediaKind.EPISODE) {
-            for (season in dao.seasonsToFetch()) {
-                runLogged("season ${season.tvId}/${season.season}") { fetchSeason(season.tvId, season.season) }
-            }
-        }
+        if (kind == MediaKind.EPISODE) fetchPendingSeasons()
     }
 
     /** Forgets every TMDB match (including manual ones) and looks everything up again. */
     suspend fun reloadAll() {
         dao.clearEpisodes()
+        dao.clearSeasons()
         dao.clearMetadata()
         enrichMissing()
     }
@@ -108,6 +139,7 @@ class MetadataRepository @Inject constructor(
         val details = api.tv(id)
         val overview = details.overview?.takeIf { it.isNotBlank() }
             ?: api.tv(id, TmdbApi.FALLBACK_LANGUAGE, append = "").overview
+        storeSeasons(id, details.seasons)
         return details.toEntity(key, overview)
     }
 
@@ -134,6 +166,7 @@ class MetadataRepository @Inject constructor(
                 )
             },
         )
+        dao.markEpisodesFetched(tvId, season, System.currentTimeMillis())
     }
 
     private suspend fun runLogged(what: String, block: suspend () -> Unit) {
@@ -190,6 +223,7 @@ class MetadataRepository @Inject constructor(
         private const val TAG = "MetadataRepository"
         private const val CAST_SIZE = 8
         private const val NOT_FOUND_RETRY_MS = 7L * 24 * 60 * 60 * 1000
+        private const val SEASONS_REFRESH_MS = 7L * 24 * 60 * 60 * 1000
         /** TMDB's placeholder names for untranslated episodes: "1. epizód", "Episode 1". */
         private val GENERIC_EPISODE_NAME = Regex("""(?i)^(\d+\.\s*epizód|episode\s*\d+|\d+\.\s*rész)$""")
 
