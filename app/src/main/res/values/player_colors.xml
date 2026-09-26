@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The D2 palette for the View-based player controls (the Compose screens use ui/theme/Theme.kt). -->
+<resources>
+    <color name="player_accent">#FF8A65</color>
+    <color name="player_on_accent">#101820</color>
+    <color name="player_text">#EEF3F7</color>
+    <color name="player_text_secondary">#C9D5DE</color>
+    <color name="player_violet">#B3A4FF</color>
+    <color name="player_pill">#26FFFFFF</color>
+</resources>

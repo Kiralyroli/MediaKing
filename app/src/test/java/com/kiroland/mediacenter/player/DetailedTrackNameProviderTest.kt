@@ -12,6 +12,19 @@ class DetailedTrackNameProviderTest {
         DetailedTrackNameProvider.getTrackName(Format.Builder().apply(build).build())
 
     @Test
+    fun `a label that repeats the language is not shown twice`() {
+        assertEquals(
+            "Magyar · AAC · Sztereó",
+            name {
+                setSampleMimeType(MimeTypes.AUDIO_AAC)
+                setLanguage("hu")
+                setLabel("magyar")
+                setChannelCount(2)
+            },
+        )
+    }
+
+    @Test
     fun `embedded forced srt subtitle`() {
         assertEquals(
             "Magyar · Forced · SRT · Kényszerített",

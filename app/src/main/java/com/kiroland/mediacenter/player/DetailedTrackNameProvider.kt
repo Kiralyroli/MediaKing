@@ -29,7 +29,8 @@ object DetailedTrackNameProvider : TrackNameProvider {
             C.TRACK_TYPE_VIDEO -> videoParts(format, mime)
             else -> listOfNotNull(languageName(format.language), format.label)
         }
-        return parts.filterNot { it.isNullOrBlank() }.distinct().joinToString(" · ").ifEmpty { "Ismeretlen sáv" }
+        // A label that only repeats the language ("magyar" next to "Magyar") is dropped.
+        return parts.filterNot { it.isNullOrBlank() }.distinctBy { it!!.lowercase(HU) }.joinToString(" · ").ifEmpty { "Ismeretlen sáv" }
     }
 
     /** Subtitles parsed during extraction are re-labelled as Media3 cues; the original type is in `codecs`. */

@@ -1,0 +1,211 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The player's on-screen controls in the D2 look. Views with exo_ ids are driven by Media3's
+  PlayerControlView (play/pause icon, seeking, time bar, times); the player_ ones by PlayerActivity.
+-->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <View
+        android:id="@id/exo_controls_background"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@drawable/player_scrim" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top"
+        android:orientation="horizontal"
+        android:paddingStart="40dp"
+        android:paddingTop="26dp"
+        android:paddingEnd="40dp">
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/player_label"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:fontFamily="@font/manrope"
+                android:fontVariationSettings="'wght' 800"
+                android:letterSpacing="0.06"
+                android:textAllCaps="true"
+                android:textColor="@color/player_accent"
+                android:textSize="13sp" />
+
+            <TextView
+                android:id="@+id/player_title"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:ellipsize="end"
+                android:fontFamily="@font/space_grotesk"
+                android:fontVariationSettings="'wght' 700"
+                android:maxLines="1"
+                android:textColor="@color/player_text"
+                android:textSize="26sp" />
+        </LinearLayout>
+
+        <TextClock
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:fontFamily="@font/space_grotesk"
+            android:fontVariationSettings="'wght' 600"
+            android:format12Hour="HH:mm"
+            android:format24Hour="HH:mm"
+            android:textColor="@color/player_text"
+            android:textSize="20sp" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom"
+        android:orientation="vertical"
+        android:paddingStart="40dp"
+        android:paddingEnd="40dp"
+        android:paddingBottom="28dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <TextView
+                android:id="@id/exo_position"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:fontFamily="@font/space_grotesk"
+                android:fontVariationSettings="'wght' 600"
+                android:textColor="@color/player_text"
+                android:textSize="15sp" />
+
+            <androidx.media3.ui.DefaultTimeBar
+                android:id="@id/exo_progress"
+                android:background="@drawable/player_timebar"
+                android:paddingStart="10dp"
+                android:paddingEnd="10dp"
+                android:nextFocusDown="@id/exo_play_pause"
+                android:layout_width="0dp"
+                android:layout_height="30dp"
+                android:layout_marginStart="14dp"
+                android:layout_marginEnd="14dp"
+                android:layout_weight="1"
+                app:bar_height="8dp"
+                app:buffered_color="#59FFFFFF"
+                app:played_color="@color/player_accent"
+                app:scrubber_color="@color/player_text"
+                app:scrubber_dragged_size="22dp"
+                app:scrubber_enabled_size="18dp"
+                app:unplayed_color="#33FFFFFF" />
+
+            <TextView
+                android:id="@id/exo_duration"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:fontFamily="@font/space_grotesk"
+                android:fontVariationSettings="'wght' 600"
+                android:textColor="@color/player_text_secondary"
+                android:textSize="15sp" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <TextView
+                android:id="@id/exo_rew_with_amount"
+                android:nextFocusUp="@id/exo_progress"
+                style="@style/PlayerRound"
+                android:contentDescription="Vissza 10 másodpercet"
+                android:text="10" />
+
+            <ImageView
+                android:id="@id/exo_play_pause"
+                android:nextFocusUp="@id/exo_progress"
+                android:layout_width="66dp"
+                android:layout_height="66dp"
+                android:layout_marginStart="8dp"
+                android:layout_marginEnd="8dp"
+                android:background="@drawable/player_play"
+                android:contentDescription="Lejátszás / szünet"
+                android:focusable="true"
+                android:padding="17dp"
+                android:scaleType="fitCenter"
+                android:tint="@color/player_on_accent" />
+
+            <TextView
+                android:id="@id/exo_ffwd_with_amount"
+                android:nextFocusUp="@id/exo_progress"
+                style="@style/PlayerRound"
+                android:contentDescription="Előre 30 másodpercet"
+                android:text="30" />
+
+            <Space
+                android:layout_width="0dp"
+                android:layout_height="1dp"
+                android:layout_weight="1" />
+
+            <LinearLayout
+                android:id="@+id/player_audio"
+                android:nextFocusUp="@id/exo_progress"
+                style="@style/PlayerPill">
+
+                <TextView style="@style/PlayerPillLabel" android:text="Hang" />
+
+                <TextView android:id="@+id/player_audio_value" style="@style/PlayerPillValue" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/player_subtitle"
+                android:nextFocusUp="@id/exo_progress"
+                style="@style/PlayerPill">
+
+                <TextView style="@style/PlayerPillLabel" android:text="Felirat" />
+
+                <TextView android:id="@+id/player_subtitle_value" style="@style/PlayerPillValue" />
+            </LinearLayout>
+
+            <ImageView
+                android:id="@+id/player_settings"
+                android:nextFocusUp="@id/exo_progress"
+                android:layout_width="52dp"
+                android:layout_height="52dp"
+                android:layout_marginStart="10dp"
+                android:background="@drawable/player_round"
+                android:contentDescription="Beállítások"
+                android:focusable="true"
+                android:padding="14dp"
+                android:src="@drawable/exo_ic_settings"
+                android:tint="@color/player_pill_text" />
+
+            <TextView
+                android:id="@+id/player_next"
+                android:nextFocusUp="@id/exo_progress"
+                android:layout_width="wrap_content"
+                android:layout_height="52dp"
+                android:layout_marginStart="10dp"
+                android:background="@drawable/player_pill_light"
+                android:focusable="true"
+                android:fontFamily="@font/manrope"
+                android:fontVariationSettings="'wght' 800"
+                android:gravity="center"
+                android:paddingStart="20dp"
+                android:paddingEnd="20dp"
+                android:text="Következő rész ›"
+                android:textColor="@color/player_on_accent"
+                android:textSize="14sp"
+                android:visibility="gone" />
+        </LinearLayout>
+    </LinearLayout>
+</FrameLayout>

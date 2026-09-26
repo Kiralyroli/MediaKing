@@ -29,7 +29,13 @@ import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.ui.PlayerView
 import androidx.media3.ui.TrackSelectionDialogBuilder
+import com.kiroland.mediacenter.R
 import com.kiroland.mediacenter.data.library.LibraryRepository
+import com.kiroland.mediacenter.data.library.db.MediaEntity
+import com.kiroland.mediacenter.data.library.db.MediaKind
+import com.kiroland.mediacenter.data.metadata.MetadataRepository
+import kotlinx.coroutines.flow.first
+import android.widget.TextView
 import com.kiroland.mediacenter.data.addons.AddonRepository
 import com.kiroland.mediacenter.data.epg.EpgRepository
 import com.kiroland.mediacenter.data.settings.SettingsRepository
@@ -63,6 +69,7 @@ class PlayerActivity : ComponentActivity() {
     @Inject lateinit var epg: EpgRepository
     @Inject lateinit var smb: SmbClient
     @Inject lateinit var mediaFiles: MediaFiles
+    @Inject lateinit var metadata: MetadataRepository
 
     private lateinit var playerView: PlayerView
     private var player: ExoPlayer? = null
@@ -79,6 +86,8 @@ class PlayerActivity : ComponentActivity() {
 
     private var live: LiveRef? = null
     private var lastLiveRecoveryMs = 0L
+    /** The episode after the one playing, for the next-episode button. */
+    private var nextUp: MediaEntity? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -94,15 +103,10 @@ class PlayerActivity : ComponentActivity() {
         } else if (intent.getBooleanExtra(EXTRA_FROM_START, false)) {
             resumePositionMs = 0L
         }
-        playerView = PlayerView(this).apply {
-            keepScreenOn = true
-            setShowSubtitleButton(true)
-            setShowNextButton(false)
-            setShowPreviousButton(false)
-            controllerShowTimeoutMs = 4_000
-        }
+        // The controls are our own layout (res/layout/player_controls.xml) on Media3's controller.
+        playerView = layoutInflater.inflate(R.layout.player_view, null) as PlayerView
         setContentView(playerView)
-        installTrackMenus()
+        installControls()
         WindowCompat.getInsetsController(window, window.decorView).apply {
             hide(WindowInsetsCompat.Type.systemBars())
             systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
@@ -148,6 +152,9 @@ class PlayerActivity : ComponentActivity() {
             .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON)
             .setEnableDecoderFallback(true)
         val builder = ExoPlayer.Builder(this, renderersFactory)
+            // Matches the −10 / +30 buttons.
+            .setSeekBackIncrementMs(SEEK_BACK_MS)
+            .setSeekForwardIncrementMs(SEEK_FORWARD_MS)
         // An add-on may need headers (Referer, User-Agent) on the stream requests themselves.
         live?.let { addons.find(it.addonId)?.stream?.headers }?.takeIf { it.isNotEmpty() }?.let { headers ->
             val http = DefaultHttpDataSource.Factory().setDefaultRequestProperties(headers)
@@ -165,6 +172,7 @@ class PlayerActivity : ComponentActivity() {
             addListener(object : Player.Listener {
                 override fun onTracksChanged(tracks: Tracks) {
                     if (settings.current.autoSubtitles) autoSelectSubtitles(this@apply, tracks)
+                    showTracks(tracks)
                 }
 
                 override fun onPlayerError(error: PlaybackException) {
@@ -214,6 +222,8 @@ class PlayerActivity : ComponentActivity() {
         exoPlayer.prepare()
         exoPlayer.playWhenReady = true
         val onNow = channel?.let { epg.nowNext(ref.addonId, it).first?.title }
+        setHeader("Élő · ${channel?.name ?: ref.channelId}", onNow ?: channel?.name.orEmpty())
+        playerView.findViewById<View>(R.id.player_next).visibility = View.GONE
         val label = listOfNotNull(channel?.name ?: ref.channelId, onNow?.let { "Most: $it" }).joinToString("\n")
         Toast.makeText(this, label, Toast.LENGTH_SHORT).show()
     }
@@ -308,6 +318,7 @@ class PlayerActivity : ComponentActivity() {
             .setSubtitleConfigurations(subtitles)
             .build()
         resumePositionMs = startMs
+        showHeader(path)
         exoPlayer.setMediaItem(mediaItem, startMs)
         exoPlayer.prepare()
     }
@@ -341,41 +352,68 @@ class PlayerActivity : ComponentActivity() {
                 finish()
                 return@launch
             }
-            currentPath = next.path
-            Toast.makeText(
-                this@PlayerActivity,
-                "Következik: ${episodeCode(next.season, next.episode, next.episodeEnd)}",
-                Toast.LENGTH_LONG,
-            ).show()
-            load(exoPlayer, next.path, savedStart(next.path))
-            exoPlayer.playWhenReady = true
+            playEpisode(exoPlayer, next)
         }
     }
 
-    /**
-     * The built-in subtitle/settings popups name tracks with DefaultTrackNameProvider (language only) and
-     * offer no way to swap it, so both buttons open dialogs that use [DetailedTrackNameProvider] instead.
-     */
-    private fun installTrackMenus() {
-        fun view(id: Int): View? = playerView.findViewById(id)
-        val subtitle = view(androidx.media3.ui.R.id.exo_subtitle)
-        val settings = view(androidx.media3.ui.R.id.exo_settings)
-        subtitle?.setOnClickListener { showTrackDialog(C.TRACK_TYPE_TEXT) }
-        settings?.setOnClickListener { showSettingsMenu() }
+    /** The "next episode" button: keeps this one's position and moves on. */
+    private fun skipToNext() {
+        val exoPlayer = player ?: return
+        val next = nextUp ?: return
+        saveProgress(exoPlayer)
+        lifecycleScope.launch { playEpisode(exoPlayer, next) }
+    }
 
-        // The stock layout gives the D-pad no way from the centre buttons down to the bottom bar
-        // (it stops at the time bar), so wire the route explicitly: down to CC, up back to play/pause.
-        val playPause = androidx.media3.ui.R.id.exo_play_pause
-        val centre = listOf(
-            playPause,
-            androidx.media3.ui.R.id.exo_rew_with_amount,
-            androidx.media3.ui.R.id.exo_ffwd_with_amount,
-            androidx.media3.ui.R.id.exo_progress,
-        )
-        val down = subtitle?.id ?: settings?.id ?: return
-        centre.forEach { view(it)?.nextFocusDownId = down }
-        subtitle?.nextFocusUpId = playPause
-        settings?.nextFocusUpId = playPause
+    private suspend fun playEpisode(exoPlayer: ExoPlayer, next: MediaEntity) {
+        currentPath = next.path
+        Toast.makeText(this, "Következik: ${episodeCode(next.season, next.episode, next.episodeEnd)}", Toast.LENGTH_LONG).show()
+        load(exoPlayer, next.path, savedStart(next.path))
+        exoPlayer.playWhenReady = true
+    }
+
+    /** Series and episode (or film and year) over the controls; the next-episode button when there is one. */
+    private fun showHeader(path: String) {
+        lifecycleScope.launch {
+            val item = library.media(path).first() ?: return@launch
+            val media = item.media
+            if (media.kind == MediaKind.EPISODE) {
+                val tvId = item.metadata?.tmdbId
+                val name = tvId?.let { id ->
+                    metadata.episodes(id).first().firstOrNull { it.season == media.season && it.episode == media.episode }?.name
+                }
+                setHeader("${item.displayTitle} · ${episodeCode(media.season, media.episode, media.episodeEnd)}", name ?: media.fileName)
+                nextUp = library.nextEpisode(path)
+            } else {
+                setHeader(listOfNotNull("Film", item.displayYear?.toString()).joinToString(" · "), item.displayTitle)
+                nextUp = null
+            }
+            if (currentPath == path) playerView.findViewById<View>(R.id.player_next).visibility = if (nextUp != null) View.VISIBLE else View.GONE
+        }
+    }
+
+    private fun setHeader(label: String, title: String) {
+        playerView.findViewById<TextView>(R.id.player_label).text = label
+        playerView.findViewById<TextView>(R.id.player_title).text = title
+    }
+
+    /** What the audio and subtitle pills show: the selected tracks, named like in the pickers. */
+    private fun showTracks(tracks: Tracks) {
+        fun selected(type: Int) = tracks.groups.filter { it.type == type }.firstNotNullOfOrNull { group ->
+            (0 until group.length).firstOrNull { group.isTrackSelected(it) }?.let { group.getTrackFormat(it) }
+        }
+        val hasText = tracks.groups.any { it.type == C.TRACK_TYPE_TEXT }
+        playerView.findViewById<TextView>(R.id.player_audio_value).text =
+            selected(C.TRACK_TYPE_AUDIO)?.let { DetailedTrackNameProvider.getTrackName(it) } ?: "—"
+        playerView.findViewById<TextView>(R.id.player_subtitle_value).text =
+            selected(C.TRACK_TYPE_TEXT)?.let { DetailedTrackNameProvider.getTrackName(it) } ?: "Kikapcsolva"
+        playerView.findViewById<View>(R.id.player_subtitle).visibility = if (hasText) View.VISIBLE else View.GONE
+    }
+
+    private fun installControls() {
+        playerView.findViewById<View>(R.id.player_audio).setOnClickListener { showTrackDialog(C.TRACK_TYPE_AUDIO) }
+        playerView.findViewById<View>(R.id.player_subtitle).setOnClickListener { showTrackDialog(C.TRACK_TYPE_TEXT) }
+        playerView.findViewById<View>(R.id.player_settings).setOnClickListener { showSettingsMenu() }
+        playerView.findViewById<View>(R.id.player_next).setOnClickListener { skipToNext() }
     }
 
     /** Remote shortcuts: Menu opens the options, Captions/Audio open their pickers directly. */
@@ -459,6 +497,8 @@ class PlayerActivity : ComponentActivity() {
         private const val STATE_POSITION = "position"
         private const val STATE_PLAY_WHEN_READY = "playWhenReady"
         private const val PROGRESS_INTERVAL_MS = 10_000L
+        private const val SEEK_BACK_MS = 10_000L
+        private const val SEEK_FORWARD_MS = 30_000L
         private val DIALOG_THEME = android.R.style.Theme_Material_Dialog_Alert
         private val SHORTCUT_KEYS = setOf(
             KeyEvent.KEYCODE_MENU,

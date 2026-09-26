@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The big play/pause: coral disc, with a light ring when focused. -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:state_focused="true">
+        <layer-list>
+            <item><shape android:shape="oval"><solid android:color="@color/player_text" /></shape></item>
+            <item android:bottom="5dp" android:left="5dp" android:right="5dp" android:top="5dp">
+                <shape android:shape="oval"><solid android:color="@color/player_on_accent" /></shape>
+            </item>
+            <item android:bottom="8dp" android:left="8dp" android:right="8dp" android:top="8dp">
+                <shape android:shape="oval"><solid android:color="@color/player_accent" /></shape>
+            </item>
+        </layer-list>
+    </item>
+    <item android:bottom="8dp" android:left="8dp" android:right="8dp" android:top="8dp">
+        <shape android:shape="oval"><solid android:color="@color/player_accent" /></shape>
+    </item>
+</selector>
