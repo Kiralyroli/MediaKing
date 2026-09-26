@@ -3,7 +3,13 @@ package com.kiroland.mediacenter.data.addons
 import android.content.Context
 import android.util.Log
 import dagger.hilt.android.qualifiers.ApplicationContext
+import com.kiroland.mediacenter.di.ApplicationScope
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -20,6 +26,7 @@ import javax.inject.Singleton
 class AddonRepository @Inject constructor(
     @param:ApplicationContext context: Context,
     okHttp: OkHttpClient,
+    @param:ApplicationScope private val scope: CoroutineScope,
 ) {
     private val dir = File(context.filesDir, "addons").apply { mkdirs() }
     private val http = okHttp.newBuilder()
@@ -29,6 +36,20 @@ class AddonRepository @Inject constructor(
 
     private val _addons = MutableStateFlow(load())
     val addons: StateFlow<List<AddonManifest>> = _addons.asStateFlow()
+
+    /** Channels read from add-ons' M3U playlists, by add-on id, and the guide URL each playlist named. */
+    private val playlistChannels = MutableStateFlow<Map<String, List<AddonChannel>>>(emptyMap())
+    private val playlistGuides = mutableMapOf<String, String>()
+
+    /** Every add-on's channels: its own list plus its playlist's, by add-on id. */
+    val catalog: StateFlow<Map<String, List<AddonChannel>>> =
+        combine(_addons, playlistChannels) { addons, fromPlaylists ->
+            addons.associate { it.id to (it.channels + fromPlaylists[it.id].orEmpty()) }
+        }.stateIn(scope, SharingStarted.Eagerly, emptyMap())
+
+    init {
+        scope.launch { refreshPlaylists() }
+    }
 
     private val engine = AddonEngine { url, headers -> fetch(url, headers, MAX_PAGE_BYTES) }
 
@@ -41,6 +62,7 @@ class AddonRepository @Inject constructor(
         check(temp.renameTo(target) || (target.delete() && temp.renameTo(target))) { "Nem sikerült menteni" }
         _addons.value = (_addons.value.filterNot { it.id == addon.id } + addon).sortedBy { it.name.lowercase() }
         Log.i(TAG, "Installed add-on ${addon.id} v${addon.version}")
+        if (addon.playlist != null) scope.launch { refreshPlaylist(addon) }
         addon
     }
 
@@ -52,8 +74,29 @@ class AddonRepository @Inject constructor(
     @Synchronized
     fun remove(id: String): Boolean {
         val removed = File(dir, "$id.json").delete()
+        playlistChannels.value = playlistChannels.value - id
         _addons.value = _addons.value.filterNot { it.id == id }
         return removed
+    }
+
+    fun channels(addonId: String): List<AddonChannel> = catalog.value[addonId].orEmpty()
+
+    /** The add-on's own XMLTV guide, or the one its playlist header names. */
+    fun guideUrl(addon: AddonManifest): String? = addon.epg ?: playlistGuides[addon.id]
+
+    suspend fun refreshPlaylists() {
+        _addons.value.filter { it.playlist != null }.forEach { refreshPlaylist(it) }
+    }
+
+    private suspend fun refreshPlaylist(addon: AddonManifest) {
+        val url = addon.playlist ?: return
+        runCatching { M3uParser.parse(fetch(url, addon.headers, MAX_PLAYLIST_BYTES)) }
+            .onSuccess { playlist ->
+                playlist.guideUrl?.let { playlistGuides[addon.id] = it }
+                playlistChannels.value = playlistChannels.value + (addon.id to playlist.channels)
+                Log.i(TAG, "Playlist of ${addon.id}: ${playlist.channels.size} channels")
+            }
+            .onFailure { Log.w(TAG, "Playlist of ${addon.id} failed: ${it.message}") }
     }
 
     fun find(addonId: String): AddonManifest? = _addons.value.firstOrNull { it.id == addonId }
@@ -65,7 +108,7 @@ class AddonRepository @Inject constructor(
     /** @throws AddonException when the add-on or channel is gone, or a step fails. */
     suspend fun resolve(addonId: String, channelId: String): String {
         val addon = find(addonId) ?: throw AddonException("A kiegészítő már nincs telepítve")
-        val channel = addon.channels.firstOrNull { it.id == channelId } ?: throw AddonException("Ismeretlen csatorna")
+        val channel = channels(addonId).firstOrNull { it.id == channelId } ?: throw AddonException("Ismeretlen csatorna")
         return engine.resolve(addon, channel)
     }
 
@@ -93,5 +136,6 @@ class AddonRepository @Inject constructor(
         const val TAG = "AddonRepository"
         const val MAX_ADDON_BYTES = 256L * 1024
         const val MAX_PAGE_BYTES = 5L * 1024 * 1024
+        const val MAX_PLAYLIST_BYTES = 20L * 1024 * 1024
     }
 }

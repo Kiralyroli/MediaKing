@@ -188,7 +188,7 @@ class PlayerActivity : ComponentActivity() {
 
     private suspend fun loadLive(exoPlayer: ExoPlayer, ref: LiveRef) {
         val addon = addons.find(ref.addonId)
-        val channel = addon?.channels?.firstOrNull { it.id == ref.channelId }
+        val channel = addons.channels(ref.addonId).firstOrNull { it.id == ref.channelId }
         val result = runCatching { addons.resolve(ref.addonId, ref.channelId) }
         if (player !== exoPlayer || live != ref) return // Released or zapped meanwhile.
         val url = result.getOrElse { error ->
@@ -232,7 +232,7 @@ class PlayerActivity : ComponentActivity() {
         }
         if (event.action != KeyEvent.ACTION_UP) return true
         // Zapping stays within the add-on the channel came from, in its own order.
-        val channels = addons.find(current.addonId)?.channels ?: return true
+        val channels = addons.channels(current.addonId).takeIf { it.isNotEmpty() } ?: return true
         val index = channels.indexOfFirst { it.id == current.channelId }.coerceAtLeast(0)
         val next = LiveRef(current.addonId, channels[(index + step).mod(channels.size)].id)
         val exoPlayer = player ?: return true

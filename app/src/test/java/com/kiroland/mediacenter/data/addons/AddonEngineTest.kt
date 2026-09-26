@@ -103,7 +103,7 @@ class AddonEngineTest {
         fun error(json: String) = AddonParser.parse(json).exceptionOrNull()?.message.orEmpty()
         assertTrue(error("not json").startsWith("Nem érvényes kiegészítő-fájl"))
         assertTrue(error("""{"id":"Bad Id","name":"x","channels":[{"id":"a","name":"A","url":"https://x"}]}""").startsWith("Az azonosító"))
-        assertEquals("Nincs egyetlen csatorna sem", error("""{"id":"ok","name":"x","channels":[]}"""))
+        assertEquals("Nincs egyetlen csatorna sem (se channels, se playlist)", error("""{"id":"ok","name":"x","channels":[]}"""))
         assertEquals("A: nincs se url, se resolve lépés", error("""{"id":"ok","name":"x","channels":[{"id":"a","name":"A"}]}"""))
         assertTrue(
             error("""{"id":"ok","name":"x","channels":[{"id":"a","name":"A"}],"resolve":[{"get":"https://x","regex":"y"}]}""")

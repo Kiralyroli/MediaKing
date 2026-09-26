@@ -83,6 +83,7 @@ dependencies {
     implementation(libs.ktor.server.core)
     implementation(libs.ktor.server.cio)
     implementation(libs.zxing.core)
+    implementation(libs.tvprovider)
 
     implementation(libs.media3.exoplayer)
     implementation(libs.media3.ui)
@@ -94,4 +95,6 @@ dependencies {
     implementation(libs.kotlinx.coroutines.android)
 
     testImplementation(libs.junit)
+    // XmlPullParser implementation for JVM tests (Android provides its own on the device).
+    testImplementation(libs.kxml2)
 }

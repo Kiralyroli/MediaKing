@@ -7,6 +7,7 @@ import com.kiroland.mediacenter.data.library.db.MediaKind
 import com.kiroland.mediacenter.data.library.db.MediaWithProgress
 import com.kiroland.mediacenter.data.library.db.MetadataEntity
 import com.kiroland.mediacenter.data.library.db.WatchProgressEntity
+import com.kiroland.mediacenter.data.watchnext.WatchNextPublisher
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
@@ -33,6 +34,7 @@ data class ContinueItem(val item: MediaWithProgress, val isNextUp: Boolean, val 
 class LibraryRepository @Inject constructor(
     private val dao: LibraryDao,
     private val scanner: LibraryScanner,
+    private val watchNext: WatchNextPublisher,
 ) {
     val folders: Flow<List<LibraryFolderEntity>> = dao.observeFolders()
     private val collator = Collator.getInstance(Locale.forLanguageTag("hu-HU"))
@@ -101,6 +103,7 @@ class LibraryRepository @Inject constructor(
         if (durationMs <= 0) return
         val finished = positionMs >= durationMs * FINISHED_FRACTION || durationMs - positionMs < FINISHED_REMAINING_MS
         dao.upsertProgress(WatchProgressEntity(path, positionMs, durationMs, finished, System.currentTimeMillis()))
+        watchNext.update(path)
     }
 
     suspend fun markWatched(path: String, watched: Boolean) {
@@ -110,6 +113,7 @@ class LibraryRepository @Inject constructor(
         } else {
             dao.deleteProgress(path)
         }
+        watchNext.update(path)
     }
 
     suspend fun nextEpisode(path: String): MediaEntity? {

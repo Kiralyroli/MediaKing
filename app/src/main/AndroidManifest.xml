@@ -12,6 +12,8 @@
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+    <!-- Publishing our own "continue watching" items to the home screen's Watch Next row. -->
+    <uses-permission android:name="com.android.providers.tv.permission.WRITE_EPG_DATA" />
 
     <!-- Apps this one opens (Android 11+ package visibility; harmless on the Android 10 target). -->
     <queries>
@@ -58,6 +60,18 @@
             android:configChanges="keyboard|keyboardHidden|navigation|screenSize|smallestScreenSize|screenLayout"
             android:exported="false"
             android:screenOrientation="landscape" />
+
+        <!-- Opens Watch Next items from the TV home screen. -->
+        <activity
+            android:name=".data.watchnext.WatchNextActivity"
+            android:exported="true"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:scheme="mymedia" android:host="play" />
+            </intent-filter>
+        </activity>
 
         <!-- Wi-Fi upload server: runs in the foreground while the user has it switched on. -->
         <service

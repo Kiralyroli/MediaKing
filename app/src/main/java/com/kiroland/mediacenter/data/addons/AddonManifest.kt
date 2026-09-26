@@ -16,7 +16,11 @@ data class AddonManifest(
     val description: String? = null,
     /** Default headers for every `get` step (e.g. User-Agent). */
     val headers: Map<String, String> = emptyMap(),
-    val channels: List<AddonChannel>,
+    val channels: List<AddonChannel> = emptyList(),
+    /** An M3U playlist whose entries become channels (in addition to [channels]). */
+    val playlist: String? = null,
+    /** An XMLTV programme guide (optionally .gz) for now / next information; matched by `epgId`. */
+    val epg: String? = null,
     /** Applied to channels without a fixed `url`. */
     val resolve: List<ResolveStep> = emptyList(),
     val stream: StreamOptions? = null,
@@ -34,6 +38,10 @@ data class AddonChannel(
     val builtin: String? = null,
     /** A fixed stream URL; no resolve steps needed. */
     val url: String? = null,
+    /** Tile image (URL). */
+    val logo: String? = null,
+    /** Channel id in the add-on's XMLTV guide. */
+    val epgId: String? = null,
     /** Extra template values for the resolve steps, e.g. {"stream": "news-hd"} → {stream}. */
     val vars: Map<String, String> = emptyMap(),
 )
@@ -81,7 +89,9 @@ object AddonParser {
     private fun validate(m: AddonManifest) {
         require(ID.matches(m.id)) { "Az azonosító csak kisbetűt, számot, pontot, kötőjelet tartalmazhat: ${m.id}" }
         require(m.name.isNotBlank()) { "Hiányzik a név" }
-        require(m.channels.isNotEmpty()) { "Nincs egyetlen csatorna sem" }
+        require(m.channels.isNotEmpty() || m.playlist != null) { "Nincs egyetlen csatorna sem (se channels, se playlist)" }
+        require(m.playlist == null || isHttp(m.playlist)) { "A playlist címe csak http(s) lehet" }
+        require(m.epg == null || isHttp(m.epg)) { "Az epg címe csak http(s) lehet" }
         val ids = m.channels.map { it.id }
         require(ids.size == ids.toSet().size) { "Ismétlődő csatorna-azonosító" }
         m.channels.forEach { c ->
