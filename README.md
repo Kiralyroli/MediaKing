@@ -2,7 +2,7 @@
 
 ![MediaKing](docs/brand/mediaking-banner.png)
 
-[![CI](https://github.com/Kiralyroli/android-tv-media-center/actions/workflows/ci.yml/badge.svg)](https://github.com/Kiralyroli/android-tv-media-center/actions/workflows/ci.yml)
+[![CI](https://github.com/Kiralyroli/MediaKing/actions/workflows/ci.yml/badge.svg)](https://github.com/Kiralyroli/MediaKing/actions/workflows/ci.yml)
 
 Saját médiaközpont Android TV-re: a TV-re kötött USB-s HDD filmjeit és sorozatait rendezett,
 posztereket és magyar leírásokat mutató médiatárrá alakítja, és saját lejátszóval játssza le őket.
