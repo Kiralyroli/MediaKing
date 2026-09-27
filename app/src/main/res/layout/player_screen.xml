@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The player plus what floats over it with or without the controls: skip and next-episode prompts. -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@android:color/black">
+
+    <include layout="@layout/player_view" />
+
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|end"
+        android:layout_marginEnd="40dp"
+        android:layout_marginBottom="150dp"
+        android:gravity="end"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/player_skip"
+            android:layout_width="wrap_content"
+            android:layout_height="52dp"
+            android:background="@drawable/player_skip"
+            android:fontFamily="@font/manrope"
+            android:fontVariationSettings="'wght' 800"
+            android:gravity="center"
+            android:paddingStart="24dp"
+            android:paddingEnd="24dp"
+            android:textColor="@color/player_on_accent"
+            android:textSize="16sp"
+            android:visibility="gone" />
+
+        <LinearLayout
+            android:id="@+id/player_next_card"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="@drawable/player_card"
+            android:minWidth="300dp"
+            android:orientation="vertical"
+            android:paddingStart="22dp"
+            android:paddingTop="16dp"
+            android:paddingEnd="22dp"
+            android:paddingBottom="16dp"
+            android:visibility="gone">
+
+            <TextView
+                android:id="@+id/player_next_label"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:fontFamily="@font/manrope"
+                android:fontVariationSettings="'wght' 800"
+                android:letterSpacing="0.06"
+                android:textAllCaps="true"
+                android:textColor="@color/player_accent"
+                android:textSize="12sp" />
+
+            <TextView
+                android:id="@+id/player_next_title"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:ellipsize="end"
+                android:fontFamily="@font/space_grotesk"
+                android:fontVariationSettings="'wght' 700"
+                android:maxWidth="420dp"
+                android:maxLines="1"
+                android:textColor="@color/player_text"
+                android:textSize="20sp" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:fontFamily="@font/manrope"
+                android:text="OK: indítás most · Vissza: bezárás"
+                android:textColor="@color/player_text_secondary"
+                android:textSize="12sp" />
+        </LinearLayout>
+    </LinearLayout>
+</FrameLayout>

@@ -34,6 +34,9 @@ import com.kiroland.mediacenter.data.library.LibraryRepository
 import com.kiroland.mediacenter.data.library.db.MediaEntity
 import com.kiroland.mediacenter.data.library.db.MediaKind
 import com.kiroland.mediacenter.data.metadata.MetadataRepository
+import com.kiroland.mediacenter.data.segments.Segment
+import com.kiroland.mediacenter.data.segments.SegmentRepository
+import com.kiroland.mediacenter.data.segments.SegmentType
 import kotlinx.coroutines.flow.first
 import android.widget.TextView
 import com.kiroland.mediacenter.data.addons.AddonRepository
@@ -70,6 +73,7 @@ class PlayerActivity : ComponentActivity() {
     @Inject lateinit var smb: SmbClient
     @Inject lateinit var mediaFiles: MediaFiles
     @Inject lateinit var metadata: MetadataRepository
+    @Inject lateinit var segmentRepository: SegmentRepository
 
     private lateinit var playerView: PlayerView
     private var player: ExoPlayer? = null
@@ -88,6 +92,13 @@ class PlayerActivity : ComponentActivity() {
     private var lastLiveRecoveryMs = 0L
     /** The episode after the one playing, for the next-episode button. */
     private var nextUp: MediaEntity? = null
+    private var nextTitle: String? = null
+    /** Intro, recap and credits of the file playing (see [SegmentRepository]). */
+    private var segments: List<Segment> = emptyList()
+    private var segmentJob: Job? = null
+    /** The next-episode card was closed with Back: it stays away for this episode. */
+    private var nextCardDismissed = false
+    private var countdownStartedAt: Long? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -104,8 +115,8 @@ class PlayerActivity : ComponentActivity() {
             resumePositionMs = 0L
         }
         // The controls are our own layout (res/layout/player_controls.xml) on Media3's controller.
-        playerView = layoutInflater.inflate(R.layout.player_view, null) as PlayerView
-        setContentView(playerView)
+        setContentView(R.layout.player_screen)
+        playerView = findViewById(R.id.player_view)
         installControls()
         WindowCompat.getInsetsController(window, window.decorView).apply {
             hide(WindowInsetsCompat.Type.systemBars())
@@ -135,6 +146,7 @@ class PlayerActivity : ComponentActivity() {
     }
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        if (handlePrompts(event)) return true
         if (handleShortcut(event)) return true
         if (handleZapping(event)) return true
         // Media keys and D-pad go to the player UI first (shows the controller, seeks, toggles).
@@ -200,6 +212,7 @@ class PlayerActivity : ComponentActivity() {
             load(exoPlayer, currentPath, start)
             exoPlayer.playWhenReady = playWhenReady
             startProgressUpdates(exoPlayer)
+            startSegmentWatch(exoPlayer)
         }
     }
 
@@ -372,23 +385,134 @@ class PlayerActivity : ComponentActivity() {
     }
 
     /** Series and episode (or film and year) over the controls; the next-episode button when there is one. */
+    /** Series and episode (or film and year) over the controls; the next-episode button when there is one. */
     private fun showHeader(path: String) {
+        segments = emptyList()
+        nextCardDismissed = false
+        countdownStartedAt = null
         lifecycleScope.launch {
             val item = library.media(path).first() ?: return@launch
             val media = item.media
+            val tvId = item.metadata?.tmdbId
+            suspend fun episodeName(season: Int?, episode: Int?) = tvId?.let { id ->
+                metadata.episodes(id).first().firstOrNull { it.season == season && it.episode == episode }?.name
+            }
             if (media.kind == MediaKind.EPISODE) {
-                val tvId = item.metadata?.tmdbId
-                val name = tvId?.let { id ->
-                    metadata.episodes(id).first().firstOrNull { it.season == media.season && it.episode == media.episode }?.name
-                }
-                setHeader("${item.displayTitle} · ${episodeCode(media.season, media.episode, media.episodeEnd)}", name ?: media.fileName)
+                val code = episodeCode(media.season, media.episode, media.episodeEnd)
+                setHeader("${item.displayTitle} · $code", episodeName(media.season, media.episode) ?: media.fileName)
                 nextUp = library.nextEpisode(path)
+                nextTitle = nextUp?.let { next ->
+                    listOfNotNull(episodeCode(next.season, next.episode, next.episodeEnd), episodeName(next.season, next.episode))
+                        .joinToString(" · ")
+                }
             } else {
                 setHeader(listOfNotNull("Film", item.displayYear?.toString()).joinToString(" · "), item.displayTitle)
                 nextUp = null
+                nextTitle = null
             }
-            if (currentPath == path) playerView.findViewById<View>(R.id.player_next).visibility = if (nextUp != null) View.VISIBLE else View.GONE
+            if (currentPath != path) return@launch
+            playerView.findViewById<View>(R.id.player_next).visibility = if (nextUp != null) View.VISIBLE else View.GONE
+            val found = segmentRepository.segmentsFor(item)
+            if (currentPath == path) segments = found
         }
+    }
+
+    /**
+     * Twice a second: offer to skip an intro or recap while one plays, and from the credits on (or the
+     * last half minute when their start is unknown) show the next episode, counting down when
+     * "next episode automatically" is on.
+     */
+    private fun startSegmentWatch(exoPlayer: ExoPlayer) {
+        segmentJob?.cancel()
+        segmentJob = lifecycleScope.launch {
+            while (isActive) {
+                delay(SEGMENT_TICK_MS)
+                if (player !== exoPlayer || live != null) continue
+                val duration = exoPlayer.duration.takeIf { it != C.TIME_UNSET && it > 0 } ?: continue
+                val position = exoPlayer.currentPosition
+                showSkip(skippable(position, duration))
+                updateNextCard(exoPlayer, position, duration)
+            }
+        }
+    }
+
+    /** An intro, recap or preview playing now with more than a few seconds of it left. */
+    private fun skippable(position: Long, duration: Long): Segment? = segments.firstOrNull {
+        it.type != SegmentType.CREDITS && it.contains(position) && (it.endMs ?: duration) - position > SKIP_MIN_LEFT_MS
+    }
+
+    private fun showSkip(segment: Segment?) {
+        val view = findViewById<TextView>(R.id.player_skip)
+        if (segment == null) {
+            view.visibility = View.GONE
+            return
+        }
+        view.text = when (segment.type) {
+            SegmentType.RECAP -> "Előzmények átugrása"
+            SegmentType.PREVIEW -> "Előzetes átugrása"
+            else -> "Főcím átugrása"
+        }
+        view.visibility = View.VISIBLE
+    }
+
+    private fun updateNextCard(exoPlayer: ExoPlayer, position: Long, duration: Long) {
+        val card = findViewById<View>(R.id.player_next_card)
+        val creditsStart = segments.firstOrNull { it.type == SegmentType.CREDITS }?.startMs ?: (duration - NEXT_FALLBACK_MS)
+        val show = nextUp != null && !nextCardDismissed && position >= creditsStart && duration - position > 1_000
+        if (!show) {
+            card.visibility = View.GONE
+            countdownStartedAt = null
+            return
+        }
+        card.visibility = View.VISIBLE
+        findViewById<TextView>(R.id.player_next_title).text = nextTitle.orEmpty()
+        val label = findViewById<TextView>(R.id.player_next_label)
+        if (!settings.current.autoNextEpisode || !exoPlayer.isPlaying) {
+            label.text = "Következő rész"
+            countdownStartedAt = null
+            return
+        }
+        val started = countdownStartedAt ?: System.currentTimeMillis().also { countdownStartedAt = it }
+        val left = ((NEXT_COUNTDOWN_MS - (System.currentTimeMillis() - started) + 999) / 1000).coerceAtLeast(0)
+        label.text = "Következő rész · $left mp"
+        if (left == 0L) playNextFromCredits(exoPlayer)
+    }
+
+    /** From the credits on the episode counts as watched. */
+    private fun playNextFromCredits(exoPlayer: ExoPlayer) {
+        val next = nextUp ?: return
+        val finished = currentPath
+        val duration = exoPlayer.duration.takeIf { it != C.TIME_UNSET }
+        findViewById<View>(R.id.player_next_card).visibility = View.GONE
+        nextUp = null
+        lifecycleScope.launch {
+            if (duration != null) library.saveProgress(finished, duration, duration)
+            playEpisode(exoPlayer, next)
+        }
+    }
+
+    /** While the controls are hidden: OK skips or starts the next episode, Back closes the card. */
+    private fun handlePrompts(event: KeyEvent): Boolean {
+        if (playerView.isControllerFullyVisible) return false
+        val exoPlayer = player ?: return false
+        val skip = findViewById<View>(R.id.player_skip).visibility == View.VISIBLE
+        val card = findViewById<View>(R.id.player_next_card).visibility == View.VISIBLE
+        val ok = event.keyCode == KeyEvent.KEYCODE_DPAD_CENTER || event.keyCode == KeyEvent.KEYCODE_ENTER
+        val back = event.keyCode == KeyEvent.KEYCODE_BACK
+        if (!(ok && (skip || card)) && !(back && card)) return false
+        if (event.action != KeyEvent.ACTION_UP) return true
+        when {
+            back -> {
+                nextCardDismissed = true
+                findViewById<View>(R.id.player_next_card).visibility = View.GONE
+            }
+            card -> playNextFromCredits(exoPlayer)
+            else -> skippable(exoPlayer.currentPosition, exoPlayer.duration)?.let { segment ->
+                exoPlayer.seekTo(segment.endMs ?: exoPlayer.duration)
+                showSkip(null)
+            }
+        }
+        return true
     }
 
     private fun setHeader(label: String, title: String) {
@@ -475,6 +599,7 @@ class PlayerActivity : ComponentActivity() {
 
     private fun releasePlayer() {
         progressJob?.cancel()
+        segmentJob?.cancel()
         player?.let {
             if (it.playbackState != Player.STATE_IDLE && it.playbackState != Player.STATE_ENDED) saveProgress(it)
             resumePositionMs = it.currentPosition
@@ -498,6 +623,10 @@ class PlayerActivity : ComponentActivity() {
         private const val STATE_PLAY_WHEN_READY = "playWhenReady"
         private const val PROGRESS_INTERVAL_MS = 10_000L
         private const val SEEK_BACK_MS = 10_000L
+        private const val SEGMENT_TICK_MS = 500L
+        private const val SKIP_MIN_LEFT_MS = 3_000L
+        private const val NEXT_FALLBACK_MS = 30_000L
+        private const val NEXT_COUNTDOWN_MS = 10_000L
         private const val SEEK_FORWARD_MS = 30_000L
         private val DIALOG_THEME = android.R.style.Theme_Material_Dialog_Alert
         private val SHORTCUT_KEYS = setOf(

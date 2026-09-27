@@ -42,6 +42,32 @@ class MediaFiles @Inject constructor(private val smb: SmbClient) {
         }
     }
 
+    /** Up to [length] bytes at [offset]; fewer at the end of the file. */
+    fun readRange(path: String, offset: Long, length: Int): ByteArray {
+        val buffer = ByteArray(length)
+        var filled = 0
+        val smbPath = SmbPath.parse(path)
+        if (smbPath == null) {
+            java.io.RandomAccessFile(path, "r").use { file ->
+                file.seek(offset)
+                while (filled < length) {
+                    val n = file.read(buffer, filled, length - filled)
+                    if (n <= 0) break
+                    filled += n
+                }
+            }
+        } else {
+            smb.open(smbPath).use { file ->
+                while (filled < length && offset + filled < file.length) {
+                    val n = file.read(offset + filled, buffer, filled, length - filled)
+                    if (n <= 0) break
+                    filled += n
+                }
+            }
+        }
+        return if (filled == length) buffer else buffer.copyOf(filled)
+    }
+
     companion object {
         fun isNetwork(path: String) = SmbPath.isSmb(path)
         fun parentOf(path: String): String = path.trimEnd('/').substringBeforeLast('/')

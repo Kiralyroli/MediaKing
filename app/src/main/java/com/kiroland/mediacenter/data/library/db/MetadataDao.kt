@@ -77,6 +77,14 @@ interface MetadataDao {
     @Query("DELETE FROM season_metadata")
     suspend fun clearSeasons()
 
+    // --- Skippable segments from TheIntroDB ---
+
+    @Query("SELECT * FROM segment_cache WHERE `key` = :key")
+    suspend fun cachedSegments(key: String): SegmentCacheEntity?
+
+    @Upsert
+    suspend fun cacheSegments(entry: SegmentCacheEntity)
+
     @Query("DELETE FROM metadata")
     suspend fun clearMetadata()
 

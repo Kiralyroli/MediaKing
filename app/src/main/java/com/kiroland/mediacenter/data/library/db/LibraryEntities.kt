@@ -84,6 +84,14 @@ data class SeasonMetadataEntity(
     val episodesFetchedAt: Long? = null,
 )
 
+/** TheIntroDB's answer for one episode or film ("tv:1981:2:3", "movie:550"); an empty list = not in it. */
+@Entity(tableName = "segment_cache")
+data class SegmentCacheEntity(
+    @PrimaryKey val key: String,
+    val segmentsJson: String,
+    val fetchedAt: Long,
+)
+
 /** Keyed by path, not by media row, so progress survives rescans and a drive being unplugged. */
 @Entity(tableName = "watch_progress")
 data class WatchProgressEntity(
