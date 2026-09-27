@@ -53,12 +53,12 @@ class TransferService : Service() {
         if (wifiLock == null) {
             @Suppress("DEPRECATION") // WIFI_MODE_FULL_HIGH_PERF is the right mode for sustained transfers on API 29.
             wifiLock = getSystemService(WifiManager::class.java)
-                .createWifiLock(WifiManager.WIFI_MODE_FULL_HIGH_PERF, "MyMedia:upload")
+                .createWifiLock(WifiManager.WIFI_MODE_FULL_HIGH_PERF, "MediaKing:upload")
                 .apply { setReferenceCounted(false); acquire() }
         }
         if (wakeLock == null) {
             wakeLock = getSystemService(PowerManager::class.java)
-                .newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "MyMedia:upload")
+                .newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "MediaKing:upload")
                 .apply { setReferenceCounted(false); acquire() }
         }
     }

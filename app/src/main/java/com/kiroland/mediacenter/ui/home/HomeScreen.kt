@@ -40,6 +40,7 @@ import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.withStyle
@@ -50,6 +51,7 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Surface
 import androidx.tv.material3.Text
 import com.kiroland.mediacenter.data.storage.StorageVolumeInfo
+import com.kiroland.mediacenter.R
 import com.kiroland.mediacenter.ui.addons.AddonsScreen
 import com.kiroland.mediacenter.ui.diagnostics.DiagnosticsScreen
 import com.kiroland.mediacenter.ui.library.LibraryHomeScreen
@@ -110,15 +112,24 @@ fun HomeScreen(
                 .focusGroup(),
             verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
-            Text(
-                buildAnnotatedString {
-                    append("my")
-                    withStyle(SpanStyle(color = MaterialTheme.colorScheme.primary)) { append("·") }
-                    append("media")
-                },
-                style = MaterialTheme.typography.headlineSmall,
-                modifier = Modifier.padding(start = 10.dp, bottom = 10.dp),
-            )
+            Row(
+                modifier = Modifier.padding(start = 8.dp, bottom = 10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                androidx.compose.foundation.Image(
+                    painter = painterResource(R.drawable.mediaking_mark),
+                    contentDescription = null,
+                    modifier = Modifier.size(width = 30.dp, height = 25.dp),
+                )
+                Text(
+                    buildAnnotatedString {
+                        append("Media")
+                        withStyle(SpanStyle(color = MaterialTheme.colorScheme.primary)) { append("King") }
+                    },
+                    style = MaterialTheme.typography.headlineSmall,
+                )
+            }
             HomeSection.entries.filter { it.inDrawer }.forEach { item ->
                 NavPill(
                     item = item,

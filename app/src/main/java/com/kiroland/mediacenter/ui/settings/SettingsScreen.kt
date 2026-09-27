@@ -149,7 +149,7 @@ fun SettingsScreen(onOpenStorage: () -> Unit, onOpenDiagnostics: () -> Unit, vie
         item { Action("Diagnosztika", "Készülék, kodekek, tárhelyek írástesztje.", onClick = onOpenDiagnostics) }
         item {
             Action(
-                "My Media ${BuildConfig.VERSION_NAME}",
+                "MediaKing ${BuildConfig.VERSION_NAME}",
                 "TMDB: " + if (viewModel.tmdbConfigured) "beállítva" else "nincs token (local.properties: tmdb.token)",
             ) {}
         }

@@ -1,9 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- MediaKing: a crown with a play mark, coral on deep blue-grey. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <path android:fillColor="#0E1116" android:pathData="M0,0h108v108h-108z" />
-    <path android:fillColor="#4FA3FF" android:pathData="M42,32L42,76L78,54Z" />
+    <path android:fillColor="#101820"
+        android:pathData="M24,0h60a24,24 0,0 1,24 24v60a24,24 0,0 1,-24 24h-60a24,24 0,0 1,-24 -24v-60a24,24 0,0 1,24 -24z" />
+    <path android:fillColor="#FF8A65"
+        android:pathData="M24,74L19,38L38,53L54,29L70,53L89,38L84,74Z" />
+    <path android:fillColor="#FF8A65"
+        android:pathData="M14,36a5,5 0,1 0,10 0a5,5 0,1 0,-10 0zM49,27a5,5 0,1 0,10 0a5,5 0,1 0,-10 0zM84,36a5,5 0,1 0,10 0a5,5 0,1 0,-10 0z" />
+    <path android:fillColor="#FF8A65"
+        android:pathData="M27.5,78h53a3.5,3.5 0,0 1,0 7h-53a3.5,3.5 0,0 1,0 -7z" />
+    <path android:fillColor="#101820" android:pathData="M48,52L48,70L64,61Z" />
 </vector>

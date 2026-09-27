@@ -1,4 +1,6 @@
-# My Media – Android TV Media Center
+# MediaKing – Android TV Media Center
+
+![MediaKing](docs/brand/mediaking-banner.png)
 
 [![CI](https://github.com/Kiralyroli/android-tv-media-center/actions/workflows/ci.yml/badge.svg)](https://github.com/Kiralyroli/android-tv-media-center/actions/workflows/ci.yml)
 

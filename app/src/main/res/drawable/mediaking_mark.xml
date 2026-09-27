@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The MediaKing crown on its own (no background), for the side menu. The play mark is cut out. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="80dp"
+    android:height="66dp"
+    android:viewportWidth="80"
+    android:viewportHeight="66">
+    <path android:fillColor="#FF8A65" android:fillType="evenOdd"
+        android:pathData="M10,52L5,16L24,31L40,7L56,31L75,16L70,52ZM34,30L34,48L50,39Z" />
+    <path android:fillColor="#FF8A65"
+        android:pathData="M0,14a5,5 0,1 0,10 0a5,5 0,1 0,-10 0zM35,5a5,5 0,1 0,10 0a5,5 0,1 0,-10 0zM70,14a5,5 0,1 0,10 0a5,5 0,1 0,-10 0z" />
+    <path android:fillColor="#FF8A65"
+        android:pathData="M13.5,56h53a3.5,3.5 0,0 1,0 7h-53a3.5,3.5 0,0 1,0 -7z" />
+</vector>

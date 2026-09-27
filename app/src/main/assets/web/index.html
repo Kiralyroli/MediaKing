@@ -3,23 +3,23 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>My Media – feltöltés</title>
+<title>MediaKing – feltöltés</title>
 <style>
   :root {
-    --bg: #0e1116; --surface: #181d26; --surface2: #232a36; --text: #e6e9ef; --muted: #a9b2c3;
-    --accent: #4fa3ff; --ok: #5bd18b; --warn: #ffc857; --err: #ff6b6b; --radius: 12px;
+    --bg: #101820; --surface: #16222c; --surface2: #243642; --text: #eef3f7; --muted: #a9bdca;
+    --accent: #ff8a65; --ok: #5bd18b; --warn: #ffc857; --err: #ff6b6b; --radius: 12px;
   }
   * { box-sizing: border-box; }
   body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
   header { padding: 16px; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid var(--surface2); }
-  header .logo { width: 32px; height: 32px; border-radius: 8px; background: var(--surface2); display: grid; place-items: center; color: var(--accent); font-size: 18px; }
+  header .logo { width: 36px; height: 36px; display: block; }
   header h1 { font-size: 18px; margin: 0; }
   header .device { color: var(--muted); font-size: 13px; margin-left: auto; text-align: right; }
   main { max-width: 900px; margin: 0 auto; padding: 16px; display: grid; gap: 16px; }
   section { background: var(--surface); border-radius: var(--radius); padding: 16px; }
   h2 { font-size: 15px; margin: 0 0 12px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: .04em; }
   button, .button { font: inherit; border: 0; border-radius: 999px; padding: 9px 16px; background: var(--surface2); color: var(--text); cursor: pointer; }
-  button.primary, .button.primary { background: var(--accent); color: #00213f; font-weight: 600; }
+  button.primary, .button.primary { background: var(--accent); color: #101820; font-weight: 600; }
   button:disabled { opacity: .5; cursor: default; }
   button.small { padding: 4px 12px; font-size: 13px; }
   button.danger { background: transparent; color: var(--err); border: 1px solid color-mix(in srgb, var(--err) 45%, transparent); }
@@ -58,8 +58,8 @@
 </head>
 <body>
 <header>
-  <div class="logo">▶</div>
-  <h1>My Media – feltöltés</h1>
+  <svg class="logo" viewBox="0 0 108 108" aria-hidden="true"><rect width="108" height="108" rx="24" fill="#16222c"/><path fill="#ff8a65" d="M24,74 L19,38 L38,53 L54,29 L70,53 L89,38 L84,74 Z"/><circle cx="19" cy="36" r="5" fill="#ff8a65"/><circle cx="54" cy="27" r="5" fill="#ff8a65"/><circle cx="89" cy="36" r="5" fill="#ff8a65"/><rect x="24" y="78" width="60" height="7" rx="3.5" fill="#ff8a65"/><path fill="#16222c" d="M48,52 L48,70 L64,61 Z"/></svg>
+  <h1>Media<span style="color:var(--accent)">King</span> – feltöltés</h1>
   <div class="device" id="device"></div>
 </header>
 
