@@ -135,6 +135,19 @@ class MetadataRepository @Inject constructor(
         return showEntity(key, match.id)
     }
 
+    /**
+     * A title's TMDB data in the library's shape, for titles that are not in the library (streaming
+     * search); nothing is stored.
+     */
+    suspend fun preview(isMovie: Boolean, id: Int): MetadataEntity {
+        val key = (if (isMovie) "preview:movie:" else "preview:tv:") + id
+        if (isMovie) return movieEntity(key, id)
+        val details = api.tv(id)
+        val overview = details.overview?.takeIf { it.isNotBlank() }
+            ?: api.tv(id, TmdbApi.FALLBACK_LANGUAGE, append = "").overview
+        return details.toEntity(key, overview)
+    }
+
     private suspend fun showEntity(key: String, id: Int): MetadataEntity {
         val details = api.tv(id)
         val overview = details.overview?.takeIf { it.isNotBlank() }

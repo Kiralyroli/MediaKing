@@ -28,6 +28,7 @@ import coil3.compose.AsyncImage
 import com.kiroland.mediacenter.data.streaming.Offer
 import com.kiroland.mediacenter.data.streaming.ProviderOffer
 import com.kiroland.mediacenter.data.streaming.StreamingRepository
+import com.kiroland.mediacenter.data.streaming.Subscriptions
 import com.kiroland.mediacenter.ui.theme.OnAccent
 import com.kiroland.mediacenter.ui.theme.Shapes
 import com.kiroland.mediacenter.ui.theme.Success
@@ -38,7 +39,17 @@ import com.kiroland.mediacenter.ui.theme.TextPrimary
 sealed interface WatchState {
     data object Loading : WatchState
     data object Unknown : WatchState
-    data class Known(val offers: List<ProviderOffer>, val installed: Set<Int>) : WatchState
+    /** [offers] sorted for the user; [mine] are their subscriptions. */
+    data class Known(val offers: List<ProviderOffer>, val installed: Set<Int>, val mine: Set<Int>) : WatchState
+}
+
+/** Offers for a TMDB title, sorted for the user, with which providers' apps are on this TV. */
+suspend fun loadWhereToWatch(streaming: StreamingRepository, isMovie: Boolean, tmdbId: Int?): WatchState {
+    tmdbId ?: return WatchState.Unknown
+    val availability = streaming.availability(isMovie, tmdbId) ?: return WatchState.Unknown
+    val installed = availability.offers.filter { streaming.isAppInstalled(it.providerId) }.mapTo(HashSet()) { it.providerId }
+    val mine = streaming.mySubscriptions()
+    return WatchState.Known(Subscriptions.sortForUser(availability.offers, mine), installed, mine)
 }
 
 /**
@@ -64,7 +75,7 @@ fun WhereToWatch(state: WatchState, title: String, streaming: StreamingRepositor
                 contentPadding = PaddingValues(vertical = 6.dp),
             ) {
                 items(state.offers, key = { it.providerId }) { offer ->
-                    ProviderPill(offer, installed = offer.providerId in state.installed) {
+                    ProviderPill(offer, installed = offer.providerId in state.installed, included = Subscriptions.isIncluded(offer, state.mine)) {
                         val message = when (streaming.open(offer.providerId, title)) {
                             StreamingRepository.Opened.TITLE_SEARCHED, StreamingRepository.Opened.WEBSITE -> null
                             StreamingRepository.Opened.SEARCH_PAGE -> "Írd be a keresőbe: $title"
@@ -81,8 +92,7 @@ fun WhereToWatch(state: WatchState, title: String, streaming: StreamingRepositor
 }
 
 @Composable
-private fun ProviderPill(offer: ProviderOffer, installed: Boolean, onClick: () -> Unit) {
-    val subscription = offer.best == Offer.SUBSCRIPTION || offer.best == Offer.FREE
+private fun ProviderPill(offer: ProviderOffer, installed: Boolean, included: Boolean, onClick: () -> Unit) {
     Surface(
         onClick = onClick,
         shape = ClickableSurfaceDefaults.shape(Shapes.Pill),
@@ -107,9 +117,9 @@ private fun ProviderPill(offer: ProviderOffer, installed: Boolean, onClick: () -
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     // A green dot marks "included in a subscription"; the text keeps the pill's own colour,
                     // which stays readable both on the dark pill and on the light focused one.
-                    if (subscription) Box(Modifier.size(8.dp).clip(Shapes.Pill).background(Success))
+                    if (included) Box(Modifier.size(8.dp).clip(Shapes.Pill).background(Success))
                     Text(
-                        listOfNotNull(offerLabel(offer), "nincs telepítve".takeIf { !installed }).joinToString(" · "),
+                        listOfNotNull(offerLabel(offer, included), "nincs telepítve".takeIf { !installed }).joinToString(" · "),
                         style = MaterialTheme.typography.labelMedium,
                         color = androidx.tv.material3.LocalContentColor.current.copy(alpha = 0.8f),
                         maxLines = 1,
@@ -120,8 +130,8 @@ private fun ProviderPill(offer: ProviderOffer, installed: Boolean, onClick: () -
     }
 }
 
-private fun offerLabel(offer: ProviderOffer): String = when (offer.best) {
-    Offer.SUBSCRIPTION -> "előfizetéssel"
+private fun offerLabel(offer: ProviderOffer, included: Boolean): String = when (offer.best) {
+    Offer.SUBSCRIPTION -> if (included) "benne van az előfizetésedben" else "előfizetéssel"
     Offer.FREE -> "ingyenes"
     Offer.RENT -> if (Offer.BUY in offer.offers) "kölcsönzés, vásárlás" else "kölcsönzés"
     Offer.BUY -> "vásárlás"

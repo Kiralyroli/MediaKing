@@ -59,12 +59,26 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.stateIn
 import javax.inject.Inject
+import com.kiroland.mediacenter.data.streaming.StreamingRepository
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.mapLatest
 
 data class SearchResults(val query: String = "", val movies: List<MediaWithProgress> = emptyList(), val series: List<SeriesSummary> = emptyList())
 
 @HiltViewModel
-class SearchViewModel @Inject constructor(repository: LibraryRepository) : ViewModel() {
+class SearchViewModel @Inject constructor(repository: LibraryRepository, streaming: StreamingRepository) : ViewModel() {
     val query = MutableStateFlow("")
+
+    /** TMDB's films and series for the query, for "where to watch"; asked after a longer pause in typing. */
+    @OptIn(FlowPreview::class, ExperimentalCoroutinesApi::class)
+    val streamingResults: StateFlow<List<StreamingRepository.Title>> = query
+        .debounce(600)
+        .map { it.trim() }
+        .distinctUntilChanged()
+        .mapLatest { q -> if (q.length < 2) emptyList() else streaming.search(q) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     @OptIn(FlowPreview::class)
     val results: StateFlow<SearchResults> =
@@ -86,10 +100,12 @@ class SearchViewModel @Inject constructor(repository: LibraryRepository) : ViewM
 fun SearchScreen(
     onOpenMovie: (String) -> Unit,
     onOpenSeries: (String) -> Unit,
+    onOpenStreaming: (isMovie: Boolean, tmdbId: Int) -> Unit,
     viewModel: SearchViewModel = hiltViewModel(),
 ) {
     val query by viewModel.query.collectAsStateWithLifecycle()
     val results by viewModel.results.collectAsStateWithLifecycle()
+    val streamingResults by viewModel.streamingResults.collectAsStateWithLifecycle()
     var fieldFocused by remember { mutableStateOf(false) }
     val field = remember { FocusRequester() }
     // The result that was opened, to put focus back on it when coming back.
@@ -139,7 +155,7 @@ fun SearchScreen(
                         .padding(horizontal = 16.dp, vertical = 12.dp),
                 )
                 if (results.query.isNotBlank() && results.movies.isEmpty() && results.series.isEmpty()) {
-                    Text("Nincs találat.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("A médiatárban nincs találat.", color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
         }
@@ -171,12 +187,27 @@ fun SearchScreen(
                 }
             }
         }
+        if (streamingResults.isNotEmpty()) {
+            shelf("Streamingen – hol nézheted?") {
+                items(streamingResults, key = { (if (it.isMovie) "m" else "t") + it.tmdbId }) { title ->
+                    val key = "stream:" + (if (title.isMovie) "m" else "t") + title.tmdbId
+                    PosterCard(
+                        title = title.title,
+                        subtitle = listOfNotNull(if (title.isMovie) "Film" else "Sorozat", title.year?.toString()).joinToString(" · "),
+                        imageUrl = TmdbImages.poster(title.posterPath),
+                        onClick = { opened = key; onOpenStreaming(title.isMovie, title.tmdbId) },
+                        modifier = cardModifier(key),
+                    )
+                }
+            }
+        }
     }
     // Only on a fresh search; coming back from a result focuses that result instead.
     LaunchedEffect(Unit) { if (query.isEmpty()) runCatching { field.requestFocus() } }
-    LaunchedEffect(results) {
+    LaunchedEffect(results, streamingResults) {
         val key = opened ?: return@LaunchedEffect
-        if (results.movies.any { it.media.path == key } || results.series.any { it.seriesKey == key }) {
+        val streamingKeys = streamingResults.map { "stream:" + (if (it.isMovie) "m" else "t") + it.tmdbId }
+        if (results.movies.any { it.media.path == key } || results.series.any { it.seriesKey == key } || key in streamingKeys) {
             runCatching { openedCard.requestFocus() }
             opened = null
         }

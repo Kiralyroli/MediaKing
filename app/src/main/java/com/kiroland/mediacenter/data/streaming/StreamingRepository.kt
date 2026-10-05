@@ -7,6 +7,7 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import android.util.Log
 import com.kiroland.mediacenter.data.metadata.TmdbCredentials
+import com.kiroland.mediacenter.data.settings.SettingsRepository
 import com.kiroland.mediacenter.data.metadata.tmdb.TmdbApi
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellationException
@@ -19,8 +20,40 @@ class StreamingRepository @Inject constructor(
     @param:ApplicationContext private val context: Context,
     private val api: TmdbApi,
     private val credentials: TmdbCredentials,
+    private val settings: SettingsRepository,
 ) {
     data class Availability(val offers: List<ProviderOffer>)
+
+    /** A film or series found on TMDB, whether or not it is in the library. */
+    data class Title(val isMovie: Boolean, val tmdbId: Int, val title: String, val year: Int?, val posterPath: String?)
+
+    /** Films and series matching [query] on TMDB; empty without a token or when offline. */
+    suspend fun search(query: String): List<Title> {
+        if (!credentials.isConfigured || query.isBlank()) return emptyList()
+        return try {
+            api.searchMulti(query).results
+                .filter { it.mediaType == "movie" || it.mediaType == "tv" }
+                // TMDB's adult flag misses plenty; obscure entries with no poster and hardly any votes are
+                // also rarely on a streaming service, so only reasonably known titles are listed.
+                .filter { it.posterPath != null && (it.voteCount >= MIN_VOTES || it.popularity >= MIN_POPULARITY) }
+                .map { r ->
+                    val movie = r.mediaType == "movie"
+                    Title(
+                        isMovie = movie,
+                        tmdbId = r.id,
+                        title = (if (movie) r.title ?: r.originalTitle else r.name ?: r.originalName).orEmpty(),
+                        year = (if (movie) r.releaseDate else r.firstAirDate)?.take(4)?.toIntOrNull(),
+                        posterPath = r.posterPath,
+                    )
+                }
+                .filter { it.title.isNotBlank() }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.w(TAG, "Search for '$query' failed: ${e.message}")
+            emptyList()
+        }
+    }
 
     /** Offers change often, so they are kept for a few hours only, in memory. */
     private val cache = HashMap<String, Pair<Long, Availability>>()
@@ -47,6 +80,12 @@ class StreamingRepository @Inject constructor(
 
     /** Provider apps installed right now (they can be installed while the app runs). */
     fun installedPackages(): Set<String> = StreamingProviders.allPackages.filterTo(HashSet()) { isInstalled(it) }
+
+    /** The user's subscriptions: chosen in the settings, or the services whose app is installed. */
+    fun mySubscriptions(): Set<Int> = Subscriptions.effective(
+        settings.current.subscriptions,
+        Subscriptions.choices.map { it.providerId }.filterTo(HashSet(), ::isAppInstalled),
+    )
 
     fun isAppInstalled(providerId: Int): Boolean =
         StreamingProviders.apps[providerId]?.packages?.any { isInstalled(it) } == true
@@ -99,5 +138,7 @@ class StreamingRepository @Inject constructor(
         const val REGION = "HU"
         const val PLAY_STORE = "com.android.vending"
         const val CACHE_MS = 6L * 60 * 60 * 1000
+        const val MIN_VOTES = 20
+        const val MIN_POPULARITY = 3.0
     }
 }

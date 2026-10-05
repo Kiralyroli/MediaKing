@@ -15,6 +15,7 @@ import com.kiroland.mediacenter.ui.library.FixMatchScreen
 import com.kiroland.mediacenter.ui.library.MovieScreen
 import com.kiroland.mediacenter.ui.library.SeriesScreen
 import com.kiroland.mediacenter.ui.live.GuideScreen
+import com.kiroland.mediacenter.ui.streaming.StreamingTitleScreen
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -31,6 +32,10 @@ data class SeriesRoute(val seriesKey: String)
 
 @Serializable
 data object GuideRoute
+
+/** A film or series found by the streaming search (by TMDB id). */
+@Serializable
+data class StreamingTitleRoute(val isMovie: Boolean, val tmdbId: Int)
 
 /** Pick the right TMDB entry for a metadata key; [kind] is a MediaKind name. */
 @Serializable
@@ -56,6 +61,7 @@ fun MediaCenterNavHost() {
                 onOpenSeries = { key -> navController.navigate(SeriesRoute(key)) },
                 onPlay = { path -> play(path, false) },
                 onOpenGuide = { navController.navigate(GuideRoute) },
+                onOpenStreaming = { isMovie, id -> navController.navigate(StreamingTitleRoute(isMovie, id)) },
             )
         }
         composable<BrowserRoute> {
@@ -77,6 +83,12 @@ fun MediaCenterNavHost() {
             )
         }
         composable<GuideRoute> { GuideScreen() }
+        composable<StreamingTitleRoute> {
+            StreamingTitleScreen(
+                onOpenMovie = { path -> navController.navigate(MovieRoute(path)) },
+                onOpenSeries = { key -> navController.navigate(SeriesRoute(key)) },
+            )
+        }
         composable<FixMatchRoute> {
             FixMatchScreen(onDone = { navController.popBackStack() })
         }

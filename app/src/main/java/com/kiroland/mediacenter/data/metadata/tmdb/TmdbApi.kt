@@ -23,6 +23,14 @@ interface TmdbApi {
         @Query("language") language: String = LANGUAGE,
     ): SearchResponse<TvResult>
 
+    /** Films and series together (people too, which callers drop), by popularity. */
+    @GET("search/multi")
+    suspend fun searchMulti(
+        @Query("query") query: String,
+        @Query("language") language: String = LANGUAGE,
+        @Query("include_adult") includeAdult: Boolean = false,
+    ): SearchResponse<MultiResult>
+
     @GET("movie/{id}")
     suspend fun movie(
         @Path("id") id: Int,
@@ -180,4 +188,20 @@ data class ProviderEntry(
     @SerialName("provider_name") val name: String,
     @SerialName("logo_path") val logoPath: String? = null,
     @SerialName("display_priority") val priority: Int = 0,
+)
+
+/** A search/multi hit: a film (title, release_date) or a series (name, first_air_date). */
+@Serializable
+data class MultiResult(
+    val id: Int,
+    @SerialName("media_type") val mediaType: String,
+    val title: String? = null,
+    val name: String? = null,
+    @SerialName("original_title") val originalTitle: String? = null,
+    @SerialName("original_name") val originalName: String? = null,
+    @SerialName("release_date") val releaseDate: String? = null,
+    @SerialName("first_air_date") val firstAirDate: String? = null,
+    @SerialName("poster_path") val posterPath: String? = null,
+    val popularity: Double = 0.0,
+    @SerialName("vote_count") val voteCount: Int = 0,
 )

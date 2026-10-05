@@ -17,6 +17,11 @@ data class Settings(
     val showAntenna: Boolean = false,
     /** Start the Wi-Fi upload server whenever the app starts. */
     val uploadAutoStart: Boolean = false,
+    /**
+     * Streaming services the user subscribes to, by TMDB provider id; null until chosen, which means
+     * "the ones whose app is on this TV".
+     */
+    val subscriptions: Set<Int>? = null,
 )
 
 /** App preferences; small and synchronous, so SharedPreferences behind a StateFlow is enough. */
@@ -35,6 +40,10 @@ class SettingsRepository @Inject constructor(@ApplicationContext context: Contex
             .putBoolean(AUTO_SUBTITLES, next.autoSubtitles)
             .putBoolean(SHOW_ANTENNA, next.showAntenna)
             .putBoolean(UPLOAD_AUTOSTART, next.uploadAutoStart)
+            .apply {
+                val subscriptions = next.subscriptions
+                if (subscriptions == null) remove(SUBSCRIPTIONS) else putStringSet(SUBSCRIPTIONS, subscriptions.mapTo(HashSet()) { it.toString() })
+            }
             .apply()
         _settings.value = next
     }
@@ -44,6 +53,7 @@ class SettingsRepository @Inject constructor(@ApplicationContext context: Contex
         autoSubtitles = prefs.getBoolean(AUTO_SUBTITLES, true),
         showAntenna = prefs.getBoolean(SHOW_ANTENNA, false),
         uploadAutoStart = prefs.getBoolean(UPLOAD_AUTOSTART, false),
+        subscriptions = prefs.getStringSet(SUBSCRIPTIONS, null)?.mapNotNullTo(HashSet()) { it.toIntOrNull() },
     )
 
     private companion object {
@@ -51,5 +61,6 @@ class SettingsRepository @Inject constructor(@ApplicationContext context: Contex
         const val AUTO_SUBTITLES = "auto_subtitles"
         const val SHOW_ANTENNA = "show_antenna"
         const val UPLOAD_AUTOSTART = "upload_autostart"
+        const val SUBSCRIPTIONS = "streaming_subscriptions"
     }
 }

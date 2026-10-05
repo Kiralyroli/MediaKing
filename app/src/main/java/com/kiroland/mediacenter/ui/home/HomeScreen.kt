@@ -94,6 +94,7 @@ fun HomeScreen(
     onOpenSeries: (String) -> Unit,
     onPlay: (String) -> Unit,
     onOpenGuide: () -> Unit,
+    onOpenStreaming: (isMovie: Boolean, tmdbId: Int) -> Unit,
 ) {
     var section by rememberSaveable { mutableStateOf(HomeSection.Home) }
     // Sections reached from Settings keep "Beállítások" highlighted in the drawer.
@@ -143,7 +144,7 @@ fun HomeScreen(
         }
         Box(Modifier.weight(1f).fillMaxHeight()) {
             when (section) {
-                HomeSection.Search -> SearchScreen(onOpenMovie = onOpenMovie, onOpenSeries = onOpenSeries)
+                HomeSection.Search -> SearchScreen(onOpenMovie = onOpenMovie, onOpenSeries = onOpenSeries, onOpenStreaming = onOpenStreaming)
                 HomeSection.Home -> LibraryHomeScreen(
                     onOpenMovie = onOpenMovie,
                     onOpenSeries = onOpenSeries,

@@ -81,4 +81,25 @@ class StreamingProvidersTest {
         assertEquals("Élősködők", searchTitle("기생충", "Élősködők"))
         assertEquals("Végső állomás", searchTitle(null, "Végső állomás"))
     }
+
+    @Test
+    fun `my subscriptions come first`() {
+        val offers = StreamingProviders.merge(
+            CountryProviders(
+                flatrate = listOf(entry(8, "Netflix", 0), entry(1899, "HBO Max", 28)),
+                rent = listOf(entry(2, "Apple TV Store", 5)),
+            ),
+        )
+        val mine = setOf(1899)
+        assertEquals(listOf("HBO Max", "Netflix", "Apple TV Store"), Subscriptions.sortForUser(offers, mine).map { it.name })
+        assertTrue(Subscriptions.isIncluded(offers.first { it.name == "HBO Max" }, mine))
+        assertTrue(!Subscriptions.isIncluded(offers.first { it.name == "Netflix" }, mine))
+    }
+
+    @Test
+    fun `until chosen, my subscriptions are the installed apps`() {
+        assertEquals(setOf(8, 1899), Subscriptions.effective(null, setOf(8, 1899, 3, 188)))
+        assertEquals(setOf(337), Subscriptions.effective(setOf(337), setOf(8)))
+        assertEquals(emptySet<Int>(), Subscriptions.effective(emptySet(), setOf(8)))
+    }
 }

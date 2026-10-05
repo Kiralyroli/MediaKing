@@ -16,6 +16,7 @@ import com.kiroland.mediacenter.data.library.db.MediaWithProgress
 import com.kiroland.mediacenter.data.metadata.MetadataRepository
 import com.kiroland.mediacenter.data.streaming.StreamingRepository
 import com.kiroland.mediacenter.ui.streaming.WatchState
+import com.kiroland.mediacenter.ui.streaming.loadWhereToWatch
 import kotlinx.coroutines.flow.mapLatest
 import com.kiroland.mediacenter.ui.MovieRoute
 import com.kiroland.mediacenter.ui.SeriesRoute
@@ -64,7 +65,7 @@ class MovieViewModel @Inject constructor(
     val whereToWatch: StateFlow<WatchState> = movie
         .map { it?.metadata?.tmdbId }
         .distinctUntilChanged()
-        .mapLatest { id -> whereToWatch(streaming, isMovie = true, id) }
+        .mapLatest { id -> loadWhereToWatch(streaming, isMovie = true, id) }
         .stateIn(this, WatchState.Loading)
 
     fun setWatched(watched: Boolean) {
@@ -98,7 +99,7 @@ class SeriesViewModel @Inject constructor(
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val whereToWatch: StateFlow<WatchState> = tvId
-        .mapLatest { id -> whereToWatch(streaming, isMovie = false, id) }
+        .mapLatest { id -> loadWhereToWatch(streaming, isMovie = false, id) }
         .stateIn(this, WatchState.Loading)
 
     /** Every season and episode: the library's files plus what TMDB lists but the library lacks. */
@@ -110,10 +111,3 @@ class SeriesViewModel @Inject constructor(
     }
 }
 
-/** Offers for a TMDB title, with which providers' apps are on this TV. */
-private suspend fun whereToWatch(streaming: StreamingRepository, isMovie: Boolean, tmdbId: Int?): WatchState {
-    tmdbId ?: return WatchState.Unknown
-    val availability = streaming.availability(isMovie, tmdbId) ?: return WatchState.Unknown
-    val installed = availability.offers.filter { streaming.isAppInstalled(it.providerId) }.mapTo(HashSet()) { it.providerId }
-    return WatchState.Known(availability.offers, installed)
-}

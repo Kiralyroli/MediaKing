@@ -1,0 +1,140 @@
+package com.kiroland.mediacenter.ui.streaming
+
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.VideoLibrary
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.SavedStateHandle
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewModelScope
+import androidx.navigation.toRoute
+import androidx.tv.material3.Button
+import androidx.tv.material3.MaterialTheme
+import androidx.tv.material3.Text
+import com.kiroland.mediacenter.data.library.LibraryRepository
+import com.kiroland.mediacenter.data.library.db.MetadataEntity
+import com.kiroland.mediacenter.data.metadata.MetadataRepository
+import com.kiroland.mediacenter.data.metadata.tmdb.TmdbImages
+import com.kiroland.mediacenter.data.streaming.StreamingRepository
+import com.kiroland.mediacenter.data.streaming.searchTitle
+import com.kiroland.mediacenter.ui.StreamingTitleRoute
+import com.kiroland.mediacenter.ui.library.Backdrop
+import com.kiroland.mediacenter.ui.library.ButtonContent
+import com.kiroland.mediacenter.ui.library.Poster
+import com.kiroland.mediacenter.ui.library.factsLine
+import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
+import javax.inject.Inject
+
+/** Where a title found on TMDB sits in the library, if it is there. */
+sealed interface InLibrary {
+    data class Movie(val path: String) : InLibrary
+    data class Series(val seriesKey: String) : InLibrary
+}
+
+@HiltViewModel
+class StreamingTitleViewModel @Inject constructor(
+    savedStateHandle: SavedStateHandle,
+    metadata: MetadataRepository,
+    library: LibraryRepository,
+    val streaming: StreamingRepository,
+) : ViewModel() {
+    private val route = savedStateHandle.toRoute<StreamingTitleRoute>()
+
+    private val _details = MutableStateFlow<MetadataEntity?>(null)
+    val details: StateFlow<MetadataEntity?> = _details.asStateFlow()
+
+    private val _whereToWatch = MutableStateFlow<WatchState>(WatchState.Loading)
+    val whereToWatch: StateFlow<WatchState> = _whereToWatch.asStateFlow()
+
+    /** The same title in the library: then its own page plays it from the drive. */
+    val inLibrary: StateFlow<InLibrary?> = combine(library.movies, library.series) { movies, series ->
+        if (route.isMovie) {
+            movies.firstOrNull { it.metadata?.tmdbId == route.tmdbId }?.let { InLibrary.Movie(it.media.path) }
+        } else {
+            series.firstOrNull { it.metadata?.tmdbId == route.tmdbId }?.let { InLibrary.Series(it.seriesKey) }
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
+    init {
+        viewModelScope.launch { _details.value = runCatching { metadata.preview(route.isMovie, route.tmdbId) }.getOrNull() }
+        viewModelScope.launch { _whereToWatch.value = loadWhereToWatch(streaming, route.isMovie, route.tmdbId) }
+    }
+}
+
+/** A film or series found by the streaming search: its data and where to watch it. */
+@Composable
+fun StreamingTitleScreen(
+    onOpenMovie: (String) -> Unit,
+    onOpenSeries: (String) -> Unit,
+    viewModel: StreamingTitleViewModel = hiltViewModel(),
+) {
+    val details by viewModel.details.collectAsStateWithLifecycle()
+    val whereToWatch by viewModel.whereToWatch.collectAsStateWithLifecycle()
+    val inLibrary by viewModel.inLibrary.collectAsStateWithLifecycle()
+    val meta = details ?: return
+    val title = meta.title ?: meta.originalTitle.orEmpty()
+    val libraryFocus = remember { FocusRequester() }
+
+    Backdrop(TmdbImages.backdrop(meta.backdropPath)) {
+        Row(
+            modifier = Modifier.fillMaxSize().padding(horizontal = 56.dp, vertical = 48.dp),
+            horizontalArrangement = Arrangement.spacedBy(40.dp),
+        ) {
+            Poster(title, TmdbImages.poster(meta.posterPath), null)
+            Column(Modifier.widthIn(max = 900.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text(title, style = MaterialTheme.typography.displaySmall, fontWeight = FontWeight.SemiBold)
+                meta.originalTitle?.takeIf { it != title }?.let {
+                    Text(it, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                Text(factsLine(meta.year, meta), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(
+                    meta.overview ?: "Nincs leírás.",
+                    style = MaterialTheme.typography.bodyLarge,
+                    maxLines = 6,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                inLibrary?.let { found ->
+                    Spacer(Modifier.height(4.dp))
+                    Button(
+                        onClick = {
+                            when (found) {
+                                is InLibrary.Movie -> onOpenMovie(found.path)
+                                is InLibrary.Series -> onOpenSeries(found.seriesKey)
+                            }
+                        },
+                        modifier = Modifier.focusRequester(libraryFocus),
+                    ) { ButtonContent(Icons.Outlined.VideoLibrary, "Megvan a médiatárban") }
+                }
+                WhereToWatch(whereToWatch, searchTitle(meta.originalTitle, title), viewModel.streaming, Modifier.padding(top = 8.dp))
+                meta.director?.let { Text("Rendező: $it", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1) }
+                meta.cast?.let { Text("Szereplők: $it", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2) }
+            }
+        }
+    }
+    LaunchedEffect(inLibrary != null) { if (inLibrary != null) runCatching { libraryFocus.requestFocus() } }
+}

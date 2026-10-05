@@ -118,3 +118,41 @@ private val APPLE = ProviderApp(
 fun searchTitle(originalTitle: String?, localTitle: String): String =
     originalTitle?.takeIf { it.isNotBlank() && it.all { c -> !c.isLetter() || Character.UnicodeScript.of(c.code) == Character.UnicodeScript.LATIN } }
         ?: localTitle
+
+/** A subscription service the user can tick in the settings. */
+data class Subscribable(val providerId: Int, val name: String)
+
+object Subscriptions {
+    /** The subscription services offered in Hungary that matter here, in TMDB's Hungarian order. */
+    val choices = listOf(
+        Subscribable(8, "Netflix"),
+        Subscribable(119, "Amazon Prime Video"),
+        Subscribable(1899, "HBO Max"),
+        Subscribable(337, "Disney+"),
+        Subscribable(1773, "SkyShowtime"),
+        Subscribable(350, "Apple TV+"),
+        Subscribable(188, "YouTube Premium"),
+        Subscribable(11, "MUBI"),
+        Subscribable(701, "FilmBox+"),
+        Subscribable(223, "Hayu"),
+        Subscribable(283, "Crunchyroll"),
+    )
+
+    /** YouTube comes with every Android TV: having the app says nothing about a Premium subscription. */
+    private val notImpliedByApp = setOf(188)
+
+    /** Chosen in the settings, or until then the services whose app is installed. */
+    fun effective(chosen: Set<Int>?, installedProviders: Set<Int>): Set<Int> =
+        chosen ?: choices.map { it.providerId }.filterTo(HashSet()) { it in installedProviders && it !in notImpliedByApp }
+
+    /**
+     * Offers sorted for this user: what their subscriptions include first, then other subscriptions,
+     * free, rent and buy (each in TMDB's order).
+     */
+    fun sortForUser(offers: List<ProviderOffer>, mine: Set<Int>): List<ProviderOffer> =
+        offers.sortedWith(compareBy<ProviderOffer> { !isIncluded(it, mine) }.thenBy { it.best.ordinal }.thenBy { it.priority })
+
+    /** The user can watch it at no extra cost: in one of their subscriptions, or free. */
+    fun isIncluded(offer: ProviderOffer, mine: Set<Int>): Boolean =
+        (Offer.SUBSCRIPTION in offer.offers && offer.providerId in mine) || Offer.FREE in offer.offers
+}

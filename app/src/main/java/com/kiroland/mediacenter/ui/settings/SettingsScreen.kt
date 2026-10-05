@@ -41,6 +41,9 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+import androidx.compose.foundation.lazy.items
+import com.kiroland.mediacenter.data.streaming.StreamingRepository
+import com.kiroland.mediacenter.data.streaming.Subscriptions
 
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
@@ -48,8 +51,19 @@ class SettingsViewModel @Inject constructor(
     private val repository: SettingsRepository,
     private val scanner: LibraryScanner,
     private val metadata: MetadataRepository,
+    private val streaming: StreamingRepository,
     @param:ApplicationScope private val appScope: CoroutineScope,
 ) : ViewModel() {
+    /** Checked state of each subscription choice (the installed apps until the user picks). */
+    fun subscriptions(): Set<Int> = streaming.mySubscriptions()
+
+    fun isAppInstalled(providerId: Int): Boolean = streaming.isAppInstalled(providerId)
+
+    fun setSubscribed(providerId: Int, subscribed: Boolean) {
+        val now = streaming.mySubscriptions()
+        repository.update { it.copy(subscriptions = if (subscribed) now + providerId else now - providerId) }
+    }
+
     val settings: StateFlow<Settings> = repository.settings
     val tmdbConfigured: Boolean get() = metadata.isConfigured
 
@@ -72,6 +86,8 @@ class SettingsViewModel @Inject constructor(
 @Composable
 fun SettingsScreen(onOpenStorage: () -> Unit, onOpenDiagnostics: () -> Unit, viewModel: SettingsViewModel = hiltViewModel()) {
     val settings by viewModel.settings.collectAsStateWithLifecycle()
+    // Recomputed whenever the settings change (a toggle was flipped).
+    val subscriptions = remember(settings) { viewModel.subscriptions() }
     val context = LocalContext.current
     // Destructive action: first press arms, second runs (as elsewhere in the app).
     var reloadArmed by remember { mutableStateOf(false) }
@@ -99,6 +115,23 @@ fun SettingsScreen(onOpenStorage: () -> Unit, onOpenDiagnostics: () -> Unit, vie
                 description = "Magyar hangnál a kényszerített, idegen nyelvű hangnál a teljes magyar felirat.",
                 checked = settings.autoSubtitles,
             ) { value -> viewModel.update { it.copy(autoSubtitles = value) } }
+        }
+
+        section("Előfizetéseim")
+        item {
+            Text(
+                "A „Hol nézheted?” részben ezeket teszi előre és jelöli zölddel. Amíg nem választasz, a TV-re telepített appok számítanak.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(bottom = 6.dp),
+            )
+        }
+        items(Subscriptions.choices, key = { "sub-" + it.providerId }) { choice ->
+            Toggle(
+                title = choice.name,
+                description = if (viewModel.isAppInstalled(choice.providerId)) "Az app telepítve van." else "Az app nincs telepítve.",
+                checked = choice.providerId in subscriptions,
+            ) { value -> viewModel.setSubscribed(choice.providerId, value) }
         }
 
         section("Élő TV")
