@@ -44,6 +44,13 @@ interface TmdbApi {
         @Query("language") language: String = LANGUAGE,
     ): SeasonDetails
 
+    /** Where a title can be watched, per country ("flatrate" = subscription). Data by JustWatch. */
+    @GET("{type}/{id}/watch/providers")
+    suspend fun watchProviders(
+        @Path("type") type: String,
+        @Path("id") id: Int,
+    ): WatchProvidersResponse
+
     companion object {
         const val BASE_URL = "https://api.themoviedb.org/3/"
         const val LANGUAGE = "hu-HU"
@@ -151,4 +158,26 @@ object TmdbImages {
     fun poster(path: String?): String? = path?.let { "${BASE}w342$it" }
     fun backdrop(path: String?): String? = path?.let { "${BASE}w1280$it" }
     fun still(path: String?): String? = path?.let { "${BASE}w300$it" }
+    fun logo(path: String?): String? = path?.let { "${BASE}w154$it" }
 }
+
+@Serializable
+data class WatchProvidersResponse(val results: Map<String, CountryProviders> = emptyMap())
+
+@Serializable
+data class CountryProviders(
+    val link: String? = null,
+    val flatrate: List<ProviderEntry> = emptyList(),
+    val free: List<ProviderEntry> = emptyList(),
+    val ads: List<ProviderEntry> = emptyList(),
+    val rent: List<ProviderEntry> = emptyList(),
+    val buy: List<ProviderEntry> = emptyList(),
+)
+
+@Serializable
+data class ProviderEntry(
+    @SerialName("provider_id") val id: Int,
+    @SerialName("provider_name") val name: String,
+    @SerialName("logo_path") val logoPath: String? = null,
+    @SerialName("display_priority") val priority: Int = 0,
+)

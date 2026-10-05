@@ -18,6 +18,9 @@ Portfólióprojekt, egy valódi Xiaomi Mi TV-n (Android 10) fejlesztve és teszt
 - **Kezdőlap** – Folytatás (félbehagyott filmek, sorozatoknál a következő rész), legutóbb hozzáadott filmek, sorozatok
 - **Android TV kezdőképernyő** – a „Következő” (Watch Next) sorban a félbehagyott film vagy a következő rész, onnan egy gombnyomással folytatható
 - **Keresés** cím, eredeti cím, szereplő vagy rendező szerint, ékezetek nélkül is
+- **Hol nézheted?** – a film- és sorozat-adatlapokon a magyarországi streaming-elérhetőség (előfizetés, kölcsönzés, vásárlás;
+  forrás: JustWatch a TMDB-n át); egy gombnyomással megnyitja a szolgáltató appját: a Prime Video rögtön a címre keres,
+  az HBO Max és a Disney+ a keresőoldalt nyitja, a Netflix az appot; a beírandó eredeti címet felirat mutatja
 - **Hálózati mappák (SMB)** – számítógép vagy NAS megosztott mappája a médiatárban, másolás nélkül; lejátszás közvetlenül
   a hálózatról (előreolvasó pufferrel), feliratokkal együtt; beállítás a feltöltő oldalon, kapcsolatpróbával
 - **Lejátszó** (Media3 / ExoPlayer)
@@ -105,6 +108,7 @@ Minden push a `main` ágra lefordítja az appot és lefuttatja a teszteket (GitH
 ## Köszönet
 
 - Film- és sorozatadatok: [TMDB](https://www.themoviedb.org).
+- Streaming-elérhetőség: [JustWatch](https://www.justwatch.com) (a TMDB-n keresztül).
   *This product uses the TMDB API but is not endorsed or certified by TMDB.*
 - FFmpeg-dekóder: [Jellyfin media3-ffmpeg-decoder](https://github.com/jellyfin/jellyfin-androidx-media)
 - Betűtípusok: [Space Grotesk](https://github.com/floriankarsten/space-grotesk) és [Manrope](https://github.com/googlefonts/manrope),

@@ -46,6 +46,8 @@ import com.kiroland.mediacenter.ui.theme.SurfaceColor
 import com.kiroland.mediacenter.ui.theme.TextPrimary
 import androidx.compose.ui.graphics.Color
 import com.kiroland.mediacenter.data.metadata.tmdb.TmdbImages
+import com.kiroland.mediacenter.ui.streaming.WhereToWatch
+import com.kiroland.mediacenter.data.streaming.searchTitle
 import com.kiroland.mediacenter.util.formatBytes
 import com.kiroland.mediacenter.util.formatDuration
 import java.time.LocalDate
@@ -62,6 +64,7 @@ fun SeriesScreen(
     val episodes by viewModel.episodes.collectAsStateWithLifecycle()
     val episodeInfo by viewModel.episodeInfo.collectAsStateWithLifecycle()
     val overview by viewModel.overview.collectAsStateWithLifecycle()
+    val whereToWatch by viewModel.whereToWatch.collectAsStateWithLifecycle()
     val all = episodes ?: return
     val seasons = overview ?: return
     if (all.isEmpty() || seasons.isEmpty()) {
@@ -119,6 +122,7 @@ fun SeriesScreen(
                         ButtonContent(Icons.Outlined.ManageSearch, "Nem ez a sorozat?")
                     }
                 }
+                WhereToWatch(whereToWatch, searchTitle(meta?.originalTitle, title), viewModel.streaming, Modifier.padding(top = 4.dp))
             }
 
             if (seasons.size > 1) {

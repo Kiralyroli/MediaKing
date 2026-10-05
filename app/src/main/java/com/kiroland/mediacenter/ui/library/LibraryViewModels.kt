@@ -14,6 +14,9 @@ import com.kiroland.mediacenter.data.library.db.LibraryFolderEntity
 import com.kiroland.mediacenter.data.library.db.EpisodeMetadataEntity
 import com.kiroland.mediacenter.data.library.db.MediaWithProgress
 import com.kiroland.mediacenter.data.metadata.MetadataRepository
+import com.kiroland.mediacenter.data.streaming.StreamingRepository
+import com.kiroland.mediacenter.ui.streaming.WatchState
+import kotlinx.coroutines.flow.mapLatest
 import com.kiroland.mediacenter.ui.MovieRoute
 import com.kiroland.mediacenter.ui.SeriesRoute
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -52,9 +55,17 @@ class LibraryViewModel @Inject constructor(
 class MovieViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val repository: LibraryRepository,
+    val streaming: StreamingRepository,
 ) : ViewModel() {
     val path = savedStateHandle.toRoute<MovieRoute>().path
     val movie: StateFlow<MediaWithProgress?> = repository.media(path).stateIn(this, null)
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val whereToWatch: StateFlow<WatchState> = movie
+        .map { it?.metadata?.tmdbId }
+        .distinctUntilChanged()
+        .mapLatest { id -> whereToWatch(streaming, isMovie = true, id) }
+        .stateIn(this, WatchState.Loading)
 
     fun setWatched(watched: Boolean) {
         viewModelScope.launch { repository.markWatched(path, watched) }
@@ -66,6 +77,7 @@ class SeriesViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val repository: LibraryRepository,
     metadataRepository: MetadataRepository,
+    val streaming: StreamingRepository,
 ) : ViewModel() {
     val seriesKey = savedStateHandle.toRoute<SeriesRoute>().seriesKey
     private val episodesFlow = repository.seriesEpisodes(seriesKey)
@@ -84,6 +96,11 @@ class SeriesViewModel @Inject constructor(
         .map { list -> list.associateBy { it.season to it.episode } }
         .stateIn(this, emptyMap())
 
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val whereToWatch: StateFlow<WatchState> = tvId
+        .mapLatest { id -> whereToWatch(streaming, isMovie = false, id) }
+        .stateIn(this, WatchState.Loading)
+
     /** Every season and episode: the library's files plus what TMDB lists but the library lacks. */
     val overview: StateFlow<List<SeasonOverview>?> =
         combine(episodesFlow, tmdbSeasons, tmdbEpisodes, SeriesOverview::build).stateIn(this, null)
@@ -91,4 +108,12 @@ class SeriesViewModel @Inject constructor(
     fun toggleWatched(item: MediaWithProgress) {
         viewModelScope.launch { repository.markWatched(item.media.path, !item.isWatched) }
     }
+}
+
+/** Offers for a TMDB title, with which providers' apps are on this TV. */
+private suspend fun whereToWatch(streaming: StreamingRepository, isMovie: Boolean, tmdbId: Int?): WatchState {
+    tmdbId ?: return WatchState.Unknown
+    val availability = streaming.availability(isMovie, tmdbId) ?: return WatchState.Unknown
+    val installed = availability.offers.filter { streaming.isAppInstalled(it.providerId) }.mapTo(HashSet()) { it.providerId }
+    return WatchState.Known(availability.offers, installed)
 }

@@ -47,6 +47,8 @@ import androidx.tv.material3.Text
 import coil3.compose.AsyncImage
 import com.kiroland.mediacenter.data.library.db.MetadataEntity
 import com.kiroland.mediacenter.data.metadata.tmdb.TmdbImages
+import com.kiroland.mediacenter.ui.streaming.WhereToWatch
+import com.kiroland.mediacenter.data.streaming.searchTitle
 import com.kiroland.mediacenter.util.formatBytes
 import com.kiroland.mediacenter.util.formatDuration
 import java.util.Locale
@@ -58,6 +60,7 @@ fun MovieScreen(
     viewModel: MovieViewModel = hiltViewModel(),
 ) {
     val item by viewModel.movie.collectAsStateWithLifecycle()
+    val whereToWatch by viewModel.whereToWatch.collectAsStateWithLifecycle()
     val movie = item ?: return
     val media = movie.media
     val meta = movie.metadata?.takeIf { it.tmdbId != null }
@@ -117,6 +120,8 @@ fun MovieScreen(
                         }
                     }
                 }
+
+                WhereToWatch(whereToWatch, searchTitle(meta?.originalTitle, movie.displayTitle), viewModel.streaming, Modifier.padding(top = 8.dp))
 
                 Spacer(Modifier.height(8.dp))
                 meta?.director?.let { Credit("Rendező", it) }
