@@ -47,6 +47,8 @@ import com.kiroland.mediacenter.ui.theme.TextPrimary
 import androidx.compose.ui.graphics.Color
 import com.kiroland.mediacenter.data.metadata.tmdb.TmdbImages
 import com.kiroland.mediacenter.ui.streaming.WhereToWatch
+import com.kiroland.mediacenter.ui.streaming.seriesSummary
+import com.kiroland.mediacenter.data.library.SeasonFacts
 import com.kiroland.mediacenter.data.streaming.searchTitle
 import com.kiroland.mediacenter.util.formatBytes
 import com.kiroland.mediacenter.util.formatDuration
@@ -65,6 +67,7 @@ fun SeriesScreen(
     val episodeInfo by viewModel.episodeInfo.collectAsStateWithLifecycle()
     val overview by viewModel.overview.collectAsStateWithLifecycle()
     val whereToWatch by viewModel.whereToWatch.collectAsStateWithLifecycle()
+    val facts by viewModel.seriesFacts.collectAsStateWithLifecycle()
     val all = episodes ?: return
     val seasons = overview ?: return
     if (all.isEmpty() || seasons.isEmpty()) {
@@ -104,7 +107,9 @@ fun SeriesScreen(
                         "${all.size} rész",
                         "${all.count { it.isWatched }} megnézve",
                         // What exists beyond the library, per TMDB.
-                        "összesen ${seasons.size} évad, $listedEpisodes rész".takeIf { seasons.size > ownedSeasons || listedEpisodes > all.size },
+                        // What exists beyond the library, per TMDB: aired seasons, status, an announced season.
+                        facts?.let { "összesen " + seriesSummary(it) }
+                            ?: "összesen ${seasons.size} évad, $listedEpisodes rész".takeIf { seasons.size > ownedSeasons || listedEpisodes > all.size },
                     ).joinToString(" · "),
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -134,6 +139,8 @@ fun SeriesScreen(
                         val listed = season.listedEpisodes
                         PillButton(
                             text = when {
+                                season.isMissing && (season.airDate == null || season.airDate > today) ->
+                                    "${seasonLabel(season.season)} · " + (SeasonFacts.shortDate(season.airDate)?.let { "bejelentve: $it" } ?: "bejelentve")
                                 season.isMissing -> "${seasonLabel(season.season)} · nincs meg"
                                 listed != null && season.ownedCount < listed -> "${seasonLabel(season.season)} · ${season.ownedCount}/$listed"
                                 else -> seasonLabel(season.season)

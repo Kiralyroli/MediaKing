@@ -136,6 +136,16 @@ data class TvDetails(
     @SerialName("created_by") val createdBy: List<Creator> = emptyList(),
     val credits: Credits? = null,
     val seasons: List<SeasonSummary> = emptyList(),
+    /** "Returning Series", "Ended", "Canceled", "In Production", "Planned". */
+    val status: String? = null,
+    @SerialName("next_episode_to_air") val nextEpisodeToAir: NextEpisode? = null,
+)
+
+@Serializable
+data class NextEpisode(
+    @SerialName("air_date") val airDate: String? = null,
+    @SerialName("season_number") val seasonNumber: Int? = null,
+    @SerialName("episode_number") val episodeNumber: Int? = null,
 )
 
 @Serializable

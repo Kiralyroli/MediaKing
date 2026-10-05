@@ -152,7 +152,11 @@ object Subscriptions {
     fun sortForUser(offers: List<ProviderOffer>, mine: Set<Int>): List<ProviderOffer> =
         offers.sortedWith(compareBy<ProviderOffer> { !isIncluded(it, mine) }.thenBy { it.best.ordinal }.thenBy { it.priority })
 
-    /** The user can watch it at no extra cost: in one of their subscriptions, or free. */
+    /**
+     * The user can watch it at no extra cost: in one of their subscriptions, or free outright. A
+     * subscription service that also has a free tier (Apple TV gives some episodes away) still needs
+     * the subscription.
+     */
     fun isIncluded(offer: ProviderOffer, mine: Set<Int>): Boolean =
-        (Offer.SUBSCRIPTION in offer.offers && offer.providerId in mine) || Offer.FREE in offer.offers
+        if (Offer.SUBSCRIPTION in offer.offers) offer.providerId in mine else Offer.FREE in offer.offers
 }

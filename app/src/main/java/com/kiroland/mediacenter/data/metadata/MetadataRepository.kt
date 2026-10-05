@@ -6,6 +6,9 @@ import com.kiroland.mediacenter.data.library.db.MediaKind
 import com.kiroland.mediacenter.data.library.db.MetadataDao
 import com.kiroland.mediacenter.data.library.db.MetadataEntity
 import com.kiroland.mediacenter.data.library.db.SeasonMetadataEntity
+import com.kiroland.mediacenter.data.library.SeasonFacts
+import com.kiroland.mediacenter.data.library.SeasonInfo
+import com.kiroland.mediacenter.data.library.SeriesFacts
 import com.kiroland.mediacenter.data.metadata.tmdb.MovieDetails
 import com.kiroland.mediacenter.data.metadata.tmdb.SeasonSummary
 import com.kiroland.mediacenter.data.metadata.tmdb.TmdbApi
@@ -133,6 +136,18 @@ class MetadataRepository @Inject constructor(
         }
         val match = TmdbMatcher.best(title, year, candidates) ?: return null
         return showEntity(key, match.id)
+    }
+
+    /** Seasons, episode counts, air dates and what comes next, fresh from TMDB (series change often). */
+    suspend fun seriesFacts(tvId: Int): SeriesFacts {
+        val details = api.tv(tvId, append = "")
+        return SeasonFacts.build(
+            seasons = details.seasons.map { SeasonInfo(it.seasonNumber, it.name, it.episodeCount, it.airDate) },
+            tmdbStatus = details.status,
+            nextEpisodeSeason = details.nextEpisodeToAir?.seasonNumber,
+            nextAirDate = details.nextEpisodeToAir?.airDate,
+            today = SeasonFacts.today(),
+        )
     }
 
     /**

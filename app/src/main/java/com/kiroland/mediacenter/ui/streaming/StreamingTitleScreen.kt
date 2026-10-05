@@ -1,6 +1,8 @@
 package com.kiroland.mediacenter.ui.streaming
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -30,6 +32,7 @@ import androidx.tv.material3.Button
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import com.kiroland.mediacenter.data.library.LibraryRepository
+import com.kiroland.mediacenter.data.library.SeriesFacts
 import com.kiroland.mediacenter.data.library.db.MetadataEntity
 import com.kiroland.mediacenter.data.metadata.MetadataRepository
 import com.kiroland.mediacenter.data.metadata.tmdb.TmdbImages
@@ -68,6 +71,12 @@ class StreamingTitleViewModel @Inject constructor(
     private val _details = MutableStateFlow<MetadataEntity?>(null)
     val details: StateFlow<MetadataEntity?> = _details.asStateFlow()
 
+    val isMovie: Boolean get() = route.isMovie
+
+    /** Seasons and what comes next (series only). */
+    private val _seriesFacts = MutableStateFlow<SeriesFacts?>(null)
+    val seriesFacts: StateFlow<SeriesFacts?> = _seriesFacts.asStateFlow()
+
     private val _whereToWatch = MutableStateFlow<WatchState>(WatchState.Loading)
     val whereToWatch: StateFlow<WatchState> = _whereToWatch.asStateFlow()
 
@@ -83,6 +92,7 @@ class StreamingTitleViewModel @Inject constructor(
     init {
         viewModelScope.launch { _details.value = runCatching { metadata.preview(route.isMovie, route.tmdbId) }.getOrNull() }
         viewModelScope.launch { _whereToWatch.value = loadWhereToWatch(streaming, route.isMovie, route.tmdbId) }
+        if (!route.isMovie) viewModelScope.launch { _seriesFacts.value = runCatching { metadata.seriesFacts(route.tmdbId) }.getOrNull() }
     }
 }
 
@@ -96,6 +106,7 @@ fun StreamingTitleScreen(
     val details by viewModel.details.collectAsStateWithLifecycle()
     val whereToWatch by viewModel.whereToWatch.collectAsStateWithLifecycle()
     val inLibrary by viewModel.inLibrary.collectAsStateWithLifecycle()
+    val seriesFacts by viewModel.seriesFacts.collectAsStateWithLifecycle()
     val meta = details ?: return
     val title = meta.title ?: meta.originalTitle.orEmpty()
     val libraryFocus = remember { FocusRequester() }
@@ -106,7 +117,8 @@ fun StreamingTitleScreen(
             horizontalArrangement = Arrangement.spacedBy(40.dp),
         ) {
             Poster(title, TmdbImages.poster(meta.posterPath), null)
-            Column(Modifier.widthIn(max = 900.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            // Scrolls when the season row is focused below the fold.
+            Column(Modifier.widthIn(max = 900.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Text(title, style = MaterialTheme.typography.displaySmall, fontWeight = FontWeight.SemiBold)
                 meta.originalTitle?.takeIf { it != title }?.let {
                     Text(it, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -115,7 +127,8 @@ fun StreamingTitleScreen(
                 Text(
                     meta.overview ?: "Nincs leírás.",
                     style = MaterialTheme.typography.bodyLarge,
-                    maxLines = 6,
+                    // A series also lists its seasons below, so its text is kept shorter.
+                    maxLines = if (viewModel.isMovie) 6 else 3,
                     overflow = TextOverflow.Ellipsis,
                 )
                 inLibrary?.let { found ->
@@ -131,8 +144,9 @@ fun StreamingTitleScreen(
                     ) { ButtonContent(Icons.Outlined.VideoLibrary, "Megvan a médiatárban") }
                 }
                 WhereToWatch(whereToWatch, searchTitle(meta.originalTitle, title), viewModel.streaming, Modifier.padding(top = 8.dp))
-                meta.director?.let { Text("Rendező: $it", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1) }
-                meta.cast?.let { Text("Szereplők: $it", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2) }
+                seriesFacts?.let { SeasonStrip(it, Modifier.padding(top = 4.dp)) }
+                if (viewModel.isMovie) meta.director?.let { Text("Rendező: $it", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1) }
+                if (viewModel.isMovie) meta.cast?.let { Text("Szereplők: $it", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2) }
             }
         }
     }

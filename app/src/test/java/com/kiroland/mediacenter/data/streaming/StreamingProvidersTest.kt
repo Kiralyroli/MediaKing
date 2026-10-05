@@ -102,4 +102,14 @@ class StreamingProvidersTest {
         assertEquals(setOf(337), Subscriptions.effective(setOf(337), setOf(8)))
         assertEquals(emptySet<Int>(), Subscriptions.effective(emptySet(), setOf(8)))
     }
+
+    @Test
+    fun `a subscription with a free tier still needs the subscription`() {
+        // Silo in Hungary: Apple TV by subscription, some episodes free.
+        val apple = StreamingProviders.merge(CountryProviders(flatrate = listOf(entry(350, "Apple TV", 2)), free = listOf(entry(350, "Apple TV", 2)))).single()
+        assertTrue(!Subscriptions.isIncluded(apple, mine = setOf(1899)))
+        assertTrue(Subscriptions.isIncluded(apple, mine = setOf(350)))
+        val mediaklikk = StreamingProviders.merge(CountryProviders(free = listOf(entry(2695, "MediaKlikk", 39)))).single()
+        assertTrue(Subscriptions.isIncluded(mediaklikk, mine = emptySet()))
+    }
 }

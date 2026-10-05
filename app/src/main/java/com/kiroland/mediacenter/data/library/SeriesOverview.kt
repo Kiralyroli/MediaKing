@@ -24,6 +24,8 @@ data class SeasonOverview(
     val rows: List<EpisodeRow>,
     /** Episodes TMDB lists for the season, if known. */
     val listedEpisodes: Int?,
+    /** First air date ("2027-07-08"), if TMDB has one. */
+    val airDate: String? = null,
 ) {
     val ownedCount: Int get() = rows.count { it is EpisodeRow.Owned }
     val isMissing: Boolean get() = ownedCount == 0
@@ -56,7 +58,7 @@ object SeriesOverview {
             val missing = expected.filterNot { it in covered }.map { EpisodeRow.Missing(season, it, known[it]) }
             val rows = (owned.map { EpisodeRow.Owned(it) } + missing)
                 .sortedWith(compareBy<EpisodeRow> { it.episode ?: Int.MAX_VALUE }.thenBy { it is EpisodeRow.Missing })
-            SeasonOverview(season, listed[season]?.name, rows, listedCount ?: known.size.takeIf { it > 0 })
+            SeasonOverview(season, listed[season]?.name, rows, listedCount ?: known.size.takeIf { it > 0 }, listed[season]?.airDate)
         }
     }
 }

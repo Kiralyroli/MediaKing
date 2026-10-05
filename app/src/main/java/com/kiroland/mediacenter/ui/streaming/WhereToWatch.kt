@@ -131,7 +131,11 @@ private fun ProviderPill(offer: ProviderOffer, installed: Boolean, included: Boo
 }
 
 private fun offerLabel(offer: ProviderOffer, included: Boolean): String = when (offer.best) {
-    Offer.SUBSCRIPTION -> if (included) "benne van az előfizetésedben" else "előfizetéssel"
+    Offer.SUBSCRIPTION -> when {
+        included -> "benne van az előfizetésedben"
+        Offer.FREE in offer.offers -> "előfizetéssel · egyes részek ingyen"
+        else -> "előfizetéssel"
+    }
     Offer.FREE -> "ingyenes"
     Offer.RENT -> if (Offer.BUY in offer.offers) "kölcsönzés, vásárlás" else "kölcsönzés"
     Offer.BUY -> "vásárlás"

@@ -10,6 +10,7 @@ import com.kiroland.mediacenter.data.library.ScanState
 import com.kiroland.mediacenter.data.library.SeriesSummary
 import com.kiroland.mediacenter.data.library.SeasonOverview
 import com.kiroland.mediacenter.data.library.SeriesOverview
+import com.kiroland.mediacenter.data.library.SeriesFacts
 import com.kiroland.mediacenter.data.library.db.LibraryFolderEntity
 import com.kiroland.mediacenter.data.library.db.EpisodeMetadataEntity
 import com.kiroland.mediacenter.data.library.db.MediaWithProgress
@@ -101,6 +102,12 @@ class SeriesViewModel @Inject constructor(
     val whereToWatch: StateFlow<WatchState> = tvId
         .mapLatest { id -> loadWhereToWatch(streaming, isMovie = false, id) }
         .stateIn(this, WatchState.Loading)
+
+    /** Seasons, status and an announced season, live from TMDB; null until loaded or offline. */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val seriesFacts: StateFlow<SeriesFacts?> = tvId
+        .mapLatest { id -> id?.let { runCatching { metadataRepository.seriesFacts(it) }.getOrNull() } }
+        .stateIn(this, null)
 
     /** Every season and episode: the library's files plus what TMDB lists but the library lacks. */
     val overview: StateFlow<List<SeasonOverview>?> =
