@@ -66,14 +66,18 @@ fun LibraryHomeScreen(
     onOpenSeries: (String) -> Unit,
     onPlay: (String) -> Unit,
     onOpenLiveTv: () -> Unit,
+    onOpenStreaming: (isMovie: Boolean, tmdbId: Int) -> Unit,
     viewModel: LibraryViewModel = hiltViewModel(),
     liveViewModel: HomeLiveViewModel = hiltViewModel(),
+    streamingViewModel: HomeStreamingViewModel = hiltViewModel(),
 ) {
     val folders by viewModel.folders.collectAsStateWithLifecycle()
     val continueState by viewModel.continueWatching.collectAsStateWithLifecycle()
     val recentState by viewModel.recentMovies.collectAsStateWithLifecycle()
     val series by viewModel.series.collectAsStateWithLifecycle()
     val live by liveViewModel.channels.collectAsStateWithLifecycle()
+    val watchlist by streamingViewModel.watchlist.collectAsStateWithLifecycle()
+    val popular by streamingViewModel.popular.collectAsStateWithLifecycle()
     val scanState by viewModel.scanState.collectAsStateWithLifecycle()
     val context = LocalContext.current
     // Shelves load independently; pick the initial focus only once all of them are in, or it lands on
@@ -145,6 +149,19 @@ fun LibraryHomeScreen(
             }
         }
 
+        if (watchlist.isNotEmpty()) {
+            shelf("Megnézendők") {
+                itemsIndexed(watchlist, key = { _, it -> it.key }) { _, entry ->
+                    PosterCard(
+                        title = entry.title,
+                        subtitle = listOfNotNull(if (entry.isMovie) "Film" else "Sorozat", entry.year?.toString()).joinToString(" · "),
+                        imageUrl = TmdbImages.poster(entry.posterPath),
+                        onClick = { onOpenStreaming(entry.isMovie, entry.tmdbId) },
+                    )
+                }
+            }
+        }
+
         if (recentMovies.isNotEmpty()) {
             shelf("Legutóbb hozzáadva") {
                 itemsIndexed(recentMovies, key = { _, it -> it.media.path }) { _, item ->
@@ -169,6 +186,20 @@ fun LibraryHomeScreen(
                         subtitle = "${summary.seasonCount} évad · ${summary.episodeCount} rész",
                         watched = summary.watchedCount == summary.episodeCount,
                         onClick = { onOpenSeries(summary.seriesKey) },
+                    )
+                }
+            }
+        }
+
+        // What is popular on each of the user's services, so it also says where to watch it.
+        popular.forEach { shelf ->
+            shelf("Népszerű · ${shelf.providerName}") {
+                itemsIndexed(shelf.titles, key = { _, it -> (if (it.isMovie) "m" else "t") + it.tmdbId }) { _, title ->
+                    PosterCard(
+                        title = title.title,
+                        subtitle = listOfNotNull(if (title.isMovie) "Film" else "Sorozat", title.year?.toString()).joinToString(" · "),
+                        imageUrl = TmdbImages.poster(title.posterPath),
+                        onClick = { onOpenStreaming(title.isMovie, title.tmdbId) },
                     )
                 }
             }

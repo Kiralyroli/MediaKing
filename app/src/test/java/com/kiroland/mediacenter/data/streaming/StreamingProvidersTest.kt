@@ -112,4 +112,15 @@ class StreamingProvidersTest {
         val mediaklikk = StreamingProviders.merge(CountryProviders(free = listOf(entry(2695, "MediaKlikk", 39)))).single()
         assertTrue(Subscriptions.isIncluded(mediaklikk, mine = emptySet()))
     }
+
+    @Test
+    fun `popular films and series merged, unreadable titles dropped`() {
+        val movies = listOf("Toy Story 5" to 90.0, "A szerelem képlete" to 120.0)
+        val series = listOf("Reacher" to 100.0, "सीआईडी" to 95.0)
+        assertEquals(
+            listOf("A szerelem képlete", "Reacher", "Toy Story 5"),
+            mergeByPopularity(movies, series, { it.second }, { it.first }, limit = 20).map { it.first },
+        )
+        assertEquals(1, mergeByPopularity(movies, series, { it.second }, { it.first }, limit = 1).size)
+    }
 }

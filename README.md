@@ -23,6 +23,8 @@ Portfólióprojekt, egy valódi Xiaomi Mi TV-n (Android 10) fejlesztve és teszt
   az HBO Max és a Disney+ a keresőoldalt nyitja, a Netflix az appot; a beírandó eredeti címet felirat mutatja
 - **Streaming-keresés és előfizetések** – a keresés a médiatár mellett a TMDB filmjeit és sorozatait is mutatja, saját
   adatlappal és „Hol nézheted?” résszel; a Beállításokban megadott előfizetéseidet teszi előre („benne van az előfizetésedben”)
+- **Megnézendők és „Népszerű nálad”** – streaming-címek félretehetők a Megnézendők közé (kezdőlapi sor); a kezdőlapon
+  előfizetésenként egy „Népszerű · Szolgáltató” sor mutatja, mi megy most a te szolgáltatásaidon
 - **Hálózati mappák (SMB)** – számítógép vagy NAS megosztott mappája a médiatárban, másolás nélkül; lejátszás közvetlenül
   a hálózatról (előreolvasó pufferrel), feliratokkal együtt; beállítás a feltöltő oldalon, kapcsolatpróbával
 - **Lejátszó** (Media3 / ExoPlayer)

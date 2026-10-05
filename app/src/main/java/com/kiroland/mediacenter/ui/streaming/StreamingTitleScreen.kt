@@ -12,6 +12,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.VideoLibrary
+import androidx.compose.material.icons.outlined.BookmarkAdd
+import androidx.compose.material.icons.filled.Bookmark
+import androidx.tv.material3.OutlinedButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -89,6 +92,15 @@ class StreamingTitleViewModel @Inject constructor(
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
+    val inWatchlist: StateFlow<Boolean> = streaming.isInWatchlist(route.isMovie, route.tmdbId)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
+
+    fun toggleWatchlist() {
+        val meta = _details.value ?: return
+        val title = StreamingRepository.Title(route.isMovie, route.tmdbId, meta.title ?: meta.originalTitle.orEmpty(), meta.year, meta.posterPath)
+        viewModelScope.launch { streaming.setInWatchlist(title, !inWatchlist.value) }
+    }
+
     init {
         viewModelScope.launch { _details.value = runCatching { metadata.preview(route.isMovie, route.tmdbId) }.getOrNull() }
         viewModelScope.launch { _whereToWatch.value = loadWhereToWatch(streaming, route.isMovie, route.tmdbId) }
@@ -107,6 +119,9 @@ fun StreamingTitleScreen(
     val whereToWatch by viewModel.whereToWatch.collectAsStateWithLifecycle()
     val inLibrary by viewModel.inLibrary.collectAsStateWithLifecycle()
     val seriesFacts by viewModel.seriesFacts.collectAsStateWithLifecycle()
+    val inWatchlist by viewModel.inWatchlist.collectAsStateWithLifecycle()
+    val watchlistFocus = remember { FocusRequester() }
+    val scroll = rememberScrollState()
     val meta = details ?: return
     val title = meta.title ?: meta.originalTitle.orEmpty()
     val libraryFocus = remember { FocusRequester() }
@@ -118,7 +133,7 @@ fun StreamingTitleScreen(
         ) {
             Poster(title, TmdbImages.poster(meta.posterPath), null)
             // Scrolls when the season row is focused below the fold.
-            Column(Modifier.widthIn(max = 900.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Column(Modifier.widthIn(max = 900.dp).verticalScroll(scroll), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Text(title, style = MaterialTheme.typography.displaySmall, fontWeight = FontWeight.SemiBold)
                 meta.originalTitle?.takeIf { it != title }?.let {
                     Text(it, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -131,17 +146,22 @@ fun StreamingTitleScreen(
                     maxLines = if (viewModel.isMovie) 6 else 3,
                     overflow = TextOverflow.Ellipsis,
                 )
-                inLibrary?.let { found ->
-                    Spacer(Modifier.height(4.dp))
-                    Button(
-                        onClick = {
-                            when (found) {
-                                is InLibrary.Movie -> onOpenMovie(found.path)
-                                is InLibrary.Series -> onOpenSeries(found.seriesKey)
-                            }
-                        },
-                        modifier = Modifier.focusRequester(libraryFocus),
-                    ) { ButtonContent(Icons.Outlined.VideoLibrary, "Megvan a médiatárban") }
+                Row(Modifier.padding(top = 4.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                    inLibrary?.let { found ->
+                        Button(
+                            onClick = {
+                                when (found) {
+                                    is InLibrary.Movie -> onOpenMovie(found.path)
+                                    is InLibrary.Series -> onOpenSeries(found.seriesKey)
+                                }
+                            },
+                            modifier = Modifier.focusRequester(libraryFocus),
+                        ) { ButtonContent(Icons.Outlined.VideoLibrary, "Megvan a médiatárban") }
+                    }
+                    OutlinedButton(onClick = viewModel::toggleWatchlist, modifier = Modifier.focusRequester(watchlistFocus)) {
+                        if (inWatchlist) ButtonContent(Icons.Filled.Bookmark, "Megnézendő")
+                        else ButtonContent(Icons.Outlined.BookmarkAdd, "Megnézendők közé")
+                    }
                 }
                 WhereToWatch(whereToWatch, searchTitle(meta.originalTitle, title), viewModel.streaming, Modifier.padding(top = 8.dp))
                 seriesFacts?.let { SeasonStrip(it, Modifier.padding(top = 4.dp)) }
@@ -150,5 +170,11 @@ fun StreamingTitleScreen(
             }
         }
     }
-    LaunchedEffect(inLibrary != null) { if (inLibrary != null) runCatching { libraryFocus.requestFocus() } }
+    // Start on the library button when there is one, else on the watchlist button.
+    LaunchedEffect(inLibrary != null) {
+        runCatching { if (inLibrary != null) libraryFocus.requestFocus() else watchlistFocus.requestFocus() }
+        // Focusing scrolls the button towards the middle; the title should stay in sight on arrival.
+        kotlinx.coroutines.delay(50)
+        scroll.scrollTo(0)
+    }
 }

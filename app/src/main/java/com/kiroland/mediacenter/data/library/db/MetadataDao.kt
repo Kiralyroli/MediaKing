@@ -85,6 +85,20 @@ interface MetadataDao {
     @Upsert
     suspend fun cacheSegments(entry: SegmentCacheEntity)
 
+    // --- Watchlist ---
+
+    @Query("SELECT * FROM watchlist ORDER BY addedAt DESC")
+    fun observeWatchlist(): Flow<List<WatchlistEntity>>
+
+    @Query("SELECT EXISTS(SELECT 1 FROM watchlist WHERE `key` = :key)")
+    fun observeInWatchlist(key: String): Flow<Boolean>
+
+    @Upsert
+    suspend fun addToWatchlist(entry: WatchlistEntity)
+
+    @Query("DELETE FROM watchlist WHERE `key` = :key")
+    suspend fun removeFromWatchlist(key: String)
+
     @Query("DELETE FROM metadata")
     suspend fun clearMetadata()
 

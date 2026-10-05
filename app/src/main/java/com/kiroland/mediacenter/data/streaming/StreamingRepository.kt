@@ -8,6 +8,10 @@ import android.net.Uri
 import android.util.Log
 import com.kiroland.mediacenter.data.metadata.TmdbCredentials
 import com.kiroland.mediacenter.data.settings.SettingsRepository
+import com.kiroland.mediacenter.data.library.db.MetadataDao
+import com.kiroland.mediacenter.data.library.db.WatchlistEntity
+import com.kiroland.mediacenter.data.metadata.tmdb.DiscoverResult
+import kotlinx.coroutines.flow.Flow
 import com.kiroland.mediacenter.data.metadata.tmdb.TmdbApi
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellationException
@@ -21,6 +25,7 @@ class StreamingRepository @Inject constructor(
     private val api: TmdbApi,
     private val credentials: TmdbCredentials,
     private val settings: SettingsRepository,
+    private val dao: MetadataDao,
 ) {
     data class Availability(val offers: List<ProviderOffer>)
 
@@ -80,6 +85,48 @@ class StreamingRepository @Inject constructor(
 
     /** Provider apps installed right now (they can be installed while the app runs). */
     fun installedPackages(): Set<String> = StreamingProviders.allPackages.filterTo(HashSet()) { isInstalled(it) }
+
+    private val popularCache = HashMap<Int, Pair<Long, List<Title>>>()
+
+    /** What is popular on one provider in Hungary (films and series together); empty when unknown. */
+    suspend fun popularOn(providerId: Int): List<Title> {
+        if (!credentials.isConfigured) return emptyList()
+        synchronized(popularCache) {
+            popularCache[providerId]?.takeIf { System.currentTimeMillis() - it.first < CACHE_MS }?.let { return it.second }
+        }
+        return try {
+            fun List<DiscoverResult>.titles(isMovie: Boolean) = filter { it.posterPath != null }.map {
+                Title(isMovie, it.id, (if (isMovie) it.title else it.name).orEmpty(), (if (isMovie) it.releaseDate else it.firstAirDate)?.take(4)?.toIntOrNull(), it.posterPath) to it.popularity
+            }
+            val movies = api.discover("movie", providerId.toString()).results.titles(isMovie = true)
+            val series = api.discover("tv", providerId.toString()).results.titles(isMovie = false)
+            val result = mergeByPopularity(movies, series, { it.second }, { it.first.title }, limit = 20).map { it.first }
+            synchronized(popularCache) { popularCache[providerId] = System.currentTimeMillis() to result }
+            result
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.w(TAG, "Popular on $providerId failed: ${e.message}")
+            emptyList()
+        }
+    }
+
+    // --- Watchlist ---
+
+    val watchlist: Flow<List<WatchlistEntity>> = dao.observeWatchlist()
+
+    fun isInWatchlist(isMovie: Boolean, tmdbId: Int): Flow<Boolean> = dao.observeInWatchlist(watchlistKey(isMovie, tmdbId))
+
+    suspend fun setInWatchlist(title: Title, inList: Boolean) {
+        val key = watchlistKey(title.isMovie, title.tmdbId)
+        if (inList) {
+            dao.addToWatchlist(WatchlistEntity(key, title.isMovie, title.tmdbId, title.title, title.year, title.posterPath, System.currentTimeMillis()))
+        } else {
+            dao.removeFromWatchlist(key)
+        }
+    }
+
+    private fun watchlistKey(isMovie: Boolean, tmdbId: Int) = (if (isMovie) "movie:" else "tv:") + tmdbId
 
     /** The user's subscriptions: chosen in the settings, or the services whose app is installed. */
     fun mySubscriptions(): Set<Int> = Subscriptions.effective(

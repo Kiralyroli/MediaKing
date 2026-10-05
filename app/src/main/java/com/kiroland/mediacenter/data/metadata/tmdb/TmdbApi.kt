@@ -31,6 +31,18 @@ interface TmdbApi {
         @Query("include_adult") includeAdult: Boolean = false,
     ): SearchResponse<MultiResult>
 
+    /** Popular titles on given providers ("8|1899") in Hungary, included in a subscription. */
+    @GET("discover/{type}")
+    suspend fun discover(
+        @Path("type") type: String,
+        @Query("with_watch_providers") providers: String,
+        @Query("watch_region") region: String = "HU",
+        @Query("with_watch_monetization_types") monetization: String = "flatrate",
+        @Query("sort_by") sortBy: String = "popularity.desc",
+        @Query("language") language: String = LANGUAGE,
+        @Query("include_adult") includeAdult: Boolean = false,
+    ): SearchResponse<DiscoverResult>
+
     @GET("movie/{id}")
     suspend fun movie(
         @Path("id") id: Int,
@@ -214,4 +226,16 @@ data class MultiResult(
     @SerialName("poster_path") val posterPath: String? = null,
     val popularity: Double = 0.0,
     @SerialName("vote_count") val voteCount: Int = 0,
+)
+
+/** A discover hit: films have title/release_date, series name/first_air_date. */
+@Serializable
+data class DiscoverResult(
+    val id: Int,
+    val title: String? = null,
+    val name: String? = null,
+    @SerialName("release_date") val releaseDate: String? = null,
+    @SerialName("first_air_date") val firstAirDate: String? = null,
+    @SerialName("poster_path") val posterPath: String? = null,
+    val popularity: Double = 0.0,
 )

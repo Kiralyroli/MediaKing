@@ -116,8 +116,14 @@ private val APPLE = ProviderApp(
  * reliably than a Hungarian translation, unless it is not in Latin script (no way to type it on a TV).
  */
 fun searchTitle(originalTitle: String?, localTitle: String): String =
-    originalTitle?.takeIf { it.isNotBlank() && it.all { c -> !c.isLetter() || Character.UnicodeScript.of(c.code) == Character.UnicodeScript.LATIN } }
-        ?: localTitle
+    originalTitle?.takeIf { it.isNotBlank() && isLatin(it) } ?: localTitle
+
+/** Only Latin letters (accents are fine): what a Hungarian viewer can read and type. */
+fun isLatin(text: String): Boolean = text.all { c -> !c.isLetter() || Character.UnicodeScript.of(c.code) == Character.UnicodeScript.LATIN }
+
+/** Films and series from two popularity-sorted lists, merged by popularity, readable titles only. */
+fun <T> mergeByPopularity(movies: List<T>, series: List<T>, popularity: (T) -> Double, title: (T) -> String, limit: Int): List<T> =
+    (movies + series).filter { isLatin(title(it)) }.sortedByDescending(popularity).take(limit)
 
 /** A subscription service the user can tick in the settings. */
 data class Subscribable(val providerId: Int, val name: String)

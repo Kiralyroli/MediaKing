@@ -150,6 +150,7 @@ fun HomeScreen(
                     onOpenSeries = onOpenSeries,
                     onPlay = onPlay,
                     onOpenLiveTv = { section = HomeSection.LiveTv },
+                    onOpenStreaming = onOpenStreaming,
                 )
                 HomeSection.Movies -> MoviesScreen(onOpenMovie = onOpenMovie)
                 HomeSection.Series -> SeriesListScreen(onOpenSeries = onOpenSeries)
