@@ -396,4 +396,10 @@
         <item quantity="one">%d Folge</item>
         <item quantity="other">%d Folgen</item>
     </plurals>
+    <!-- News about followed titles -->
+    <string name="shelf_news">Neuigkeiten</string>
+    <string name="news_available">Jetzt bei %1$s</string>
+    <string name="news_season_out">Staffel %1$d ist da</string>
+    <string name="news_announced_on">Staffel %1$d: %2$s</string>
+    <string name="news_announced">Staffel %1$d angekündigt</string>
 </resources>

@@ -1,5 +1,8 @@
 package com.kiroland.mediacenter.ui.library
 
+import com.kiroland.mediacenter.data.library.SeasonFacts
+import com.kiroland.mediacenter.data.news.NewsKind
+import com.kiroland.mediacenter.data.library.db.TitleNewsEntity
 import com.kiroland.mediacenter.R
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
@@ -81,6 +84,7 @@ fun LibraryHomeScreen(
     val series by viewModel.series.collectAsStateWithLifecycle()
     val live by liveViewModel.channels.collectAsStateWithLifecycle()
     val watchlist by streamingViewModel.watchlist.collectAsStateWithLifecycle()
+    val news by streamingViewModel.news.collectAsStateWithLifecycle()
     val popular by streamingViewModel.popular.collectAsStateWithLifecycle()
     val scanState by viewModel.scanState.collectAsStateWithLifecycle()
     val context = LocalContext.current
@@ -132,6 +136,22 @@ fun LibraryHomeScreen(
                         onPlay = { context.startActivity(PlayerActivity.liveIntent(context, it.addonId, it.channelId)) },
                         onOpenLiveTv = onOpenLiveTv,
                         modifier = Modifier.weight(1f).fillMaxHeight(),
+                    )
+                }
+            }
+        }
+
+        if (news.isNotEmpty()) {
+            shelf(R.string.shelf_news) {
+                itemsIndexed(news, key = { _, it -> it.id }) { _, item ->
+                    PosterCard(
+                        title = item.title,
+                        subtitle = newsLine(item),
+                        imageUrl = TmdbImages.poster(item.posterPath),
+                        onClick = {
+                            streamingViewModel.dismissNews(item.isMovie, item.tmdbId)
+                            onOpenStreaming(item.isMovie, item.tmdbId)
+                        },
                     )
                 }
             }
@@ -337,6 +357,15 @@ private fun remaining(res: Resources, item: MediaWithProgress): String? {
     val minutes = ((duration - position) / 60_000).toInt()
     if (minutes <= 0) return null
     return if (minutes >= 60) res.getString(R.string.remaining_hm, minutes / 60, minutes % 60) else res.getString(R.string.remaining_m, minutes)
+}
+
+/** "Most már: Netflix", "Megjelent: 4. évad", "5. évad: 2027. július 8." */
+@Composable
+private fun newsLine(item: TitleNewsEntity): String = when (item.kind) {
+    NewsKind.AVAILABLE.name -> stringResource(R.string.news_available, item.providerName.orEmpty())
+    NewsKind.SEASON_OUT.name -> stringResource(R.string.news_season_out, item.season ?: 0)
+    else -> SeasonFacts.longDate(item.date)?.let { stringResource(R.string.news_announced_on, item.season ?: 0, it) }
+        ?: stringResource(R.string.news_announced, item.season ?: 0)
 }
 
 /** "3 évad · 44 rész" / "3 seasons · 44 eps.", short enough for a poster card. */

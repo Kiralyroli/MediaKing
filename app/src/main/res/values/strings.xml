@@ -397,4 +397,10 @@
         <item quantity="one">%d rész</item>
         <item quantity="other">%d rész</item>
     </plurals>
+    <!-- News about followed titles -->
+    <string name="shelf_news">Újdonságok</string>
+    <string name="news_available">Most már: %1$s</string>
+    <string name="news_season_out">Megjelent: %1$d. évad</string>
+    <string name="news_announced_on">%1$d. évad: %2$s</string>
+    <string name="news_announced">Bejelentve: %1$d. évad</string>
 </resources>

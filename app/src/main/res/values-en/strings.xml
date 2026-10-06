@@ -396,4 +396,10 @@
         <item quantity="one">%d ep.</item>
         <item quantity="other">%d eps.</item>
     </plurals>
+    <!-- News about followed titles -->
+    <string name="shelf_news">What\'s new</string>
+    <string name="news_available">Now on %1$s</string>
+    <string name="news_season_out">Season %1$d is out</string>
+    <string name="news_announced_on">Season %1$d: %2$s</string>
+    <string name="news_announced">Season %1$d announced</string>
 </resources>

@@ -163,3 +163,36 @@ data class MediaWithProgress(
 }
 
 data class PathAddedAt(val path: String, val addedAt: Long)
+
+/**
+ * What was seen of a followed title at the last check ("movie:157336", "tv:125988"), so the next
+ * check notices what changed: the user's services carrying it, aired and announced seasons.
+ */
+@Entity(tableName = "title_watch")
+data class TitleWatchEntity(
+    @PrimaryKey val key: String,
+    /** Provider ids on the user's services, sorted, comma separated ("8,119"). */
+    val providers: String,
+    val airedSeasons: Int?,
+    val announcedSeason: Int?,
+    val announcedDate: String?,
+    val checkedAt: Long,
+)
+
+/** Something new about a followed title, shown on the home screen until opened or old. */
+@Entity(tableName = "title_news")
+data class TitleNewsEntity(
+    /** Unique per event, e.g. "available:movie:157336:8", "season:tv:125988:3". */
+    @PrimaryKey val id: String,
+    val isMovie: Boolean,
+    val tmdbId: Int,
+    val title: String,
+    val posterPath: String?,
+    /** [com.kiroland.mediacenter.data.news.NewsKind] name. */
+    val kind: String,
+    val providerName: String?,
+    val season: Int?,
+    val date: String?,
+    val createdAt: Long,
+    val dismissed: Boolean = false,
+)

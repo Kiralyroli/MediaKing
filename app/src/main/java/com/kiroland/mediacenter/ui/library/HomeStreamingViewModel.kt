@@ -2,7 +2,10 @@ package com.kiroland.mediacenter.ui.library
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.kiroland.mediacenter.data.library.db.TitleNewsEntity
 import com.kiroland.mediacenter.data.library.db.WatchlistEntity
+import com.kiroland.mediacenter.data.news.NewsRepository
+import kotlinx.coroutines.launch
 import com.kiroland.mediacenter.data.settings.SettingsRepository
 import com.kiroland.mediacenter.data.streaming.StreamingRepository
 import com.kiroland.mediacenter.data.streaming.Subscriptions
@@ -23,8 +26,16 @@ data class PopularShelf(val providerName: String, val titles: List<StreamingRepo
 @HiltViewModel
 class HomeStreamingViewModel @Inject constructor(
     private val streaming: StreamingRepository,
+    private val newsRepository: NewsRepository,
     settings: SettingsRepository,
 ) : ViewModel() {
+
+    val news: StateFlow<List<TitleNewsEntity>> =
+        newsRepository.news().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    fun dismissNews(isMovie: Boolean, tmdbId: Int) {
+        viewModelScope.launch { newsRepository.dismiss(isMovie, tmdbId) }
+    }
 
     val watchlist: StateFlow<List<WatchlistEntity>> =
         streaming.watchlist.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())

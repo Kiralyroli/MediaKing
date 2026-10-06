@@ -39,6 +39,9 @@ object AppModule {
     fun provideMetadataDao(database: LibraryDatabase): MetadataDao = database.metadataDao()
 
     @Provides
+    fun provideNewsDao(database: LibraryDatabase): com.kiroland.mediacenter.data.library.db.NewsDao = database.newsDao()
+
+    @Provides
     @Singleton
     @ApplicationScope
     fun provideApplicationScope(): CoroutineScope {
