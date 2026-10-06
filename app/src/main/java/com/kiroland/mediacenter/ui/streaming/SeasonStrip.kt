@@ -1,5 +1,9 @@
 package com.kiroland.mediacenter.ui.streaming
 
+import com.kiroland.mediacenter.R
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
+import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -24,21 +28,34 @@ import com.kiroland.mediacenter.ui.theme.TextMuted
 import com.kiroland.mediacenter.ui.theme.TextPrimary
 
 /** "3 évad · 30 rész · Folytatódik · 4. évad: 2027. július 8." */
+@Composable
 fun seriesSummary(facts: SeriesFacts): String {
     val announced = facts.seasons.firstOrNull { it.second == SeasonState.ANNOUNCED }?.first
     return listOfNotNull(
-        "${facts.airedSeasons} évad",
-        "${facts.airedEpisodes} rész".takeIf { facts.airedEpisodes > 0 },
-        facts.status,
-        announced?.let { s -> "${s.number}. évad: " + (SeasonFacts.longDate(s.airDate) ?: "bejelentve") },
+        pluralStringResource(R.plurals.seasons_count, facts.airedSeasons, facts.airedSeasons),
+        pluralStringResource(R.plurals.episodes_count, facts.airedEpisodes, facts.airedEpisodes).takeIf { facts.airedEpisodes > 0 },
+        statusLabel(facts.status)?.let { stringResource(it) },
+        announced?.let { s -> stringResource(R.string.season_next_on, s.number, SeasonFacts.longDate(s.airDate) ?: stringResource(R.string.season_announced)) },
     ).joinToString(" · ")
+}
+
+/** TMDB's series status in the app's language. */
+@StringRes
+fun statusLabel(tmdbStatus: String?): Int? = when (tmdbStatus) {
+    "Returning Series" -> R.string.status_returning
+    "Ended" -> R.string.status_ended
+    "Canceled" -> R.string.status_canceled
+    "In Production" -> R.string.status_in_production
+    "Planned" -> R.string.status_planned
+    "Pilot" -> R.string.status_pilot
+    else -> null
 }
 
 /** One card per season: episodes and premiere; an announced one in the accent colour. Focusable so the row scrolls. */
 @Composable
 fun SeasonStrip(facts: SeriesFacts, modifier: Modifier = Modifier) {
     Column(modifier, verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Text("Évadok", style = MaterialTheme.typography.titleLarge)
+        Text(stringResource(R.string.seasons_title), style = MaterialTheme.typography.titleLarge)
         Text(seriesSummary(facts), style = MaterialTheme.typography.bodyMedium, color = TextMuted)
         LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp), contentPadding = PaddingValues(vertical = 6.dp)) {
             items(facts.seasons, key = { it.first.number }) { (season, state) ->
@@ -56,18 +73,18 @@ fun SeasonStrip(facts: SeriesFacts, modifier: Modifier = Modifier) {
                     scale = ClickableSurfaceDefaults.scale(focusedScale = 1.04f),
                 ) {
                     Column(Modifier.padding(horizontal = 14.dp, vertical = 10.dp)) {
-                        Text("${season.number}. évad", style = MaterialTheme.typography.titleSmall)
+                        Text(stringResource(R.string.season_label, season.number), style = MaterialTheme.typography.titleSmall)
                         Text(
                             when (state) {
-                                SeasonState.ANNOUNCED -> "Bejelentve"
-                                SeasonState.AIRING -> "${season.episodeCount} rész · most fut"
-                                SeasonState.AIRED -> "${season.episodeCount} rész"
+                                SeasonState.ANNOUNCED -> stringResource(R.string.season_announced)
+                                SeasonState.AIRING -> pluralStringResource(R.plurals.episodes_count, season.episodeCount, season.episodeCount) + " · " + stringResource(R.string.season_airing)
+                                SeasonState.AIRED -> pluralStringResource(R.plurals.episodes_count, season.episodeCount, season.episodeCount)
                             },
                             style = MaterialTheme.typography.labelMedium,
                             color = if (announced) MaterialTheme.colorScheme.primary else LocalContentColor.current.copy(alpha = 0.8f),
                         )
                         Text(
-                            SeasonFacts.shortDate(season.airDate) ?: "dátum még nincs",
+                            SeasonFacts.shortDate(season.airDate) ?: stringResource(R.string.season_no_date),
                             style = MaterialTheme.typography.labelMedium,
                             color = LocalContentColor.current.copy(alpha = 0.7f),
                         )

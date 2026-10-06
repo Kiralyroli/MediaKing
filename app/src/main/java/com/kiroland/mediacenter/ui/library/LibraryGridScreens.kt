@@ -1,5 +1,7 @@
 package com.kiroland.mediacenter.ui.library
 
+import com.kiroland.mediacenter.R
+import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -31,11 +33,11 @@ fun MoviesScreen(onOpenMovie: (String) -> Unit, viewModel: LibraryViewModel = hi
     val list = movies
 
     PosterGrid(
-        title = "Filmek" + (list?.let { " (${it.size})" } ?: ""),
+        title = list?.let { stringResource(R.string.movies_title_count, it.size) } ?: stringResource(R.string.movies_title),
         header = {
             ScanStatus(scanState)
             if (folders?.isEmpty() == true) EmptyLibraryHint()
-            else if (list?.isEmpty() == true) Text("Nincs film a médiatárban.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            else if (list?.isEmpty() == true) Text(stringResource(R.string.movies_none), color = MaterialTheme.colorScheme.onSurfaceVariant)
         },
         itemCount = list?.size ?: 0,
     ) { first ->
@@ -61,11 +63,11 @@ fun SeriesListScreen(onOpenSeries: (String) -> Unit, viewModel: LibraryViewModel
     val list = series
 
     PosterGrid(
-        title = "Sorozatok" + (list?.let { " (${it.size})" } ?: ""),
+        title = list?.let { stringResource(R.string.series_title_count, it.size) } ?: stringResource(R.string.series_title),
         header = {
             ScanStatus(scanState)
             if (folders?.isEmpty() == true) EmptyLibraryHint()
-            else if (list?.isEmpty() == true) Text("Nincs sorozat a médiatárban.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            else if (list?.isEmpty() == true) Text(stringResource(R.string.series_none), color = MaterialTheme.colorScheme.onSurfaceVariant)
         },
         itemCount = list?.size ?: 0,
     ) { first ->
@@ -73,7 +75,7 @@ fun SeriesListScreen(onOpenSeries: (String) -> Unit, viewModel: LibraryViewModel
             PosterCard(
                 title = summary.title,
                 imageUrl = TmdbImages.poster(summary.metadata?.posterPath),
-                subtitle = "${summary.seasonCount} évad · ${summary.episodeCount} rész",
+                subtitle = seasonsAndEpisodes(summary.seasonCount, summary.episodeCount),
                 watched = summary.watchedCount == summary.episodeCount,
                 onClick = { onOpenSeries(summary.seriesKey) },
                 modifier = if (index == 0) Modifier.focusRequester(first) else Modifier,

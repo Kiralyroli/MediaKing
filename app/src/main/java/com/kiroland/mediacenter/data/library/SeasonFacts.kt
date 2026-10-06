@@ -47,19 +47,9 @@ object SeasonFacts {
             seasons = withState,
             airedSeasons = aired.size,
             airedEpisodes = aired.sumOf { it.first.episodeCount },
-            status = statusLabel(tmdbStatus),
+            status = tmdbStatus,
             nextAirDate = nextAirDate?.takeIf { it > today },
         )
-    }
-
-    fun statusLabel(tmdbStatus: String?): String? = when (tmdbStatus) {
-        "Returning Series" -> "Folytatódik"
-        "Ended" -> "Befejeződött"
-        "Canceled" -> "Elkaszálták"
-        "In Production" -> "Készül"
-        "Planned" -> "Tervezett"
-        "Pilot" -> "Pilot"
-        else -> null
     }
 
     /** "2027. július 8." / "July 8, 2027" / "8. Juli 2027" */

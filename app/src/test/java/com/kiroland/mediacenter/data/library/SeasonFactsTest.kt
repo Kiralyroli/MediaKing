@@ -20,7 +20,7 @@ class SeasonFactsTest {
         assertEquals(listOf(SeasonState.AIRED, SeasonState.AIRED, SeasonState.AIRED, SeasonState.ANNOUNCED), facts.seasons.map { it.second })
         assertEquals(3, facts.airedSeasons)
         assertEquals(30, facts.airedEpisodes)
-        assertEquals("Folytatódik", facts.status)
+        assertEquals("Returning Series", facts.status)
         assertEquals("2027-07-08", facts.nextAirDate)
     }
 
@@ -39,7 +39,7 @@ class SeasonFactsTest {
         )
         assertEquals(listOf(1, 2), facts.seasons.map { it.first.number })
         assertEquals(SeasonState.ANNOUNCED, facts.seasons.last().second)
-        assertEquals("Befejeződött", facts.status)
+        assertEquals("Ended", facts.status)
         assertNull(facts.nextAirDate)
     }
 

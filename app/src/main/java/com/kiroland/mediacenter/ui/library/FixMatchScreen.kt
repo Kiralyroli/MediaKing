@@ -1,5 +1,8 @@
 package com.kiroland.mediacenter.ui.library
 
+import com.kiroland.mediacenter.R
+import androidx.compose.ui.res.stringResource
+import androidx.annotation.StringRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -61,7 +64,7 @@ sealed interface FixMatchState {
     data object Idle : FixMatchState
     data object Searching : FixMatchState
     data class Results(val items: List<MatchCandidate>) : FixMatchState
-    data class Error(val message: String) : FixMatchState
+    data class Error(@StringRes val message: Int, val detail: String?) : FixMatchState
     data object Saved : FixMatchState
 }
 
@@ -86,7 +89,7 @@ class FixMatchViewModel @Inject constructor(
         _state.value = FixMatchState.Searching
         viewModelScope.launch {
             _state.value = runCatching { metadata.search(kind, query.trim()) }
-                .fold({ FixMatchState.Results(it) }, { FixMatchState.Error("A keresés nem sikerült: ${it.message}") })
+                .fold({ FixMatchState.Results(it) }, { FixMatchState.Error(R.string.fix_search_failed, it.message) })
         }
     }
 
@@ -94,7 +97,7 @@ class FixMatchViewModel @Inject constructor(
         _state.value = FixMatchState.Searching
         viewModelScope.launch {
             _state.value = runCatching { metadata.applyMatch(route.key, kind, candidate.id) }
-                .fold({ FixMatchState.Saved }, { FixMatchState.Error("Nem sikerült menteni: ${it.message}") })
+                .fold({ FixMatchState.Saved }, { FixMatchState.Error(R.string.fix_save_failed, it.message) })
         }
     }
 }
@@ -122,7 +125,7 @@ fun FixMatchScreen(onDone: () -> Unit, viewModel: FixMatchViewModel = hiltViewMo
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         Text(
-            if (viewModel.kind == MediaKind.MOVIE) "Melyik film ez?" else "Melyik sorozat ez?",
+            stringResource(if (viewModel.kind == MediaKind.MOVIE) R.string.fix_which_movie else R.string.fix_which_series),
             style = MaterialTheme.typography.headlineMedium,
         )
         Row(horizontalArrangement = Arrangement.spacedBy(16.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -144,15 +147,15 @@ fun FixMatchScreen(onDone: () -> Unit, viewModel: FixMatchViewModel = hiltViewMo
                     .border(2.dp, if (fieldFocused) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(10.dp))
                     .padding(horizontal = 16.dp, vertical = 12.dp),
             )
-            Button(onClick = { viewModel.search(query) }) { Text("Keresés") }
+            Button(onClick = { viewModel.search(query) }) { Text(stringResource(R.string.fix_search)) }
         }
 
         when (val s = state) {
             FixMatchState.Idle, FixMatchState.Saved -> Unit
-            FixMatchState.Searching -> Text("Keresés…", color = MaterialTheme.colorScheme.onSurfaceVariant)
-            is FixMatchState.Error -> Text(s.message, color = MaterialTheme.colorScheme.error)
+            FixMatchState.Searching -> Text(stringResource(R.string.fix_searching), color = MaterialTheme.colorScheme.onSurfaceVariant)
+            is FixMatchState.Error -> Text(stringResource(s.message, s.detail.orEmpty()), color = MaterialTheme.colorScheme.error)
             is FixMatchState.Results -> if (s.items.isEmpty()) {
-                Text("Nincs találat. Próbáld az eredeti (angol) címmel.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(stringResource(R.string.fix_no_results), color = MaterialTheme.colorScheme.onSurfaceVariant)
             } else {
                 LazyColumn(contentPadding = PaddingValues(bottom = 48.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     items(s.items, key = { it.id }) { candidate ->

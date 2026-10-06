@@ -1,5 +1,9 @@
 package com.kiroland.mediacenter.ui.watched
 
+import com.kiroland.mediacenter.R
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
+import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -40,7 +44,12 @@ class WatchedViewModel @Inject constructor(watched: WatchedRepository) : ViewMod
     val all: StateFlow<List<WatchedTitleEntity>?> = watched.all.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 }
 
-private enum class WatchedFilter(val label: String) { ALL("Mind"), MOVIES("Filmek"), SERIES("Sorozatok"), BEST("Legjobbra értékelt") }
+private enum class WatchedFilter(@StringRes val label: Int) {
+    ALL(R.string.watched_filter_all),
+    MOVIES(R.string.watched_filter_movies),
+    SERIES(R.string.watched_filter_series),
+    BEST(R.string.watched_filter_best),
+}
 
 /** Everything the user has marked as watched, newest first; opens the title's page (to re-rate it). */
 @Composable
@@ -64,18 +73,22 @@ fun WatchedScreen(onOpenStreaming: (isMovie: Boolean, tmdbId: Int) -> Unit, view
     ) {
         item(span = { GridItemSpan(maxLineSpan) }) {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text("Megnézettek", style = MaterialTheme.typography.headlineMedium)
+                Text(stringResource(R.string.watched_title), style = MaterialTheme.typography.headlineMedium)
                 Text(
                     if (all.isEmpty()) {
-                        "Még üres. Egy film vagy sorozat oldalán a „Megnéztem” gombbal kerül ide; a médiatár végignézett filmjei maguktól."
+                        stringResource(R.string.watched_empty)
                     } else {
-                        "${all.count { it.isMovie }} film · ${all.count { !it.isMovie }} sorozat · ${all.count { it.rating != null }} értékelve"
+                        listOf(
+                            all.count { it.isMovie }.let { pluralStringResource(R.plurals.movies_count, it, it) },
+                            all.count { !it.isMovie }.let { pluralStringResource(R.plurals.series_count, it, it) },
+                            all.count { it.rating != null }.let { pluralStringResource(R.plurals.rated_count, it, it) },
+                        ).joinToString(" · ")
                     },
                     color = TextMuted,
                 )
                 if (all.isNotEmpty()) {
                     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        WatchedFilter.entries.forEach { f -> PillButton(f.label, selected = f == filter, onClick = { filter = f }) }
+                        WatchedFilter.entries.forEach { f -> PillButton(stringResource(f.label), selected = f == filter, onClick = { filter = f }) }
                     }
                 }
             }

@@ -1,5 +1,9 @@
 package com.kiroland.mediacenter.ui.library
 
+import com.kiroland.mediacenter.R
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
+import android.content.res.Resources
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -90,8 +94,8 @@ fun LibraryHomeScreen(
     // The grid shows up to three things to continue, topped up with the newest films.
     val continuing = continueWatching.mapTo(HashSet()) { it.item.media.path }
     val features = (
-        continueWatching.map { it.toFeature(onPlay) } +
-            recentMovies.filterNot { it.media.path in continuing }.map { it.toNewFeature(onOpenMovie) }
+        continueWatching.map { it.toFeature(context.resources, onPlay) } +
+            recentMovies.filterNot { it.media.path in continuing }.map { it.toNewFeature(context.resources, onOpenMovie) }
     ).take(3)
     val shownPaths = continueWatching.take(3).map { it.item.media.path }.toSet()
     val moreToContinue = continueWatching.filterNot { it.item.media.path in shownPaths }
@@ -134,7 +138,7 @@ fun LibraryHomeScreen(
         }
 
         if (moreToContinue.isNotEmpty()) {
-            shelf("Folytatás") {
+            shelf(R.string.shelf_continue) {
                 itemsIndexed(moreToContinue, key = { _, it -> it.item.media.path }) { _, entry ->
                     val media = entry.item.media
                     WideCard(
@@ -142,7 +146,7 @@ fun LibraryHomeScreen(
                         imageUrl = TmdbImages.backdrop(entry.item.metadata?.backdropPath),
                         subtitle = if (media.kind == MediaKind.EPISODE) episodeCode(media.season, media.episode, media.episodeEnd) else entry.item.displayYear?.toString(),
                         progress = entry.item.progressFraction,
-                        badge = if (entry.isNextUp) "Következő" else null,
+                        badge = if (entry.isNextUp) stringResource(R.string.badge_next) else null,
                         onClick = { onPlay(media.path) },
                     )
                 }
@@ -150,11 +154,11 @@ fun LibraryHomeScreen(
         }
 
         if (watchlist.isNotEmpty()) {
-            shelf("Megnézendők") {
+            shelf(R.string.shelf_watchlist) {
                 itemsIndexed(watchlist, key = { _, it -> it.key }) { _, entry ->
                     PosterCard(
                         title = entry.title,
-                        subtitle = listOfNotNull(if (entry.isMovie) "Film" else "Sorozat", entry.year?.toString()).joinToString(" · "),
+                        subtitle = listOfNotNull(stringResource(if (entry.isMovie) R.string.kind_movie else R.string.kind_series), entry.year?.toString()).joinToString(" · "),
                         imageUrl = TmdbImages.poster(entry.posterPath),
                         onClick = { onOpenStreaming(entry.isMovie, entry.tmdbId) },
                     )
@@ -163,7 +167,7 @@ fun LibraryHomeScreen(
         }
 
         if (recentMovies.isNotEmpty()) {
-            shelf("Legutóbb hozzáadva") {
+            shelf(R.string.shelf_recent) {
                 itemsIndexed(recentMovies, key = { _, it -> it.media.path }) { _, item ->
                     PosterCard(
                         title = item.displayTitle,
@@ -178,12 +182,12 @@ fun LibraryHomeScreen(
         }
 
         if (recentSeries.isNotEmpty()) {
-            shelf("Sorozatok") {
+            shelf(R.string.shelf_series) {
                 itemsIndexed(recentSeries, key = { _, it -> it.seriesKey }) { _, summary ->
                     PosterCard(
                         title = summary.title,
                         imageUrl = TmdbImages.poster(summary.metadata?.posterPath),
-                        subtitle = "${summary.seasonCount} évad · ${summary.episodeCount} rész",
+                        subtitle = seasonsAndEpisodes(summary.seasonCount, summary.episodeCount),
                         watched = summary.watchedCount == summary.episodeCount,
                         onClick = { onOpenSeries(summary.seriesKey) },
                     )
@@ -193,11 +197,11 @@ fun LibraryHomeScreen(
 
         // What is popular on each of the user's services, so it also says where to watch it.
         popular.forEach { shelf ->
-            shelf("Népszerű · ${shelf.providerName}") {
+            shelf(R.string.shelf_popular_on, shelf.providerName) {
                 itemsIndexed(shelf.titles, key = { _, it -> (if (it.isMovie) "m" else "t") + it.tmdbId }) { _, title ->
                     PosterCard(
                         title = title.title,
-                        subtitle = listOfNotNull(if (title.isMovie) "Film" else "Sorozat", title.year?.toString()).joinToString(" · "),
+                        subtitle = listOfNotNull(stringResource(if (title.isMovie) R.string.kind_movie else R.string.kind_series), title.year?.toString()).joinToString(" · "),
                         imageUrl = TmdbImages.poster(title.posterPath),
                         onClick = { onOpenStreaming(title.isMovie, title.tmdbId) },
                     )
@@ -251,9 +255,9 @@ private fun LiveTile(channels: List<LiveNow>, onPlay: (LiveNow) -> Unit, onOpenL
     if (channels.isEmpty()) {
         Tile(onClick = onOpenLiveTv, color = TileTints.Blue, modifier = modifier) {
             Column(Modifier.fillMaxSize().padding(20.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                TileLabel("Élő TV", Teal)
-                Text("Csatornák és műsorújság", style = MaterialTheme.typography.headlineSmall)
-                Text("Kiegészítővel a beépített lejátszóban.", style = MaterialTheme.typography.bodyMedium, color = TextSecondary)
+                TileLabel(stringResource(R.string.tile_live_tv), Teal)
+                Text(stringResource(R.string.tile_live_tv_title), style = MaterialTheme.typography.headlineSmall)
+                Text(stringResource(R.string.tile_live_tv_hint), style = MaterialTheme.typography.bodyMedium, color = TextSecondary)
             }
         }
         return
@@ -262,7 +266,7 @@ private fun LiveTile(channels: List<LiveNow>, onPlay: (LiveNow) -> Unit, onOpenL
         modifier.background(TileTints.Blue, Shapes.Tile).padding(horizontal = 10.dp, vertical = 14.dp),
         verticalArrangement = Arrangement.spacedBy(2.dp),
     ) {
-        TileLabel("Élő TV · most", Teal, modifier = Modifier.padding(start = 10.dp, bottom = 4.dp))
+        TileLabel(stringResource(R.string.tile_live_now), Teal, modifier = Modifier.padding(start = 10.dp, bottom = 4.dp))
         channels.take(5).forEach { channel ->
             Surface(
                 onClick = { onPlay(channel) },
@@ -301,11 +305,11 @@ private fun Bar(progress: Float) {
     }
 }
 
-private fun ContinueItem.toFeature(onPlay: (String) -> Unit): Feature {
+private fun ContinueItem.toFeature(res: Resources, onPlay: (String) -> Unit): Feature {
     val media = item.media
-    val left = remaining(item)
+    val left = remaining(res, item)
     return Feature(
-        label = if (isNextUp) "Következő rész" else "Folytatás",
+        label = res.getString(if (isNextUp) R.string.feature_next_episode else R.string.feature_continue),
         title = item.displayTitle,
         subtitle = if (media.kind == MediaKind.EPISODE) {
             listOfNotNull(episodeCode(media.season, media.episode, media.episodeEnd), left).joinToString(" · ")
@@ -318,8 +322,8 @@ private fun ContinueItem.toFeature(onPlay: (String) -> Unit): Feature {
     )
 }
 
-private fun MediaWithProgress.toNewFeature(onOpenMovie: (String) -> Unit) = Feature(
-    label = "Új",
+private fun MediaWithProgress.toNewFeature(res: Resources, onOpenMovie: (String) -> Unit) = Feature(
+    label = res.getString(R.string.feature_new),
     title = displayTitle,
     subtitle = listOfNotNull(displayYear?.toString(), metadata?.genres?.substringBefore(',')).joinToString(" · "),
     imageUrl = TmdbImages.backdrop(metadata?.backdropPath),
@@ -327,19 +331,24 @@ private fun MediaWithProgress.toNewFeature(onOpenMovie: (String) -> Unit) = Feat
     onClick = { onOpenMovie(media.path) },
 )
 
-private fun remaining(item: MediaWithProgress): String? {
+private fun remaining(res: Resources, item: MediaWithProgress): String? {
     val position = item.positionMs ?: return null
     val duration = item.durationMs ?: return null
     val minutes = ((duration - position) / 60_000).toInt()
     if (minutes <= 0) return null
-    return if (minutes >= 60) "még ${minutes / 60} ó ${minutes % 60} p" else "még $minutes p"
+    return if (minutes >= 60) res.getString(R.string.remaining_hm, minutes / 60, minutes % 60) else res.getString(R.string.remaining_m, minutes)
 }
+
+/** "3 évad · 44 rész" / "3 seasons · 44 episodes" */
+@Composable
+fun seasonsAndEpisodes(seasons: Int, episodes: Int): String =
+    pluralStringResource(R.plurals.seasons_count, seasons, seasons) + " · " + pluralStringResource(R.plurals.episodes_count, episodes, episodes)
 
 @Composable
 fun ScanStatus(state: ScanState) {
     if (state is ScanState.Scanning) {
         Text(
-            "Médiatár frissítése… ${state.found} fájl",
+            stringResource(R.string.library_scanning, state.found),
             style = MaterialTheme.typography.bodySmall,
             color = TextMuted,
         )
@@ -349,10 +358,9 @@ fun ScanStatus(state: ScanState) {
 @Composable
 fun EmptyLibraryHint(modifier: Modifier = Modifier) {
     Column(modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text("A médiatár még üres.", style = MaterialTheme.typography.titleMedium)
+        Text(stringResource(R.string.library_empty), style = MaterialTheme.typography.titleMedium)
         Text(
-            "Nyisd meg a Beállítások › Tárhelyek menüben a filmeket vagy sorozatokat tartalmazó mappát, " +
-                "és válaszd a „Hozzáadás a médiatárhoz” gombot.",
+            stringResource(R.string.library_empty_hint),
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }

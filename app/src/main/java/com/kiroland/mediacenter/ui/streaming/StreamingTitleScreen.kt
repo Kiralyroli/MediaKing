@@ -1,5 +1,7 @@
 package com.kiroland.mediacenter.ui.streaming
 
+import com.kiroland.mediacenter.R
+import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -166,7 +168,7 @@ fun StreamingTitleScreen(
                 }
                 Text(factsLine(meta.year, meta), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Text(
-                    meta.overview ?: "Nincs leírás.",
+                    meta.overview ?: stringResource(R.string.detail_no_overview),
                     style = MaterialTheme.typography.bodyLarge,
                     // A series also lists its seasons below, so its text is kept shorter.
                     maxLines = if (viewModel.isMovie) 6 else 3,
@@ -182,25 +184,25 @@ fun StreamingTitleScreen(
                                 }
                             },
                             modifier = Modifier.focusRequester(libraryFocus),
-                        ) { ButtonContent(Icons.Outlined.VideoLibrary, "Megvan a médiatárban") }
+                        ) { ButtonContent(Icons.Outlined.VideoLibrary, stringResource(R.string.detail_in_library)) }
                     }
                     OutlinedButton(onClick = viewModel::toggleWatched, modifier = Modifier.focusRequester(watchedFocus)) {
-                        if (watchedEntry != null) ButtonContent(Icons.Filled.CheckCircle, "Megnézve")
-                        else ButtonContent(Icons.Outlined.CheckCircle, "Megnéztem")
+                        if (watchedEntry != null) ButtonContent(Icons.Filled.CheckCircle, stringResource(R.string.detail_watched))
+                        else ButtonContent(Icons.Outlined.CheckCircle, stringResource(R.string.detail_mark_watched))
                     }
                     // Something already seen is not "to watch" any more.
                     if (watchedEntry == null) {
                         OutlinedButton(onClick = viewModel::toggleWatchlist) {
-                            if (inWatchlist) ButtonContent(Icons.Filled.Bookmark, "Megnézendő")
-                            else ButtonContent(Icons.Outlined.BookmarkAdd, "Megnézendők közé")
+                            if (inWatchlist) ButtonContent(Icons.Filled.Bookmark, stringResource(R.string.detail_on_watchlist))
+                            else ButtonContent(Icons.Outlined.BookmarkAdd, stringResource(R.string.detail_add_watchlist))
                         }
                     }
                 }
                 watchedEntry?.let { RatingRow(it.rating, viewModel::rate) }
                 WhereToWatch(whereToWatch, searchTitle(meta.originalTitle, title), viewModel.streaming, Modifier.padding(top = 8.dp))
                 seriesFacts?.let { SeasonStrip(it, Modifier.padding(top = 4.dp)) }
-                if (viewModel.isMovie) meta.director?.let { Text("Rendező: $it", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1) }
-                if (viewModel.isMovie) meta.cast?.let { Text("Szereplők: $it", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2) }
+                if (viewModel.isMovie) meta.director?.let { Text(stringResource(R.string.detail_label_value, stringResource(R.string.detail_director), it), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1) }
+                if (viewModel.isMovie) meta.cast?.let { Text(stringResource(R.string.detail_label_value, stringResource(R.string.detail_cast), it), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2) }
             }
         }
     }

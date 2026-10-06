@@ -1,5 +1,7 @@
 package com.kiroland.mediacenter.ui.streaming
 
+import com.kiroland.mediacenter.R
+import androidx.compose.ui.res.stringResource
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -63,11 +65,11 @@ fun WhereToWatch(state: WatchState, title: String, streaming: StreamingRepositor
         WatchState.Loading, WatchState.Unknown -> return
         is WatchState.Known -> Column(modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                Text("Hol nézheted?", style = MaterialTheme.typography.titleLarge)
-                Text("Forrás: JustWatch", style = MaterialTheme.typography.bodySmall, color = TextMuted)
+                Text(stringResource(R.string.wtw_title), style = MaterialTheme.typography.titleLarge)
+                Text(stringResource(R.string.wtw_source), style = MaterialTheme.typography.bodySmall, color = TextMuted)
             }
             if (state.offers.isEmpty()) {
-                Text("Magyarországon most egyik streaming szolgáltatónál sem érhető el.", color = TextMuted)
+                Text(stringResource(R.string.wtw_none), color = TextMuted)
                 return@Column
             }
             LazyRow(
@@ -78,10 +80,10 @@ fun WhereToWatch(state: WatchState, title: String, streaming: StreamingRepositor
                     ProviderPill(offer, installed = offer.providerId in state.installed, included = Subscriptions.isIncluded(offer, state.mine)) {
                         val message = when (streaming.open(offer.providerId, title)) {
                             StreamingRepository.Opened.TITLE_SEARCHED, StreamingRepository.Opened.WEBSITE -> null
-                            StreamingRepository.Opened.SEARCH_PAGE -> "Írd be a keresőbe: $title"
-                            StreamingRepository.Opened.APP -> "Keresd meg a(z) ${offer.name} appban: $title"
-                            StreamingRepository.Opened.STORE -> "A(z) ${offer.name} nincs telepítve: itt telepítheted."
-                            StreamingRepository.Opened.FAILED -> "A(z) ${offer.name} nem nyitható meg ezen a TV-n."
+                            StreamingRepository.Opened.SEARCH_PAGE -> context.getString(R.string.wtw_type_in_search, title)
+                            StreamingRepository.Opened.APP -> context.getString(R.string.wtw_find_in_app, offer.name, title)
+                            StreamingRepository.Opened.STORE -> context.getString(R.string.wtw_not_installed_store, offer.name)
+                            StreamingRepository.Opened.FAILED -> context.getString(R.string.wtw_cannot_open, offer.name)
                         }
                         message?.let { showLongToast(context.applicationContext, it) }
                     }
@@ -119,7 +121,7 @@ private fun ProviderPill(offer: ProviderOffer, installed: Boolean, included: Boo
                     // which stays readable both on the dark pill and on the light focused one.
                     if (included) Box(Modifier.size(8.dp).clip(Shapes.Pill).background(Success))
                     Text(
-                        listOfNotNull(offerLabel(offer, included), "nincs telepítve".takeIf { !installed }).joinToString(" · "),
+                        listOfNotNull(offerLabel(offer, included), stringResource(R.string.wtw_not_installed).takeIf { !installed }).joinToString(" · "),
                         style = MaterialTheme.typography.labelMedium,
                         color = androidx.tv.material3.LocalContentColor.current.copy(alpha = 0.8f),
                         maxLines = 1,
@@ -130,15 +132,16 @@ private fun ProviderPill(offer: ProviderOffer, installed: Boolean, included: Boo
     }
 }
 
+@Composable
 private fun offerLabel(offer: ProviderOffer, included: Boolean): String = when (offer.best) {
     Offer.SUBSCRIPTION -> when {
-        included -> "benne van az előfizetésedben"
-        Offer.FREE in offer.offers -> "előfizetéssel · egyes részek ingyen"
-        else -> "előfizetéssel"
+        included -> stringResource(R.string.wtw_included)
+        Offer.FREE in offer.offers -> stringResource(R.string.wtw_subscription_some_free)
+        else -> stringResource(R.string.wtw_subscription)
     }
-    Offer.FREE -> "ingyenes"
-    Offer.RENT -> if (Offer.BUY in offer.offers) "kölcsönzés, vásárlás" else "kölcsönzés"
-    Offer.BUY -> "vásárlás"
+    Offer.FREE -> stringResource(R.string.wtw_free)
+    Offer.RENT -> stringResource(if (Offer.BUY in offer.offers) R.string.wtw_rent_buy else R.string.wtw_rent)
+    Offer.BUY -> stringResource(R.string.wtw_buy)
 }
 
 

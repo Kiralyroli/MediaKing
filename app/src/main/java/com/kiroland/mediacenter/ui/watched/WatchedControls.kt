@@ -1,5 +1,7 @@
 package com.kiroland.mediacenter.ui.watched
 
+import com.kiroland.mediacenter.R
+import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
@@ -30,7 +32,7 @@ private val StarColor = Color(0xFFFFC857)
 @Composable
 fun RatingRow(rating: Int?, onRate: (Int?) -> Unit, modifier: Modifier = Modifier) {
     Row(modifier, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-        Text("Értékelésed", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(end = 6.dp))
+        Text(stringResource(R.string.rating_yours), style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(end = 6.dp))
         (1..5).forEach { star ->
             val filled = rating != null && star <= rating
             Surface(
@@ -46,12 +48,12 @@ fun RatingRow(rating: Int?, onRate: (Int?) -> Unit, modifier: Modifier = Modifie
             ) {
                 Icon(
                     if (filled) Icons.Filled.Star else Icons.Outlined.StarBorder,
-                    contentDescription = "$star csillag",
+                    contentDescription = stringResource(R.string.rating_star, star),
                     modifier = Modifier.padding(6.dp).size(28.dp),
                 )
             }
         }
-        if (rating == null) Text("nincs értékelve", style = MaterialTheme.typography.bodySmall, color = TextMuted)
+        if (rating == null) Text(stringResource(R.string.rating_none), style = MaterialTheme.typography.bodySmall, color = TextMuted)
     }
 }
 

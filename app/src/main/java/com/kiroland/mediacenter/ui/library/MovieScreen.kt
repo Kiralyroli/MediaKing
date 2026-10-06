@@ -1,5 +1,7 @@
 package com.kiroland.mediacenter.ui.library
 
+import com.kiroland.mediacenter.R
+import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -89,14 +91,14 @@ fun MovieScreen(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 when {
-                    movie.isWatched -> Text("Megnézve", color = MaterialTheme.colorScheme.primary)
+                    movie.isWatched -> Text(stringResource(R.string.detail_watched), color = MaterialTheme.colorScheme.primary)
                     resumeAt != null -> Text(
-                        "Megállítva: ${formatDuration(resumeAt)} / ${formatDuration(movie.durationMs ?: 0)}",
+                        stringResource(R.string.detail_paused_at, formatDuration(resumeAt), formatDuration(movie.durationMs ?: 0)),
                         color = MaterialTheme.colorScheme.primary,
                     )
                 }
                 Text(
-                    meta?.overview ?: "Nincs leírás. (A TMDB-n nem találtam meg ezt a címet.)",
+                    meta?.overview ?: stringResource(R.string.detail_no_overview_library),
                     style = MaterialTheme.typography.bodyLarge,
                     maxLines = 6,
                     overflow = TextOverflow.Ellipsis,
@@ -105,20 +107,20 @@ fun MovieScreen(
                 Spacer(Modifier.height(8.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                     Button(onClick = { onPlay(media.path, false) }, modifier = Modifier.focusRequester(playFocus)) {
-                        ButtonContent(Icons.Filled.PlayArrow, if (resumeAt != null) "Folytatás" else "Lejátszás")
+                        ButtonContent(Icons.Filled.PlayArrow, stringResource(if (resumeAt != null) R.string.detail_continue else R.string.detail_play))
                     }
                     if (resumeAt != null) {
                         OutlinedButton(onClick = { onPlay(media.path, true) }) {
-                            ButtonContent(Icons.Filled.Replay, "Elölről")
+                            ButtonContent(Icons.Filled.Replay, stringResource(R.string.detail_from_start))
                         }
                     }
                     OutlinedButton(onClick = { viewModel.setWatched(!movie.isWatched) }) {
-                        if (movie.isWatched) ButtonContent(Icons.Outlined.RemoveDone, "Nem néztem meg")
-                        else ButtonContent(Icons.Outlined.CheckCircle, "Megnézve")
+                        if (movie.isWatched) ButtonContent(Icons.Outlined.RemoveDone, stringResource(R.string.detail_not_watched))
+                        else ButtonContent(Icons.Outlined.CheckCircle, stringResource(R.string.detail_watched))
                     }
                     media.metadataKey?.let { key ->
                         OutlinedButton(onClick = { onFixMatch(key, media.title) }) {
-                            ButtonContent(Icons.Outlined.ManageSearch, "Nem ez a film?")
+                            ButtonContent(Icons.Outlined.ManageSearch, stringResource(R.string.detail_wrong_movie))
                         }
                     }
                 }
@@ -127,8 +129,8 @@ fun MovieScreen(
                 WhereToWatch(whereToWatch, searchTitle(meta?.originalTitle, movie.displayTitle), viewModel.streaming, Modifier.padding(top = 8.dp))
 
                 Spacer(Modifier.height(8.dp))
-                meta?.director?.let { Credit("Rendező", it) }
-                meta?.cast?.let { Credit("Szereplők", it) }
+                meta?.director?.let { Credit(stringResource(R.string.detail_director), it) }
+                meta?.cast?.let { Credit(stringResource(R.string.detail_cast), it) }
                 Text(
                     "${media.fileName} · ${formatBytes(media.sizeBytes)}",
                     style = MaterialTheme.typography.bodySmall,
@@ -143,10 +145,11 @@ fun MovieScreen(
 }
 
 /** "2017 · Horror, Sci-Fi · 1 ó 44 p · ★ 6,4" — whatever is known. */
+@Composable
 fun factsLine(year: Int?, meta: MetadataEntity?): String = listOfNotNull(
     year?.toString(),
     meta?.genres,
-    meta?.runtimeMinutes?.let { if (it >= 60) "${it / 60} ó ${it % 60} p" else "$it p" },
+    meta?.runtimeMinutes?.let { if (it >= 60) stringResource(R.string.runtime_hm, it / 60, it % 60) else stringResource(R.string.runtime_m, it) },
     meta?.rating?.let { "★ " + String.format(com.kiroland.mediacenter.util.AppLocale.current, "%.1f", it) },
 ).joinToString(" · ")
 
@@ -196,7 +199,7 @@ fun Poster(title: String, imageUrl: String?, progress: Float?) {
 @Composable
 private fun Credit(label: String, names: String) {
     Text(
-        "$label: $names",
+        stringResource(R.string.detail_label_value, label, names),
         style = MaterialTheme.typography.bodyMedium,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         maxLines = 2,

@@ -1,5 +1,8 @@
 package com.kiroland.mediacenter.ui.library
 
+import com.kiroland.mediacenter.R
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -75,7 +78,7 @@ fun SeriesScreen(
     val all = episodes ?: return
     val seasons = overview ?: return
     if (all.isEmpty() || seasons.isEmpty()) {
-        Text("A sorozat epizódjai nem érhetők el.", Modifier.padding(48.dp))
+        Text(stringResource(R.string.series_unavailable), Modifier.padding(48.dp))
         return
     }
     val meta = all.firstNotNullOfOrNull { it.metadata?.takeIf { m -> m.tmdbId != null } }
@@ -107,13 +110,12 @@ fun SeriesScreen(
                 Text(
                     listOfNotNull(
                         factsLine(meta?.year, meta).ifBlank { null },
-                        "$ownedSeasons évad",
-                        "${all.size} rész",
-                        "${all.count { it.isWatched }} megnézve",
-                        // What exists beyond the library, per TMDB.
+                        pluralStringResource(R.plurals.seasons_count, ownedSeasons, ownedSeasons),
+                        pluralStringResource(R.plurals.episodes_count, all.size, all.size),
+                        all.count { it.isWatched }.let { pluralStringResource(R.plurals.watched_episodes_count, it, it) },
                         // What exists beyond the library, per TMDB: aired seasons, status, an announced season.
-                        facts?.let { "összesen " + seriesSummary(it) }
-                            ?: "összesen ${seasons.size} évad, $listedEpisodes rész".takeIf { seasons.size > ownedSeasons || listedEpisodes > all.size },
+                        facts?.let { stringResource(R.string.series_in_total, seriesSummary(it)) }
+                            ?: stringResource(R.string.series_in_total, seasonsAndEpisodes(seasons.size, listedEpisodes)).takeIf { seasons.size > ownedSeasons || listedEpisodes > all.size },
                     ).joinToString(" · "),
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -122,20 +124,20 @@ fun SeriesScreen(
                     Text(it, style = MaterialTheme.typography.bodyMedium, maxLines = 3, overflow = TextOverflow.Ellipsis)
                 }
                 Text(
-                    "Tipp: hosszan nyomva az OK gombot egy részen megnézettnek jelölöd, vagy törlöd a jelölést.",
+                    stringResource(R.string.series_long_press_tip),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Row(Modifier.padding(top = 4.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                     if (meta != null) {
                         OutlinedButton(onClick = viewModel::toggleSeriesWatched) {
-                            if (watchedEntry != null) ButtonContent(Icons.Filled.CheckCircle, "Sorozat megnézve")
-                            else ButtonContent(Icons.Outlined.CheckCircle, "Megnéztem a sorozatot")
+                            if (watchedEntry != null) ButtonContent(Icons.Filled.CheckCircle, stringResource(R.string.series_watched))
+                            else ButtonContent(Icons.Outlined.CheckCircle, stringResource(R.string.series_mark_watched))
                         }
                     }
                     all.first().media.metadataKey?.let { key ->
                         OutlinedButton(onClick = { onFixMatch(key, all.first().media.title) }) {
-                            ButtonContent(Icons.Outlined.ManageSearch, "Nem ez a sorozat?")
+                            ButtonContent(Icons.Outlined.ManageSearch, stringResource(R.string.detail_wrong_series))
                         }
                     }
                 }
@@ -153,9 +155,10 @@ fun SeriesScreen(
                         PillButton(
                             text = when {
                                 season.isMissing && (season.airDate == null || season.airDate > today) ->
-                                    "${seasonLabel(season.season)} · " + (SeasonFacts.shortDate(season.airDate)?.let { "bejelentve: $it" } ?: "bejelentve")
-                                season.isMissing -> "${seasonLabel(season.season)} · nincs meg"
-                                listed != null && season.ownedCount < listed -> "${seasonLabel(season.season)} · ${season.ownedCount}/$listed"
+                                    SeasonFacts.shortDate(season.airDate)?.let { stringResource(R.string.season_announced_on, seasonLabel(season.season), it) }
+                                        ?: stringResource(R.string.season_announced_pill, seasonLabel(season.season))
+                                season.isMissing -> stringResource(R.string.season_missing_pill, seasonLabel(season.season))
+                                listed != null && season.ownedCount < listed -> stringResource(R.string.season_partial_pill, seasonLabel(season.season), season.ownedCount, listed)
                                 else -> seasonLabel(season.season)
                             },
                             selected = season.season == selectedSeason,
@@ -197,7 +200,7 @@ fun SeriesScreen(
                         supportingContent = {
                             Text(
                                 listOfNotNull(
-                                    progress?.let { "megállítva: ${formatDuration(item.positionMs ?: 0)}" },
+                                    progress?.let { stringResource(R.string.episode_paused_at, formatDuration(item.positionMs ?: 0)) },
                                     info?.overview,
                                     formatBytes(media.sizeBytes).takeIf { info?.overview == null },
                                 ).joinToString(" · "),
@@ -208,7 +211,7 @@ fun SeriesScreen(
                         leadingContent = {
                             Icon(
                                 if (item.isWatched) Icons.Filled.CheckCircle else Icons.Outlined.PlayCircle,
-                                contentDescription = if (item.isWatched) "Megnézve" else null,
+                                contentDescription = if (item.isWatched) stringResource(R.string.detail_watched) else null,
                             )
                         },
                         trailingContent = progress?.let { { ProgressStrip(it, Modifier.width(120.dp)) } },
@@ -244,7 +247,7 @@ private fun MissingEpisode(row: EpisodeRow.Missing, today: String, modifier: Mod
         supportingContent = {
             Text(
                 listOfNotNull(
-                    if (upcoming) "Még nem jelent meg · ${formatAirDate(airDate)}" else "Nincs meg",
+                    if (upcoming) stringResource(R.string.episode_not_aired, formatAirDate(airDate)) else stringResource(R.string.episode_missing),
                     row.info?.overview,
                 ).joinToString(" · "),
                 maxLines = 1,
@@ -262,7 +265,8 @@ private fun rowKey(row: EpisodeRow): String = when (row) {
     is EpisodeRow.Missing -> "missing-${row.season}-${row.episode}"
 }
 
-private fun seasonLabel(season: Int) = if (season == 0) "Különkiadások" else "$season. évad"
+@Composable
+private fun seasonLabel(season: Int) = if (season == 0) stringResource(R.string.season_specials) else stringResource(R.string.season_label, season)
 
 private fun formatAirDate(isoDate: String?): String = runCatching {
     LocalDate.parse(isoDate).format(DateTimeFormatter.ofLocalizedDate(java.time.format.FormatStyle.LONG).withLocale(com.kiroland.mediacenter.util.AppLocale.current))

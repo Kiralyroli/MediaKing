@@ -1,5 +1,8 @@
 package com.kiroland.mediacenter.ui.library
 
+import com.kiroland.mediacenter.R
+import androidx.compose.ui.res.stringResource
+import androidx.annotation.StringRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -149,7 +152,7 @@ private fun Artwork(title: String, imageUrl: String?, progress: Float?, watched:
         if (watched) {
             Icon(
                 Icons.Filled.Check,
-                contentDescription = "Megnézve",
+                contentDescription = stringResource(R.string.watched_badge),
                 modifier = Modifier
                     .align(Alignment.TopEnd)
                     .padding(8.dp)
@@ -182,17 +185,27 @@ fun ProgressStrip(progress: Float, modifier: Modifier = Modifier) {
     }
 }
 
+/** A titled horizontal row of cards, as a LazyColumn item, titled from a string resource. */
+fun LazyListScope.shelf(@StringRes title: Int, vararg args: Any, content: LazyListScope.() -> Unit) {
+    item(key = "shelf-$title-${args.joinToString()}") {
+        ShelfRow(stringResource(title, *args), content)
+    }
+}
+
 /** A titled horizontal row of cards, as a LazyColumn item. */
 fun LazyListScope.shelf(title: String, content: LazyListScope.() -> Unit) {
-    item(key = "shelf-$title") {
-        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text(title, style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(start = 32.dp))
-            LazyRow(
-                contentPadding = PaddingValues(horizontal = 32.dp, vertical = 8.dp),
-                horizontalArrangement = Arrangement.spacedBy(20.dp),
-                content = content,
-            )
-        }
+    item(key = "shelf-$title") { ShelfRow(title, content) }
+}
+
+@Composable
+private fun ShelfRow(title: String, content: LazyListScope.() -> Unit) {
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Text(title, style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(start = 32.dp))
+        LazyRow(
+            contentPadding = PaddingValues(horizontal = 32.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(20.dp),
+            content = content,
+        )
     }
 }
 
