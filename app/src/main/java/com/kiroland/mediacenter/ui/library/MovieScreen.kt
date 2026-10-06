@@ -48,6 +48,7 @@ import coil3.compose.AsyncImage
 import com.kiroland.mediacenter.data.library.db.MetadataEntity
 import com.kiroland.mediacenter.data.metadata.tmdb.TmdbImages
 import com.kiroland.mediacenter.ui.streaming.WhereToWatch
+import com.kiroland.mediacenter.ui.watched.RatingRow
 import com.kiroland.mediacenter.data.streaming.searchTitle
 import com.kiroland.mediacenter.util.formatBytes
 import com.kiroland.mediacenter.util.formatDuration
@@ -61,6 +62,7 @@ fun MovieScreen(
 ) {
     val item by viewModel.movie.collectAsStateWithLifecycle()
     val whereToWatch by viewModel.whereToWatch.collectAsStateWithLifecycle()
+    val watchedEntry by viewModel.watchedEntry.collectAsStateWithLifecycle()
     val movie = item ?: return
     val media = movie.media
     val meta = movie.metadata?.takeIf { it.tmdbId != null }
@@ -121,6 +123,7 @@ fun MovieScreen(
                     }
                 }
 
+                watchedEntry?.let { RatingRow(it.rating, viewModel::rate) }
                 WhereToWatch(whereToWatch, searchTitle(meta?.originalTitle, movie.displayTitle), viewModel.streaming, Modifier.padding(top = 8.dp))
 
                 Spacer(Modifier.height(8.dp))

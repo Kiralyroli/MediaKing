@@ -96,6 +96,22 @@ data class WatchlistEntity(
     val addedAt: Long,
 )
 
+/**
+ * A film or series the user has seen, wherever (library or a streaming service), with their own
+ * rating (1..5, null = not rated). Keyed like the watchlist ("movie:157336", "tv:125988").
+ */
+@Entity(tableName = "watched_title")
+data class WatchedTitleEntity(
+    @PrimaryKey val key: String,
+    val isMovie: Boolean,
+    val tmdbId: Int,
+    val title: String,
+    val year: Int?,
+    val posterPath: String?,
+    val watchedAt: Long,
+    val rating: Int? = null,
+)
+
 /** TheIntroDB's answer for one episode or film ("tv:1981:2:3", "movie:550"); an empty list = not in it. */
 @Entity(tableName = "segment_cache")
 data class SegmentCacheEntity(

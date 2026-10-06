@@ -99,6 +99,26 @@ interface MetadataDao {
     @Query("DELETE FROM watchlist WHERE `key` = :key")
     suspend fun removeFromWatchlist(key: String)
 
+    // --- Watched titles ---
+
+    @Query("SELECT * FROM watched_title ORDER BY watchedAt DESC")
+    fun observeWatched(): Flow<List<WatchedTitleEntity>>
+
+    @Query("SELECT * FROM watched_title WHERE `key` = :key")
+    fun observeWatchedEntry(key: String): Flow<WatchedTitleEntity?>
+
+    @Query("SELECT * FROM watched_title WHERE `key` = :key")
+    suspend fun watchedEntry(key: String): WatchedTitleEntity?
+
+    @Upsert
+    suspend fun upsertWatched(entry: WatchedTitleEntity)
+
+    @Query("DELETE FROM watched_title WHERE `key` = :key")
+    suspend fun deleteWatched(key: String)
+
+    @Query("UPDATE watched_title SET rating = :rating WHERE `key` = :key")
+    suspend fun rateWatched(key: String, rating: Int?)
+
     @Query("DELETE FROM metadata")
     suspend fun clearMetadata()
 

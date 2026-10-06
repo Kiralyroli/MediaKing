@@ -47,6 +47,9 @@ import com.kiroland.mediacenter.ui.theme.TextPrimary
 import androidx.compose.ui.graphics.Color
 import com.kiroland.mediacenter.data.metadata.tmdb.TmdbImages
 import com.kiroland.mediacenter.ui.streaming.WhereToWatch
+import com.kiroland.mediacenter.ui.watched.RatingRow
+import androidx.compose.foundation.layout.Row
+import androidx.compose.material.icons.outlined.CheckCircle
 import com.kiroland.mediacenter.ui.streaming.seriesSummary
 import com.kiroland.mediacenter.data.library.SeasonFacts
 import com.kiroland.mediacenter.data.streaming.searchTitle
@@ -68,6 +71,7 @@ fun SeriesScreen(
     val overview by viewModel.overview.collectAsStateWithLifecycle()
     val whereToWatch by viewModel.whereToWatch.collectAsStateWithLifecycle()
     val facts by viewModel.seriesFacts.collectAsStateWithLifecycle()
+    val watchedEntry by viewModel.watchedEntry.collectAsStateWithLifecycle()
     val all = episodes ?: return
     val seasons = overview ?: return
     if (all.isEmpty() || seasons.isEmpty()) {
@@ -122,11 +126,20 @@ fun SeriesScreen(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                all.first().media.metadataKey?.let { key ->
-                    OutlinedButton(onClick = { onFixMatch(key, all.first().media.title) }, modifier = Modifier.padding(top = 4.dp)) {
-                        ButtonContent(Icons.Outlined.ManageSearch, "Nem ez a sorozat?")
+                Row(Modifier.padding(top = 4.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                    if (meta != null) {
+                        OutlinedButton(onClick = viewModel::toggleSeriesWatched) {
+                            if (watchedEntry != null) ButtonContent(Icons.Filled.CheckCircle, "Sorozat megnézve")
+                            else ButtonContent(Icons.Outlined.CheckCircle, "Megnéztem a sorozatot")
+                        }
+                    }
+                    all.first().media.metadataKey?.let { key ->
+                        OutlinedButton(onClick = { onFixMatch(key, all.first().media.title) }) {
+                            ButtonContent(Icons.Outlined.ManageSearch, "Nem ez a sorozat?")
+                        }
                     }
                 }
+                watchedEntry?.let { RatingRow(it.rating, viewModel::rate) }
                 WhereToWatch(whereToWatch, searchTitle(meta?.originalTitle, title), viewModel.streaming, Modifier.padding(top = 4.dp))
             }
 

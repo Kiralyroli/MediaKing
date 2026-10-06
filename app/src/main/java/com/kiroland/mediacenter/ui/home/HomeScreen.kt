@@ -26,6 +26,8 @@ import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.Storage
 import androidx.compose.material.icons.outlined.Tv
+import androidx.compose.material.icons.outlined.TaskAlt
+import com.kiroland.mediacenter.ui.watched.WatchedScreen
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -78,6 +80,7 @@ private enum class HomeSection(val label: String, val icon: ImageVector, val inD
     Home("Kezdőlap", Icons.Outlined.Home),
     Movies("Filmek", Icons.Outlined.Movie),
     Series("Sorozatok", Icons.Outlined.Tv),
+    Watched("Megnézettek", Icons.Outlined.TaskAlt),
     LiveTv("Élő TV", Icons.Outlined.LiveTv),
     Upload("Feltöltés", Icons.Outlined.CloudUpload),
     Addons("Kiegészítők", Icons.Outlined.Extension),
@@ -111,10 +114,10 @@ fun HomeScreen(
                 .selectableGroup()
                 .focusProperties { onEnter = { current.requestFocus() } }
                 .focusGroup(),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
+            verticalArrangement = Arrangement.spacedBy(2.dp),
         ) {
             Row(
-                modifier = Modifier.padding(start = 8.dp, bottom = 10.dp),
+                modifier = Modifier.padding(start = 8.dp, bottom = 6.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
@@ -154,6 +157,7 @@ fun HomeScreen(
                 )
                 HomeSection.Movies -> MoviesScreen(onOpenMovie = onOpenMovie)
                 HomeSection.Series -> SeriesListScreen(onOpenSeries = onOpenSeries)
+                HomeSection.Watched -> WatchedScreen(onOpenStreaming = onOpenStreaming)
                 HomeSection.LiveTv -> LiveTvScreen(onOpenGuide = onOpenGuide)
                 HomeSection.Upload -> TransferScreen()
                 HomeSection.Addons -> AddonsScreen()
@@ -173,7 +177,7 @@ fun HomeScreen(
 private fun NavPill(item: HomeSection, selected: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
     Surface(
         onClick = onClick,
-        modifier = modifier.fillMaxWidth().height(42.dp),
+        modifier = modifier.fillMaxWidth().height(39.dp),
         shape = ClickableSurfaceDefaults.shape(Shapes.Pill),
         colors = ClickableSurfaceDefaults.colors(
             containerColor = if (selected) MaterialTheme.colorScheme.primary else Color.Transparent,

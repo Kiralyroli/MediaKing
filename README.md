@@ -27,6 +27,8 @@ Portfólióprojekt, egy valódi Xiaomi Mi TV-n (Android 10) fejlesztve és teszt
   előfizetésenként egy „Népszerű · Szolgáltató” sor mutatja, mi megy most a te szolgáltatásaidon
 - **Keresési előzmények és műfajok** – üres keresőmezőnél az utolsó 10 keresés és műfaj szerinti böngészés
   (pl. „Vígjáték a szolgáltatásaidon”)
+- **Megnézettek és értékelés** – filmek és sorozatok „Megnéztem” jelöléssel és 1–5 csillaggal, saját menüpontban
+  (szűrés filmre, sorozatra, legjobbra értékeltre); a médiatár végignézett filmjei maguktól bekerülnek
 - **Hálózati mappák (SMB)** – számítógép vagy NAS megosztott mappája a médiatárban, másolás nélkül; lejátszás közvetlenül
   a hálózatról (előreolvasó pufferrel), feliratokkal együtt; beállítás a feltöltő oldalon, kapcsolatpróbával
 - **Lejátszó** (Media3 / ExoPlayer)

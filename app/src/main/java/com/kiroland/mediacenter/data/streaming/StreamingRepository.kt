@@ -12,6 +12,7 @@ import com.kiroland.mediacenter.data.library.db.MetadataDao
 import com.kiroland.mediacenter.data.library.db.WatchlistEntity
 import com.kiroland.mediacenter.data.metadata.tmdb.DiscoverResult
 import kotlinx.coroutines.flow.Flow
+import com.kiroland.mediacenter.data.library.WatchedRepository
 import com.kiroland.mediacenter.data.metadata.tmdb.TmdbApi
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellationException
@@ -169,7 +170,7 @@ class StreamingRepository @Inject constructor(
         }
     }
 
-    private fun watchlistKey(isMovie: Boolean, tmdbId: Int) = (if (isMovie) "movie:" else "tv:") + tmdbId
+    private fun watchlistKey(isMovie: Boolean, tmdbId: Int) = WatchedRepository.key(isMovie, tmdbId)
 
     /** The user's subscriptions: chosen in the settings, or the services whose app is installed. */
     fun mySubscriptions(): Set<Int> = Subscriptions.effective(

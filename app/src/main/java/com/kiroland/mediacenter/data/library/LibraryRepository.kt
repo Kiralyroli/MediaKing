@@ -35,6 +35,7 @@ class LibraryRepository @Inject constructor(
     private val dao: LibraryDao,
     private val scanner: LibraryScanner,
     private val watchNext: WatchNextPublisher,
+    private val watchedTitles: WatchedRepository,
 ) {
     val folders: Flow<List<LibraryFolderEntity>> = dao.observeFolders()
     private val collator = Collator.getInstance(Locale.forLanguageTag("hu-HU"))
@@ -102,14 +103,17 @@ class LibraryRepository @Inject constructor(
     suspend fun saveProgress(path: String, positionMs: Long, durationMs: Long) {
         if (durationMs <= 0) return
         val finished = positionMs >= durationMs * FINISHED_FRACTION || durationMs - positionMs < FINISHED_REMAINING_MS
+        val wasFinished = dao.progress(path)?.finished == true
         dao.upsertProgress(WatchProgressEntity(path, positionMs, durationMs, finished, System.currentTimeMillis()))
         watchNext.update(path)
+        if (finished && !wasFinished) watchedTitles.recordLibraryFilm(path)
     }
 
     suspend fun markWatched(path: String, watched: Boolean) {
         if (watched) {
             val duration = dao.progress(path)?.durationMs ?: 0
             dao.upsertProgress(WatchProgressEntity(path, duration, duration, true, System.currentTimeMillis()))
+            watchedTitles.recordLibraryFilm(path)
         } else {
             dao.deleteProgress(path)
         }

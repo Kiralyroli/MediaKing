@@ -11,6 +11,9 @@ import com.kiroland.mediacenter.data.library.SeriesSummary
 import com.kiroland.mediacenter.data.library.SeasonOverview
 import com.kiroland.mediacenter.data.library.SeriesOverview
 import com.kiroland.mediacenter.data.library.SeriesFacts
+import com.kiroland.mediacenter.data.library.WatchedRepository
+import com.kiroland.mediacenter.data.library.WatchedTitle
+import com.kiroland.mediacenter.data.library.db.WatchedTitleEntity
 import com.kiroland.mediacenter.data.library.db.LibraryFolderEntity
 import com.kiroland.mediacenter.data.library.db.EpisodeMetadataEntity
 import com.kiroland.mediacenter.data.library.db.MediaWithProgress
@@ -58,6 +61,7 @@ class MovieViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val repository: LibraryRepository,
     val streaming: StreamingRepository,
+    private val watched: WatchedRepository,
 ) : ViewModel() {
     val path = savedStateHandle.toRoute<MovieRoute>().path
     val movie: StateFlow<MediaWithProgress?> = repository.media(path).stateIn(this, null)
@@ -70,7 +74,24 @@ class MovieViewModel @Inject constructor(
         .stateIn(this, WatchState.Loading)
 
     fun setWatched(watched: Boolean) {
-        viewModelScope.launch { repository.markWatched(path, watched) }
+        viewModelScope.launch {
+            repository.markWatched(path, watched)
+            // Taking it back also takes it off the watched list.
+            if (!watched) movie.value?.metadata?.tmdbId?.let { this@MovieViewModel.watched.unmark(true, it) }
+        }
+    }
+
+    /** The film's entry on the watched list (with the user's rating), if it is there. */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val watchedEntry: StateFlow<WatchedTitleEntity?> = movie
+        .map { it?.metadata?.tmdbId }
+        .distinctUntilChanged()
+        .flatMapLatest { id -> if (id == null) flowOf(null) else watched.entry(true, id) }
+        .stateIn(this, null)
+
+    fun rate(rating: Int?) {
+        val id = movie.value?.metadata?.tmdbId ?: return
+        viewModelScope.launch { watched.rate(true, id, rating) }
     }
 }
 
@@ -80,6 +101,7 @@ class SeriesViewModel @Inject constructor(
     private val repository: LibraryRepository,
     metadataRepository: MetadataRepository,
     val streaming: StreamingRepository,
+    private val watched: WatchedRepository,
 ) : ViewModel() {
     val seriesKey = savedStateHandle.toRoute<SeriesRoute>().seriesKey
     private val episodesFlow = repository.seriesEpisodes(seriesKey)
@@ -102,6 +124,27 @@ class SeriesViewModel @Inject constructor(
     val whereToWatch: StateFlow<WatchState> = tvId
         .mapLatest { id -> loadWhereToWatch(streaming, isMovie = false, id) }
         .stateIn(this, WatchState.Loading)
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val watchedEntry: StateFlow<WatchedTitleEntity?> = tvId
+        .flatMapLatest { id -> if (id == null) flowOf(null) else watched.entry(false, id) }
+        .stateIn(this, null)
+
+    /** The whole series on the watched list (or off it again). */
+    fun toggleSeriesWatched() {
+        val item = episodes.value?.firstOrNull { it.metadata?.tmdbId != null } ?: return
+        val meta = item.metadata ?: return
+        val id = meta.tmdbId ?: return
+        viewModelScope.launch {
+            if (watchedEntry.value != null) watched.unmark(false, id)
+            else watched.markWatched(WatchedTitle(false, id, item.displayTitle, item.displayYear, meta.posterPath))
+        }
+    }
+
+    fun rate(rating: Int?) {
+        val id = episodes.value?.firstNotNullOfOrNull { it.metadata?.tmdbId } ?: return
+        viewModelScope.launch { watched.rate(false, id, rating) }
+    }
 
     /** Seasons, status and an announced season, live from TMDB; null until loaded or offline. */
     @OptIn(ExperimentalCoroutinesApi::class)

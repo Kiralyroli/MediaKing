@@ -14,6 +14,12 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.VideoLibrary
 import androidx.compose.material.icons.outlined.BookmarkAdd
 import androidx.compose.material.icons.filled.Bookmark
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.outlined.CheckCircle
+import com.kiroland.mediacenter.data.library.WatchedRepository
+import com.kiroland.mediacenter.data.library.WatchedTitle
+import com.kiroland.mediacenter.data.library.db.WatchedTitleEntity
+import com.kiroland.mediacenter.ui.watched.RatingRow
 import androidx.tv.material3.OutlinedButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -68,6 +74,7 @@ class StreamingTitleViewModel @Inject constructor(
     metadata: MetadataRepository,
     library: LibraryRepository,
     val streaming: StreamingRepository,
+    private val watched: WatchedRepository,
 ) : ViewModel() {
     private val route = savedStateHandle.toRoute<StreamingTitleRoute>()
 
@@ -95,6 +102,24 @@ class StreamingTitleViewModel @Inject constructor(
     val inWatchlist: StateFlow<Boolean> = streaming.isInWatchlist(route.isMovie, route.tmdbId)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
 
+    val watchedEntry: StateFlow<WatchedTitleEntity?> = watched.entry(route.isMovie, route.tmdbId)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
+    fun toggleWatched() {
+        val meta = _details.value ?: return
+        viewModelScope.launch {
+            if (watchedEntry.value != null) {
+                watched.unmark(route.isMovie, route.tmdbId)
+            } else {
+                watched.markWatched(WatchedTitle(route.isMovie, route.tmdbId, meta.title ?: meta.originalTitle.orEmpty(), meta.year, meta.posterPath))
+            }
+        }
+    }
+
+    fun rate(rating: Int?) {
+        viewModelScope.launch { watched.rate(route.isMovie, route.tmdbId, rating) }
+    }
+
     fun toggleWatchlist() {
         val meta = _details.value ?: return
         val title = StreamingRepository.Title(route.isMovie, route.tmdbId, meta.title ?: meta.originalTitle.orEmpty(), meta.year, meta.posterPath)
@@ -120,7 +145,8 @@ fun StreamingTitleScreen(
     val inLibrary by viewModel.inLibrary.collectAsStateWithLifecycle()
     val seriesFacts by viewModel.seriesFacts.collectAsStateWithLifecycle()
     val inWatchlist by viewModel.inWatchlist.collectAsStateWithLifecycle()
-    val watchlistFocus = remember { FocusRequester() }
+    val watchedEntry by viewModel.watchedEntry.collectAsStateWithLifecycle()
+    val watchedFocus = remember { FocusRequester() }
     val scroll = rememberScrollState()
     val meta = details ?: return
     val title = meta.title ?: meta.originalTitle.orEmpty()
@@ -158,11 +184,19 @@ fun StreamingTitleScreen(
                             modifier = Modifier.focusRequester(libraryFocus),
                         ) { ButtonContent(Icons.Outlined.VideoLibrary, "Megvan a médiatárban") }
                     }
-                    OutlinedButton(onClick = viewModel::toggleWatchlist, modifier = Modifier.focusRequester(watchlistFocus)) {
-                        if (inWatchlist) ButtonContent(Icons.Filled.Bookmark, "Megnézendő")
-                        else ButtonContent(Icons.Outlined.BookmarkAdd, "Megnézendők közé")
+                    OutlinedButton(onClick = viewModel::toggleWatched, modifier = Modifier.focusRequester(watchedFocus)) {
+                        if (watchedEntry != null) ButtonContent(Icons.Filled.CheckCircle, "Megnézve")
+                        else ButtonContent(Icons.Outlined.CheckCircle, "Megnéztem")
+                    }
+                    // Something already seen is not "to watch" any more.
+                    if (watchedEntry == null) {
+                        OutlinedButton(onClick = viewModel::toggleWatchlist) {
+                            if (inWatchlist) ButtonContent(Icons.Filled.Bookmark, "Megnézendő")
+                            else ButtonContent(Icons.Outlined.BookmarkAdd, "Megnézendők közé")
+                        }
                     }
                 }
+                watchedEntry?.let { RatingRow(it.rating, viewModel::rate) }
                 WhereToWatch(whereToWatch, searchTitle(meta.originalTitle, title), viewModel.streaming, Modifier.padding(top = 8.dp))
                 seriesFacts?.let { SeasonStrip(it, Modifier.padding(top = 4.dp)) }
                 if (viewModel.isMovie) meta.director?.let { Text("Rendező: $it", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1) }
@@ -170,9 +204,9 @@ fun StreamingTitleScreen(
             }
         }
     }
-    // Start on the library button when there is one, else on the watchlist button.
+    // Start on the library button when there is one, else on "watched".
     LaunchedEffect(inLibrary != null) {
-        runCatching { if (inLibrary != null) libraryFocus.requestFocus() else watchlistFocus.requestFocus() }
+        runCatching { if (inLibrary != null) libraryFocus.requestFocus() else watchedFocus.requestFocus() }
         // Focusing scrolls the button towards the middle; the title should stay in sight on arrival.
         kotlinx.coroutines.delay(50)
         scroll.scrollTo(0)
