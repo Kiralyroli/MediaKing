@@ -160,6 +160,22 @@
     </section>
 
     <section>
+      <h2 data-t="subsTitle"></h2>
+      <p class="muted" style="margin-top:0" data-t-html="subsHelp"></p>
+      <p id="subsStatus"></p>
+      <div class="row">
+        <input type="password" id="subsKey" placeholder="API key" autocomplete="off" style="flex:1;min-width:200px">
+      </div>
+      <div class="row" style="margin-top:8px">
+        <input type="text" id="subsUser" data-t-placeholder="subsUser" autocomplete="off" style="flex:1;min-width:160px">
+        <input type="password" id="subsPassword" data-t-placeholder="netPassword" autocomplete="new-password" style="flex:1;min-width:140px">
+        <button id="subsSave" data-t="save"></button>
+        <button id="subsClear" class="danger hidden" data-t="delete"></button>
+      </div>
+      <p class="error" id="subsError"></p>
+    </section>
+
+    <section>
       <h2 data-t="networkTitle"></h2>
       <p class="muted" style="margin-top:0" data-t="networkHelp"></p>
       <ul class="list" id="networkList"></ul>
@@ -198,6 +214,13 @@ const $ = (id) => document.getElementById(id);
 // --- texts: the TV serves the page with its language in <html lang> ---
 const TEXTS = {
   hu: {
+    subsTitle: "Feliratletöltés (OpenSubtitles)",
+    subsHelp: "A lejátszó menüjében („Felirat letöltése…”) az OpenSubtitles.com feliratai közül választhatsz. Ehhez egy ingyenes <b>API-kulcs</b> kell: opensubtitles.com → regisztráció → API consumers. Fiók megadása nem kötelező, de több letöltés jár vele naponta. Minden csak a TV-n tárolódik.",
+    subsUser: "OpenSubtitles felhasználónév (nem kötelező)",
+    subsNone: "⚠️ Nincs API-kulcs: a feliratletöltés nem elérhető.",
+    subsSet: "✅ API-kulcs beállítva.",
+    subsSetUser: "✅ API-kulcs beállítva, fiók: {0}",
+    confirmClearSubs: "Törlöd az OpenSubtitles beállításokat?",
     remote: "Távirányító",
     remoteSearchHint: "Keresés a TV-n (cím, szereplő…)",
     search: "Keresés",
@@ -291,6 +314,13 @@ const TEXTS = {
     confirmClearTmdb: "Törlöd a megadott TMDB-tokent?",
   },
   en: {
+    subsTitle: "Subtitle download (OpenSubtitles)",
+    subsHelp: "In the player menu (“Download subtitles…”) you can pick from OpenSubtitles.com. This needs a free <b>API key</b>: opensubtitles.com → sign up → API consumers. An account is optional but allows more downloads a day. Everything is stored on the TV only.",
+    subsUser: "OpenSubtitles user name (optional)",
+    subsNone: "⚠️ No API key: subtitle download is not available.",
+    subsSet: "✅ API key set.",
+    subsSetUser: "✅ API key set, account: {0}",
+    confirmClearSubs: "Delete the OpenSubtitles settings?",
     remote: "Remote",
     remoteSearchHint: "Search on the TV (title, cast…)",
     search: "Search",
@@ -384,6 +414,13 @@ const TEXTS = {
     confirmClearTmdb: "Delete the TMDB token you entered?",
   },
   de: {
+    subsTitle: "Untertitel-Download (OpenSubtitles)",
+    subsHelp: "Im Player-Menü („Untertitel herunterladen…“) kannst du aus OpenSubtitles.com wählen. Dafür braucht es einen kostenlosen <b>API-Schlüssel</b>: opensubtitles.com → Registrieren → API consumers. Ein Konto ist optional, bringt aber mehr Downloads pro Tag. Alles wird nur auf dem Fernseher gespeichert.",
+    subsUser: "OpenSubtitles-Benutzername (optional)",
+    subsNone: "⚠️ Kein API-Schlüssel: Untertitel-Download nicht verfügbar.",
+    subsSet: "✅ API-Schlüssel gesetzt.",
+    subsSetUser: "✅ API-Schlüssel gesetzt, Konto: {0}",
+    confirmClearSubs: "Die OpenSubtitles-Einstellungen löschen?",
     remote: "Fernbedienung",
     remoteSearchHint: "Auf dem Fernseher suchen (Titel, Besetzung…)",
     search: "Suchen",
@@ -583,6 +620,7 @@ async function start() {
   refreshRemote();
   loadAddons();
   loadTmdb();
+  loadSubtitles();
   loadNetwork();
   if (!current && roots.length) openFolder(roots[0], roots[0].path);
 }
@@ -1052,6 +1090,42 @@ $("tmdbSave").addEventListener("click", async () => {
 $("tmdbClear").addEventListener("click", async () => {
   if (!confirm(t("confirmClearTmdb"))) return;
   loadTmdb(await api("tmdb", { method: "DELETE" }));
+});
+
+// --- OpenSubtitles ---
+function showSubtitles(status) {
+  $("subsStatus").textContent = !status.configured ? t("subsNone") : status.username ? t("subsSetUser", status.username) : t("subsSet");
+  $("subsClear").classList.toggle("hidden", !status.configured);
+}
+
+async function loadSubtitles() {
+  try {
+    const result = await api("subtitles");
+    if (result.ok) showSubtitles(result.body);
+  } catch (_) { /* pairing shown */ }
+}
+
+$("subsSave").addEventListener("click", async () => {
+  const request = { apiKey: $("subsKey").value.trim(), username: $("subsUser").value.trim(), password: $("subsPassword").value };
+  if (!request.apiKey) return;
+  $("subsSave").disabled = true;
+  $("subsError").textContent = t("connecting");
+  try {
+    const result = await api("subtitles", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(request) });
+    if (result.ok) {
+      $("subsError").textContent = "";
+      $("subsKey").value = ""; $("subsPassword").value = "";
+      showSubtitles(result.body);
+    } else {
+      $("subsError").textContent = result.body ? result.body.error : t("failed");
+    }
+  } finally { $("subsSave").disabled = false; }
+});
+
+$("subsClear").addEventListener("click", async () => {
+  if (!confirm(t("confirmClearSubs"))) return;
+  const result = await api("subtitles", { method: "DELETE" });
+  if (result.ok) showSubtitles(result.body);
 });
 
 window.addEventListener("beforeunload", (e) => {

@@ -49,7 +49,7 @@ class TmdbCredentials @Inject constructor(
                 .build()
             okHttp.newCall(request).execute().use { it.isSuccessful }
         }
-        require(accepted) { "A TMDB nem fogadta el a tokent (az „API Read Access Token” kell, nem az API-kulcs)" }
+        require(accepted) { AppLocale.text(R.string.tmdb_token_rejected) }
         save(candidate)
     }
 

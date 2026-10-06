@@ -1,5 +1,6 @@
 package com.kiroland.mediacenter.data.transfer
 
+import com.kiroland.mediacenter.data.subtitles.OpenSubtitles
 import com.kiroland.mediacenter.data.remote.RemoteControl
 import com.kiroland.mediacenter.R
 import com.kiroland.mediacenter.util.AppLocale
@@ -69,6 +70,7 @@ class TransferRepository @Inject constructor(
     private val libraryRepository: LibraryRepository,
     private val networkShares: NetworkShareRepository,
     private val smb: SmbClient,
+    private val openSubtitles: OpenSubtitles,
     @param:ApplicationScope private val scope: CoroutineScope,
 ) : TransferHost {
 
@@ -183,6 +185,16 @@ class TransferRepository @Inject constructor(
         addonRepository.installFromUrl(url).map { it.toDto() }
 
     override fun removeAddon(id: String): Boolean = addonRepository.remove(id)
+
+    override fun subtitlesStatus() = SubtitlesDto(openSubtitles.isConfigured, openSubtitles.username.ifBlank { null })
+
+    override suspend fun setSubtitlesAccount(request: SubtitlesRequest): Result<SubtitlesDto> =
+        openSubtitles.setAccount(request.apiKey, request.username, request.password).map { subtitlesStatus() }
+
+    override fun clearSubtitlesAccount(): SubtitlesDto {
+        openSubtitles.clear()
+        return subtitlesStatus()
+    }
 
     override fun remoteKey(key: String): Boolean =
         RemoteControl.Key.entries.firstOrNull { it.name.equals(key, ignoreCase = true) }?.let { RemoteControl.press(it) } ?: false

@@ -109,7 +109,18 @@ interface TransferHost {
     fun remoteKey(key: String): Boolean = false
     fun remoteSearch(text: String): Boolean = false
     suspend fun remoteStatus(): RemoteStatusDto = RemoteStatusDto(false)
+
+    /** OpenSubtitles account for subtitle downloads. */
+    fun subtitlesStatus(): SubtitlesDto = SubtitlesDto(false)
+    suspend fun setSubtitlesAccount(request: SubtitlesRequest): Result<SubtitlesDto> = Result.failure(UnsupportedOperationException())
+    fun clearSubtitlesAccount(): SubtitlesDto = SubtitlesDto(false)
 }
+
+@Serializable
+data class SubtitlesDto(val configured: Boolean, val username: String? = null)
+
+@Serializable
+data class SubtitlesRequest(val apiKey: String, val username: String = "", val password: String = "")
 
 @Serializable
 data class RemoteStatusDto(
@@ -333,6 +344,32 @@ class TransferServer(
             if (!authorized(call)) return@delete
             if (host.removeNetworkFolder(call.parameters["root"].orEmpty())) call.respondJson(ChunkDto(0, true))
             else call.respondError(HttpStatusCode.NotFound, AppLocale.text(R.string.server_no_network_folder))
+        }
+
+        get("/api/subtitles") {
+            if (!authorized(call)) return@get
+            call.respondJson(host.subtitlesStatus())
+        }
+
+        post("/api/subtitles") {
+            if (!authorized(call)) return@post
+            if ((call.request.contentLength() ?: 0) > MAX_TOKEN_BYTES) {
+                call.receiveChannel().discard()
+                call.respondError(HttpStatusCode.PayloadTooLarge, AppLocale.text(R.string.server_request_too_large))
+                return@post
+            }
+            val request = runCatching { json.decodeFromString<SubtitlesRequest>(call.receiveText()) }.getOrNull()
+            if (request == null) {
+                call.respondError(HttpStatusCode.BadRequest, AppLocale.text(R.string.server_bad_request))
+                return@post
+            }
+            host.setSubtitlesAccount(request)
+                .fold({ call.respondJson(it) }, { call.respondError(HttpStatusCode.BadRequest, it.message ?: AppLocale.text(R.string.server_failed)) })
+        }
+
+        delete("/api/subtitles") {
+            if (!authorized(call)) return@delete
+            call.respondJson(host.clearSubtitlesAccount())
         }
 
         get("/api/remote") {

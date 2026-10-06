@@ -423,4 +423,21 @@
         <item quantity="one">about %d hour</item>
         <item quantity="other">about %d hours</item>
     </plurals>
+    <!-- Subtitle download (OpenSubtitles) -->
+    <string name="tmdb_token_rejected">TMDB did not accept the token (the “API Read Access Token” is needed, not the API key)</string>
+    <string name="subs_download">Download subtitles…</string>
+    <string name="subs_not_configured">To download subtitles, enter an OpenSubtitles API key on the upload page (Upload menu).</string>
+    <string name="subs_no_match">This file has no TMDB match, so subtitles cannot be searched.</string>
+    <string name="subs_searching">Searching for subtitles…</string>
+    <string name="subs_none">No subtitles found.</string>
+    <string name="subs_choose">Download subtitles</string>
+    <string name="subs_forced">forced</string>
+    <string name="subs_machine">machine translated</string>
+    <string name="subs_added">Subtitles added and switched on</string>
+    <string name="subs_key_invalid">This does not look like an OpenSubtitles API key</string>
+    <string name="subs_key_rejected">OpenSubtitles did not accept the API key</string>
+    <string name="subs_login_failed">Wrong OpenSubtitles user name or password</string>
+    <string name="subs_search_failed">Subtitle search failed (%1$d)</string>
+    <string name="subs_download_failed">Subtitle download failed (%1$d)</string>
+    <string name="subs_quota">Today\'s OpenSubtitles download allowance is used up. An account gives more.</string>
 </resources>

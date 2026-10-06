@@ -1,5 +1,11 @@
 package com.kiroland.mediacenter.player
 
+import kotlinx.coroutines.CancellationException
+import com.kiroland.mediacenter.data.subtitles.SubtitleRanking
+import com.kiroland.mediacenter.data.subtitles.SubtitleQuery
+import com.kiroland.mediacenter.data.subtitles.SubtitleOffer
+import com.kiroland.mediacenter.data.subtitles.DownloadedSubtitles
+import com.kiroland.mediacenter.data.subtitles.OpenSubtitles
 import com.kiroland.mediacenter.data.remote.RemoteControl
 import com.kiroland.mediacenter.util.AppLocale
 import android.app.AlertDialog
@@ -81,6 +87,8 @@ class PlayerActivity : ComponentActivity() {
     @Inject lateinit var mediaFiles: MediaFiles
     @Inject lateinit var metadata: MetadataRepository
     @Inject lateinit var segmentRepository: SegmentRepository
+    @Inject lateinit var openSubtitles: OpenSubtitles
+    @Inject lateinit var downloadedSubtitles: DownloadedSubtitles
 
     private lateinit var playerView: PlayerView
     private var player: ExoPlayer? = null
@@ -91,6 +99,8 @@ class PlayerActivity : ComponentActivity() {
     private var resumePositionMs: Long? = null
     private var playWhenReady = true
     private var subtitlesChosenFor: String? = null
+    /** A just downloaded subtitle to switch on once the reloaded file shows its tracks. */
+    private var pendingSubtitleId: String? = null
 
     /** An add-on channel being played live: no progress, no next episode, channel zapping. */
     private data class LiveRef(val addonId: String, val channelId: String)
@@ -196,7 +206,11 @@ class PlayerActivity : ComponentActivity() {
                 .build()
             addListener(object : Player.Listener {
                 override fun onTracksChanged(tracks: Tracks) {
-                    if (settings.current.autoSubtitles) autoSelectSubtitles(this@apply, tracks)
+                    if (selectPendingSubtitle(this@apply, tracks)) {
+                        subtitlesChosenFor = currentPath
+                    } else if (settings.current.autoSubtitles) {
+                        autoSelectSubtitles(this@apply, tracks)
+                    }
                     showTracks(tracks)
                 }
 
@@ -330,19 +344,111 @@ class PlayerActivity : ComponentActivity() {
         exoPlayer.trackSelectionParameters = params.build()
     }
 
+    /** Offers subtitles from OpenSubtitles for the playing film or episode, the best matching release first. */
+    private fun searchSubtitles() {
+        if (!openSubtitles.isConfigured) {
+            Toast.makeText(this, R.string.subs_not_configured, Toast.LENGTH_LONG).show()
+            return
+        }
+        val path = currentPath
+        lifecycleScope.launch {
+            val item = library.media(path).first()
+            val media = item?.media
+            val tmdbId = item?.metadata?.tmdbId
+            if (media == null || tmdbId == null) {
+                Toast.makeText(this@PlayerActivity, R.string.subs_no_match, Toast.LENGTH_LONG).show()
+                return@launch
+            }
+            Toast.makeText(this@PlayerActivity, R.string.subs_searching, Toast.LENGTH_SHORT).show()
+            val query = SubtitleQuery(media.kind == MediaKind.MOVIE, tmdbId, media.season, media.episode, listOf(AppLocale.current.language, "en"))
+            val offers = try {
+                SubtitleRanking.rank(openSubtitles.search(query), media.fileName).take(MAX_SUBTITLE_OFFERS)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Toast.makeText(this@PlayerActivity, e.message ?: getString(R.string.server_failed), Toast.LENGTH_LONG).show()
+                return@launch
+            }
+            if (currentPath != path) return@launch
+            if (offers.isEmpty()) {
+                Toast.makeText(this@PlayerActivity, R.string.subs_none, Toast.LENGTH_LONG).show()
+                return@launch
+            }
+            AlertDialog.Builder(this@PlayerActivity, DIALOG_THEME)
+                .setTitle(R.string.subs_choose)
+                .setItems(offers.map { offerLabel(it) }.toTypedArray()) { _, which -> downloadSubtitle(path, offers[which]) }
+                .show()
+        }
+    }
+
+    private fun offerLabel(offer: SubtitleOffer): String = listOfNotNull(
+        DetailedTrackNameProvider.languageName(offer.language) ?: offer.language,
+        offer.release,
+        getString(R.string.subs_forced).takeIf { offer.forced },
+        "SDH".takeIf { offer.hearingImpaired },
+        getString(R.string.subs_machine).takeIf { offer.machineTranslated },
+        "⬇ " + offer.downloads,
+    ).joinToString(" · ")
+
+    /** Downloads it, adds it to the playing file (same position) and switches it on. */
+    private fun downloadSubtitle(path: String, offer: SubtitleOffer) {
+        lifecycleScope.launch {
+            val id = try {
+                val bytes = openSubtitles.download(offer.fileId)
+                withContext(Dispatchers.IO) { downloadedSubtitles.save(path, offer, bytes) }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Toast.makeText(this@PlayerActivity, e.message ?: getString(R.string.server_failed), Toast.LENGTH_LONG).show()
+                return@launch
+            }
+            val exoPlayer = player ?: return@launch
+            if (currentPath != path) return@launch
+            val mediaItem = mediaItemFor(path)
+            val position = exoPlayer.currentPosition
+            pendingSubtitleId = id
+            exoPlayer.setMediaItem(mediaItem, position)
+            exoPlayer.prepare()
+            Toast.makeText(this@PlayerActivity, R.string.subs_added, Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    /** true when it switched on a just downloaded subtitle. */
+    private fun selectPendingSubtitle(exoPlayer: ExoPlayer, tracks: Tracks): Boolean {
+        val id = pendingSubtitleId ?: return false
+        for (group in tracks.groups) {
+            if (group.type != C.TRACK_TYPE_TEXT) continue
+            val index = (0 until group.length).firstOrNull { group.getTrackFormat(it).id?.contains(id) == true } ?: continue
+            pendingSubtitleId = null
+            exoPlayer.trackSelectionParameters = exoPlayer.trackSelectionParameters.buildUpon()
+                .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, false)
+                .setOverrideForType(TrackSelectionOverride(group.mediaTrackGroup, index))
+                .build()
+            return true
+        }
+        return false
+    }
+
     /** Where to continue a file: the saved position, unless it was finished or barely started. */
     private suspend fun savedStart(path: String): Long {
         val progress = library.progress(path) ?: return 0L
         return if (progress.finished || progress.positionMs < 10_000) 0L else progress.positionMs
     }
 
-    private suspend fun load(exoPlayer: ExoPlayer, path: String, startMs: Long) {
-        val subtitles = withContext(Dispatchers.IO) { SubtitleLoader.findSidecars(path, mediaFiles, cacheDir) }
-        if (player !== exoPlayer) return
-        val mediaItem = MediaItem.Builder()
+    /** The file with its subtitles: sidecar files next to it, and downloaded ones. */
+    private suspend fun mediaItemFor(path: String): MediaItem {
+        val subtitles = withContext(Dispatchers.IO) {
+            SubtitleLoader.findSidecars(path, mediaFiles, cacheDir) + downloadedSubtitles.configurations(path)
+        }
+        return MediaItem.Builder()
             .setUri(playbackUri(path))
             .setSubtitleConfigurations(subtitles)
             .build()
+    }
+
+    private suspend fun load(exoPlayer: ExoPlayer, path: String, startMs: Long) {
+        val mediaItem = mediaItemFor(path)
+        if (player !== exoPlayer) return
         resumePositionMs = startMs
         showHeader(path)
         exoPlayer.setMediaItem(mediaItem, startMs)
@@ -608,11 +714,19 @@ class PlayerActivity : ComponentActivity() {
     private fun showSettingsMenu() {
         AlertDialog.Builder(this, DIALOG_THEME)
             .setTitle(R.string.player_settings)
-            .setItems(arrayOf(getString(R.string.player_audio), getString(R.string.player_subtitles), getString(R.string.player_speed))) { _, which ->
+            .setItems(
+                listOfNotNull(
+                    getString(R.string.player_audio),
+                    getString(R.string.player_subtitles),
+                    getString(R.string.player_speed),
+                    getString(R.string.subs_download).takeIf { live == null },
+                ).toTypedArray(),
+            ) { _, which ->
                 when (which) {
                     0 -> showTrackDialog(C.TRACK_TYPE_AUDIO)
                     1 -> showTrackDialog(C.TRACK_TYPE_TEXT)
                     2 -> showSpeedDialog()
+                    3 -> searchSubtitles()
                 }
             }
             .show()
@@ -682,6 +796,7 @@ class PlayerActivity : ComponentActivity() {
         private const val NEXT_COUNTDOWN_MS = 10_000L
         private const val SEEK_FORWARD_MS = 30_000L
         private val DIALOG_THEME = android.R.style.Theme_Material_Dialog_Alert
+        private const val MAX_SUBTITLE_OFFERS = 30
         private val SHORTCUT_KEYS = setOf(
             KeyEvent.KEYCODE_MENU,
             KeyEvent.KEYCODE_SETTINGS,

@@ -424,4 +424,21 @@
         <item quantity="one">kb. %d óra</item>
         <item quantity="other">kb. %d óra</item>
     </plurals>
+    <!-- Subtitle download (OpenSubtitles) -->
+    <string name="tmdb_token_rejected">A TMDB nem fogadta el a tokent (az „API Read Access Token” kell, nem az API-kulcs)</string>
+    <string name="subs_download">Felirat letöltése…</string>
+    <string name="subs_not_configured">Feliratletöltéshez add meg az OpenSubtitles API-kulcsot a feltöltő oldalon (Feltöltés menü).</string>
+    <string name="subs_no_match">Ehhez a fájlhoz nincs TMDB-egyezés, így nem kereshető felirat.</string>
+    <string name="subs_searching">Feliratok keresése…</string>
+    <string name="subs_none">Nem található felirat.</string>
+    <string name="subs_choose">Felirat letöltése</string>
+    <string name="subs_forced">kényszerített</string>
+    <string name="subs_machine">gépi fordítás</string>
+    <string name="subs_added">Felirat hozzáadva és bekapcsolva</string>
+    <string name="subs_key_invalid">Ez nem úgy néz ki, mint egy OpenSubtitles API-kulcs</string>
+    <string name="subs_key_rejected">Az OpenSubtitles nem fogadta el az API-kulcsot</string>
+    <string name="subs_login_failed">Hibás OpenSubtitles felhasználónév vagy jelszó</string>
+    <string name="subs_search_failed">A feliratkeresés nem sikerült (%1$d)</string>
+    <string name="subs_download_failed">A felirat letöltése nem sikerült (%1$d)</string>
+    <string name="subs_quota">Elfogyott a mai letöltési keret az OpenSubtitles-on. Fiókkal több jár.</string>
 </resources>

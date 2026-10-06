@@ -423,4 +423,21 @@
         <item quantity="one">ca. %d Stunde</item>
         <item quantity="other">ca. %d Stunden</item>
     </plurals>
+    <!-- Subtitle download (OpenSubtitles) -->
+    <string name="tmdb_token_rejected">TMDB hat das Token nicht angenommen (gebraucht wird das „API Read Access Token“, nicht der API-Schlüssel)</string>
+    <string name="subs_download">Untertitel herunterladen…</string>
+    <string name="subs_not_configured">Zum Herunterladen von Untertiteln einen OpenSubtitles-API-Schlüssel auf der Upload-Seite eingeben (Menü Hochladen).</string>
+    <string name="subs_no_match">Diese Datei hat keine TMDB-Zuordnung, daher lassen sich keine Untertitel suchen.</string>
+    <string name="subs_searching">Untertitel werden gesucht…</string>
+    <string name="subs_none">Keine Untertitel gefunden.</string>
+    <string name="subs_choose">Untertitel herunterladen</string>
+    <string name="subs_forced">erzwungen</string>
+    <string name="subs_machine">maschinell übersetzt</string>
+    <string name="subs_added">Untertitel hinzugefügt und eingeschaltet</string>
+    <string name="subs_key_invalid">Das sieht nicht wie ein OpenSubtitles-API-Schlüssel aus</string>
+    <string name="subs_key_rejected">OpenSubtitles hat den API-Schlüssel nicht angenommen</string>
+    <string name="subs_login_failed">Falscher OpenSubtitles-Benutzername oder falsches Passwort</string>
+    <string name="subs_search_failed">Untertitelsuche fehlgeschlagen (%1$d)</string>
+    <string name="subs_download_failed">Herunterladen des Untertitels fehlgeschlagen (%1$d)</string>
+    <string name="subs_quota">Das heutige Download-Kontingent bei OpenSubtitles ist aufgebraucht. Mit Konto gibt es mehr.</string>
 </resources>
