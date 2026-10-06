@@ -338,7 +338,7 @@
     <string name="addon_not_installed">Das Add-on ist nicht mehr installiert</string>
     <string name="addon_response_too_large">Antwort zu groß (über %1$d KB)</string>
     <string name="addons_title">Add-ons</string>
-    <string name="addons_intro">Add-ons fügen Live-TV Sender hinzu. Installation: Hochladen → Einschalten, dann im Browser unter „Add-ons“ aus einer Datei oder URL.</string>
+    <string name="addons_intro">Add-ons fügen dem Live-TV Sender hinzu. Installation: Hochladen → Einschalten, dann im Browser unter „Add-ons“ aus einer Datei oder URL.</string>
     <string name="addons_empty">Keine Add-ons installiert.</string>
     <string name="addons_press_again">Zum Entfernen erneut drücken.</string>
     <string name="addons_remove">Entfernen</string>
@@ -390,4 +390,6 @@
     <string name="json_path_unclosed">nicht geschlossenes [ ]</string>
     <string name="json_path_bad_filter">ungültiger Filter: [%1$s]</string>
     <string name="json_path_bad_part">ungültiger Teil: %1$s</string>
+    <!-- Upload server -->
+    <string name="server_no_port">Kein freier Port (%1$d–%2$d)</string>
 </resources>

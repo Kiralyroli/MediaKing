@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>MediaKing – feltöltés</title>
+<title>MediaKing</title>
 <style>
   :root {
     --bg: #101820; --surface: #16222c; --surface2: #243642; --text: #eef3f7; --muted: #a9bdca;
@@ -59,22 +59,22 @@
 <body>
 <header>
   <svg class="logo" viewBox="0 0 108 108" aria-hidden="true"><rect width="108" height="108" rx="24" fill="#16222c"/><path fill="#ff8a65" d="M24,74 L19,38 L38,53 L54,29 L70,53 L89,38 L84,74 Z"/><circle cx="19" cy="36" r="5" fill="#ff8a65"/><circle cx="54" cy="27" r="5" fill="#ff8a65"/><circle cx="89" cy="36" r="5" fill="#ff8a65"/><rect x="24" y="78" width="60" height="7" rx="3.5" fill="#ff8a65"/><path fill="#16222c" d="M48,52 L48,70 L64,61 Z"/></svg>
-  <h1>Media<span style="color:var(--accent)">King</span> – feltöltés</h1>
+  <h1>Media<span style="color:var(--accent)">King</span> – <span data-t="upload"></span></h1>
   <div class="device" id="device"></div>
 </header>
 
 <main>
   <section id="pairing" class="pair hidden">
-    <h2>Párosítás</h2>
-    <p class="muted">Írd be a TV-n, a Feltöltés menüben látható kódot, vagy olvasd be a QR-kódot a telefonoddal.</p>
+    <h2 data-t="pairing"></h2>
+    <p class="muted" data-t="pairingHelp"></p>
     <input id="codeInput" type="text" autocomplete="off" placeholder="XXXX-XXXX" maxlength="9">
-    <button class="primary" id="codeButton">Csatlakozás</button>
+    <button class="primary" id="codeButton" data-t="connect"></button>
     <p class="error" id="pairError"></p>
   </section>
 
   <div id="app" class="hidden" style="display:grid;gap:16px">
     <section>
-      <h2>Hová?</h2>
+      <h2 data-t="where"></h2>
       <div class="roots" id="roots"></div>
     </section>
 
@@ -83,78 +83,73 @@
       <div class="row" style="margin-bottom:8px">
         <span class="muted" id="free"></span>
         <span style="flex:1"></span>
-        <button class="small" id="mkdirButton">Új mappa</button>
+        <button class="small" id="mkdirButton" data-t="newFolder"></button>
       </div>
       <ul class="list" id="listing"></ul>
     </section>
 
     <section>
-      <h2>Feltöltés ide: <span id="targetName" style="text-transform:none;color:var(--text)"></span></h2>
+      <h2><span data-t="uploadTo"></span> <span id="targetName" style="text-transform:none;color:var(--text)"></span></h2>
       <div class="drop" id="drop">
-        <p>Húzd ide a fájlokat, vagy</p>
+        <p data-t="dropHere"></p>
         <div class="row" style="justify-content:center">
-          <label class="button primary">Fájlok kiválasztása<input type="file" id="fileInput" multiple hidden></label>
-          <label class="button">Teljes mappa<input type="file" id="folderInput" webkitdirectory multiple hidden></label>
+          <label class="button primary"><span data-t="chooseFiles"></span><input type="file" id="fileInput" multiple hidden></label>
+          <label class="button"><span data-t="wholeFolder"></span><input type="file" id="folderInput" webkitdirectory multiple hidden></label>
         </div>
       </div>
-      <p class="muted" style="font-size:13px">Tipp: feltöltés közben tartsd bekapcsolva a telefon kijelzőjét. Ha megszakad,
-        válaszd ki újra ugyanazt a fájlt ugyanide – onnan folytatja, ahol abbamaradt.</p>
+      <p class="muted" style="font-size:13px" data-t="uploadTip"></p>
     </section>
 
     <section>
-      <h2>Kiegészítők</h2>
-      <p class="muted" style="margin-top:0">Élő csatornákat adnak az Élő TV menühöz. Egy kiegészítő egy <code>.json</code> leíró fájl
-        (formátum: <code>docs/addons.md</code>); nem futtat kódot. Azonos azonosítójú kiegészítő telepítése frissíti a régit.</p>
+      <h2 data-t="addons"></h2>
+      <p class="muted" style="margin-top:0" data-t-html="addonsHelp"></p>
       <ul class="list" id="addonList"></ul>
       <div class="row" style="margin-top:12px">
-        <label class="button primary">Kiegészítő telepítése fájlból<input type="file" id="addonFile" accept=".json,application/json" hidden></label>
+        <label class="button primary"><span data-t="installAddonFile"></span><input type="file" id="addonFile" accept=".json,application/json" hidden></label>
       </div>
       <div class="row" style="margin-top:8px">
-        <input type="text" id="addonUrl" placeholder="https://…/kiegeszito.json" style="flex:1;min-width:200px">
-        <button id="addonUrlButton">Telepítés URL-ről</button>
+        <input type="text" id="addonUrl" placeholder="https://…/addon.json" style="flex:1;min-width:200px">
+        <button id="addonUrlButton" data-t="installFromUrl"></button>
       </div>
       <p class="error" id="addonError"></p>
     </section>
 
     <section>
-      <h2>Filmadatok (TMDB)</h2>
-      <p class="muted" style="margin-top:0">A posztereket, leírásokat és szereplőket a TMDB adja. Ehhez egy ingyenes
-        <b>API Read Access Token</b> kell a themoviedb.org fiókbeállításaiból (API menü). A token csak a TV-n tárolódik.</p>
+      <h2 data-t="tmdbTitle"></h2>
+      <p class="muted" style="margin-top:0" data-t-html="tmdbHelp"></p>
       <p id="tmdbStatus"></p>
       <div class="row">
         <input type="password" id="tmdbToken" placeholder="API Read Access Token" autocomplete="off" style="flex:1;min-width:200px">
-        <button id="tmdbSave">Mentés</button>
-        <button id="tmdbClear" class="danger hidden">Törlés</button>
+        <button id="tmdbSave" data-t="save"></button>
+        <button id="tmdbClear" class="danger hidden" data-t="delete"></button>
       </div>
       <p class="error" id="tmdbError"></p>
     </section>
 
     <section>
-      <h2>Hálózati mappák</h2>
-      <p class="muted" style="margin-top:0">Egy számítógép vagy NAS megosztott mappája (SMB) a médiatárba, másolás nélkül:
-        a TV onnan játssza le a filmeket. A gépnek bekapcsolva kell lennie. A jelszó csak a TV-n tárolódik.</p>
+      <h2 data-t="networkTitle"></h2>
+      <p class="muted" style="margin-top:0" data-t="networkHelp"></p>
       <ul class="list" id="networkList"></ul>
       <div class="row" style="margin-top:12px">
-        <input type="text" id="netHost" placeholder="Gép neve vagy IP-címe (pl. DESKTOP-ABC)" style="flex:1;min-width:180px">
-        <input type="text" id="netShare" placeholder="Megosztás (pl. filmek)" style="flex:1;min-width:140px">
-        <input type="text" id="netPath" placeholder="Almappa (nem kötelező)" style="flex:1;min-width:140px">
+        <input type="text" id="netHost" data-t-placeholder="netHost" style="flex:1;min-width:180px">
+        <input type="text" id="netShare" data-t-placeholder="netShare" style="flex:1;min-width:140px">
+        <input type="text" id="netPath" data-t-placeholder="netPath" style="flex:1;min-width:140px">
       </div>
       <div class="row" style="margin-top:8px">
-        <input type="text" id="netUser" placeholder="Felhasználónév (üresen: vendég)" autocomplete="off" style="flex:1;min-width:180px">
-        <input type="password" id="netPassword" placeholder="Jelszó" autocomplete="new-password" style="flex:1;min-width:140px">
-        <button id="netAdd" class="primary">Hozzáadás a médiatárhoz</button>
+        <input type="text" id="netUser" data-t-placeholder="netUser" autocomplete="off" style="flex:1;min-width:180px">
+        <input type="password" id="netPassword" data-t-placeholder="netPassword" autocomplete="new-password" style="flex:1;min-width:140px">
+        <button id="netAdd" class="primary" data-t="addToLibrary"></button>
       </div>
-      <p class="muted" style="font-size:13px">Windowson a felhasználónév általában a Microsoft-fiók e-mail-címe vagy a helyi
-        felhasználónév; a jelszó az ahhoz tartozó jelszó (nem a PIN-kód).</p>
+      <p class="muted" style="font-size:13px" data-t="netWindowsTip"></p>
       <p class="error" id="netError"></p>
     </section>
 
     <section id="queueSection" class="hidden">
       <div class="row" style="margin-bottom:4px">
-        <h2 style="margin:0">Sor</h2>
+        <h2 style="margin:0" data-t="queue"></h2>
         <span style="flex:1"></span>
         <span class="muted" id="queueSummary"></span>
-        <button class="small" id="clearDone">Készek törlése a listáról</button>
+        <button class="small" id="clearDone" data-t="clearDone"></button>
       </div>
       <div id="queue"></div>
     </section>
@@ -166,6 +161,267 @@
 const CHUNK = 8 * 1024 * 1024;
 const SKIP_FILES = new Set([".DS_Store", "Thumbs.db", "desktop.ini"]);
 const $ = (id) => document.getElementById(id);
+
+// --- texts: the TV serves the page with its language in <html lang> ---
+const TEXTS = {
+  hu: {
+    upload: "feltöltés",
+    pairing: "Párosítás",
+    pairingHelp: "Írd be a TV-n, a Feltöltés menüben látható kódot, vagy olvasd be a QR-kódot a telefonoddal.",
+    connect: "Csatlakozás",
+    where: "Hová?",
+    newFolder: "Új mappa",
+    uploadTo: "Feltöltés ide:",
+    dropHere: "Húzd ide a fájlokat, vagy",
+    chooseFiles: "Fájlok kiválasztása",
+    wholeFolder: "Teljes mappa",
+    uploadTip: "Tipp: feltöltés közben tartsd bekapcsolva a telefon kijelzőjét. Ha megszakad, válaszd ki újra ugyanazt a fájlt ugyanide – onnan folytatja, ahol abbamaradt.",
+    addons: "Kiegészítők",
+    addonsHelp: "Élő csatornákat adnak az Élő TV menühöz. Egy kiegészítő egy <code>.json</code> leíró fájl (formátum: <code>docs/addons.md</code>); nem futtat kódot. Azonos azonosítójú kiegészítő telepítése frissíti a régit.",
+    installAddonFile: "Kiegészítő telepítése fájlból",
+    installFromUrl: "Telepítés URL-ről",
+    tmdbTitle: "Filmadatok (TMDB)",
+    tmdbHelp: "A posztereket, leírásokat és szereplőket a TMDB adja. Ehhez egy ingyenes <b>API Read Access Token</b> kell a themoviedb.org fiókbeállításaiból (API menü). A token csak a TV-n tárolódik.",
+    save: "Mentés",
+    delete: "Törlés",
+    networkTitle: "Hálózati mappák",
+    networkHelp: "Egy számítógép vagy NAS megosztott mappája (SMB) a médiatárba, másolás nélkül: a TV onnan játssza le a filmeket. A gépnek bekapcsolva kell lennie. A jelszó csak a TV-n tárolódik.",
+    netHost: "Gép neve vagy IP-címe (pl. DESKTOP-ABC)",
+    netShare: "Megosztás (pl. filmek)",
+    netPath: "Almappa (nem kötelező)",
+    netUser: "Felhasználónév (üresen: vendég)",
+    netPassword: "Jelszó",
+    addToLibrary: "Hozzáadás a médiatárhoz",
+    netWindowsTip: "Windowson a felhasználónév általában a Microsoft-fiók e-mail-címe vagy a helyi felhasználónév; a jelszó az ahhoz tartozó jelszó (nem a PIN-kód).",
+    queue: "Sor",
+    clearDone: "Készek törlése a listáról",
+    hm: "{0} ó {1} p",
+    m: "{0} p",
+    s: "{0} mp",
+    free: "{0} szabad",
+    error: "Hiba",
+    freeOnDrive: "{0} szabad a meghajtón",
+    library: "médiatár",
+    partial: "félbehagyva, {0}",
+    discard: "Eldobás",
+    emptyFolder: "Üres mappa",
+    cannotDelete: "Nem törölhető",
+    confirmDeleteFolder: "Végleg törlöd ezt a mappát, benne {0} fájllal ({1})?\n\n„{2}”\n\nA törlés nem vonható vissza.",
+    confirmDeleteFile: "Végleg törlöd ezt a fájlt ({0})?\n\n„{1}”\n\nA törlés nem vonható vissza.",
+    deleteFailed: "Nem sikerült törölni",
+    confirmDiscard: "Eldobod a félbehagyott feltöltést?\n\n„{0}” ({1})",
+    newFolderName: "Az új mappa neve:",
+    createFailed: "Nem sikerült létrehozni",
+    readFolderFailed: "Nem sikerült beolvasni a mappát: {0}",
+    pairAgain: "Újra párosítás szükséges.",
+    connectionLost: "A kapcsolat többször megszakadt",
+    unknownError: "Ismeretlen hiba",
+    pause: "Szünet",
+    resume: "Folytatás",
+    cancel: "Mégse",
+    status_queued: "várakozik",
+    status_uploading: "feltöltés",
+    status_retrying: "újrapróbálás",
+    status_paused: "szünetel",
+    status_done: "kész",
+    status_exists: "már létezik",
+    status_error: "hiba",
+    eta: "még kb. {0}",
+    channel: "{0} csatorna",
+    channels: "{0} csatorna",
+    remove: "Eltávolítás",
+    noAddons: "Nincs telepített kiegészítő",
+    failed: "Nem sikerült",
+    confirmRemoveAddon: "Eltávolítod ezt a kiegészítőt?\n\n„{0}”",
+    guest: "vendég",
+    video: "{0} videó",
+    videos: "{0} videó",
+    noNetworkFolders: "Nincs hálózati mappa",
+    needHostAndShare: "Add meg a gép nevét és a megosztást",
+    connecting: "Kapcsolódás…",
+    confirmRemoveNetwork: "Kiveszed a médiatárból ezt a hálózati mappát?\n\n{0}\n\nA fájlokhoz nem nyúl, csak a TV felejti el őket.",
+    tmdbNone: "⚠️ Nincs token: a médiatár poszterek és leírások nélkül működik.",
+    tmdbUser: "✅ Token beállítva (ezen az oldalon megadva).",
+    tmdbBuiltIn: "✅ Az alkalmazásba épített token van használatban.",
+    confirmClearTmdb: "Törlöd a megadott TMDB-tokent?",
+  },
+  en: {
+    upload: "upload",
+    pairing: "Pairing",
+    pairingHelp: "Enter the code shown on the TV in the Upload menu, or scan the QR code with your phone.",
+    connect: "Connect",
+    where: "Where to?",
+    newFolder: "New folder",
+    uploadTo: "Upload to:",
+    dropHere: "Drop files here, or",
+    chooseFiles: "Choose files",
+    wholeFolder: "Whole folder",
+    uploadTip: "Tip: keep the phone's screen on while uploading. If it stops, choose the same file for the same place again – it continues where it left off.",
+    addons: "Add-ons",
+    addonsHelp: "They add live channels to Live TV. An add-on is a <code>.json</code> description file (format: <code>docs/addons.md</code>); it runs no code. Installing an add-on with the same id updates the old one.",
+    installAddonFile: "Install add-on from file",
+    installFromUrl: "Install from URL",
+    tmdbTitle: "Film data (TMDB)",
+    tmdbHelp: "Posters, overviews and cast come from TMDB. This needs a free <b>API Read Access Token</b> from your themoviedb.org account settings (API menu). The token is stored on the TV only.",
+    save: "Save",
+    delete: "Delete",
+    networkTitle: "Network folders",
+    networkHelp: "A shared folder (SMB) on a computer or NAS in the library, without copying: the TV plays the films from there. The computer has to be on. The password is stored on the TV only.",
+    netHost: "Computer name or IP address (e.g. DESKTOP-ABC)",
+    netShare: "Share (e.g. movies)",
+    netPath: "Subfolder (optional)",
+    netUser: "User name (empty: guest)",
+    netPassword: "Password",
+    addToLibrary: "Add to library",
+    netWindowsTip: "On Windows the user name is usually the Microsoft account's e-mail address or the local user name; the password is its password (not the PIN).",
+    queue: "Queue",
+    clearDone: "Clear finished from the list",
+    hm: "{0} h {1} min",
+    m: "{0} min",
+    s: "{0} s",
+    free: "{0} free",
+    error: "Error",
+    freeOnDrive: "{0} free on the drive",
+    library: "library",
+    partial: "unfinished, {0}",
+    discard: "Discard",
+    emptyFolder: "Empty folder",
+    cannotDelete: "Cannot be deleted",
+    confirmDeleteFolder: "Permanently delete this folder with {0} files ({1})?\n\n“{2}”\n\nThis cannot be undone.",
+    confirmDeleteFile: "Permanently delete this file ({0})?\n\n“{1}”\n\nThis cannot be undone.",
+    deleteFailed: "Could not delete",
+    confirmDiscard: "Discard the unfinished upload?\n\n“{0}” ({1})",
+    newFolderName: "Name of the new folder:",
+    createFailed: "Could not create it",
+    readFolderFailed: "Could not read the folder: {0}",
+    pairAgain: "Pairing needed again.",
+    connectionLost: "The connection dropped several times",
+    unknownError: "Unknown error",
+    pause: "Pause",
+    resume: "Resume",
+    cancel: "Cancel",
+    status_queued: "waiting",
+    status_uploading: "uploading",
+    status_retrying: "retrying",
+    status_paused: "paused",
+    status_done: "done",
+    status_exists: "already exists",
+    status_error: "error",
+    eta: "about {0} left",
+    channel: "{0} channel",
+    channels: "{0} channels",
+    remove: "Remove",
+    noAddons: "No add-ons installed",
+    failed: "Failed",
+    confirmRemoveAddon: "Remove this add-on?\n\n“{0}”",
+    guest: "guest",
+    video: "{0} video",
+    videos: "{0} videos",
+    noNetworkFolders: "No network folders",
+    needHostAndShare: "Enter the computer name and the share",
+    connecting: "Connecting…",
+    confirmRemoveNetwork: "Remove this network folder from the library?\n\n{0}\n\nThe files are not touched; the TV just forgets them.",
+    tmdbNone: "⚠️ No token: the library works without posters and overviews.",
+    tmdbUser: "✅ Token set (entered on this page).",
+    tmdbBuiltIn: "✅ The token built into the app is in use.",
+    confirmClearTmdb: "Delete the TMDB token you entered?",
+  },
+  de: {
+    upload: "Upload",
+    pairing: "Kopplung",
+    pairingHelp: "Gib den Code ein, den der Fernseher im Menü Hochladen zeigt, oder scanne den QR-Code mit dem Handy.",
+    connect: "Verbinden",
+    where: "Wohin?",
+    newFolder: "Neuer Ordner",
+    uploadTo: "Hochladen nach:",
+    dropHere: "Dateien hierher ziehen, oder",
+    chooseFiles: "Dateien auswählen",
+    wholeFolder: "Ganzer Ordner",
+    uploadTip: "Tipp: Lass beim Hochladen den Bildschirm des Handys an. Bricht es ab, wähle dieselbe Datei für denselben Ort erneut – es geht dort weiter, wo es aufgehört hat.",
+    addons: "Add-ons",
+    addonsHelp: "Sie fügen dem Live-TV Sender hinzu. Ein Add-on ist eine <code>.json</code>-Beschreibungsdatei (Format: <code>docs/addons.md</code>); es führt keinen Code aus. Ein Add-on mit derselben ID ersetzt das alte.",
+    installAddonFile: "Add-on aus Datei installieren",
+    installFromUrl: "Von URL installieren",
+    tmdbTitle: "Filmdaten (TMDB)",
+    tmdbHelp: "Poster, Beschreibungen und Besetzung kommen von TMDB. Dafür braucht es ein kostenloses <b>API Read Access Token</b> aus den Kontoeinstellungen von themoviedb.org (Menü API). Das Token wird nur auf dem Fernseher gespeichert.",
+    save: "Speichern",
+    delete: "Löschen",
+    networkTitle: "Netzwerkordner",
+    networkHelp: "Ein freigegebener Ordner (SMB) eines Computers oder NAS in der Mediathek, ohne Kopieren: der Fernseher spielt die Filme von dort ab. Der Rechner muss eingeschaltet sein. Das Passwort wird nur auf dem Fernseher gespeichert.",
+    netHost: "Rechnername oder IP-Adresse (z. B. DESKTOP-ABC)",
+    netShare: "Freigabe (z. B. filme)",
+    netPath: "Unterordner (optional)",
+    netUser: "Benutzername (leer: Gast)",
+    netPassword: "Passwort",
+    addToLibrary: "Zur Mediathek hinzufügen",
+    netWindowsTip: "Unter Windows ist der Benutzername meist die E-Mail-Adresse des Microsoft-Kontos oder der lokale Benutzername; das Passwort ist dessen Passwort (nicht die PIN).",
+    queue: "Warteschlange",
+    clearDone: "Fertige aus der Liste entfernen",
+    hm: "{0} Std. {1} Min.",
+    m: "{0} Min.",
+    s: "{0} s",
+    free: "{0} frei",
+    error: "Fehler",
+    freeOnDrive: "{0} frei auf dem Laufwerk",
+    library: "Mediathek",
+    partial: "unvollständig, {0}",
+    discard: "Verwerfen",
+    emptyFolder: "Leerer Ordner",
+    cannotDelete: "Nicht löschbar",
+    confirmDeleteFolder: "Diesen Ordner mit {0} Dateien ({1}) endgültig löschen?\n\n„{2}“\n\nDas lässt sich nicht rückgängig machen.",
+    confirmDeleteFile: "Diese Datei ({0}) endgültig löschen?\n\n„{1}“\n\nDas lässt sich nicht rückgängig machen.",
+    deleteFailed: "Löschen fehlgeschlagen",
+    confirmDiscard: "Den unvollständigen Upload verwerfen?\n\n„{0}“ ({1})",
+    newFolderName: "Name des neuen Ordners:",
+    createFailed: "Erstellen fehlgeschlagen",
+    readFolderFailed: "Ordner konnte nicht gelesen werden: {0}",
+    pairAgain: "Erneute Kopplung nötig.",
+    connectionLost: "Die Verbindung ist mehrmals abgebrochen",
+    unknownError: "Unbekannter Fehler",
+    pause: "Pause",
+    resume: "Fortsetzen",
+    cancel: "Abbrechen",
+    status_queued: "wartet",
+    status_uploading: "wird hochgeladen",
+    status_retrying: "neuer Versuch",
+    status_paused: "pausiert",
+    status_done: "fertig",
+    status_exists: "existiert bereits",
+    status_error: "Fehler",
+    eta: "noch ca. {0}",
+    channel: "{0} Sender",
+    channels: "{0} Sender",
+    remove: "Entfernen",
+    noAddons: "Keine Add-ons installiert",
+    failed: "Fehlgeschlagen",
+    confirmRemoveAddon: "Dieses Add-on entfernen?\n\n„{0}“",
+    guest: "Gast",
+    video: "{0} Video",
+    videos: "{0} Videos",
+    noNetworkFolders: "Keine Netzwerkordner",
+    needHostAndShare: "Gib den Rechnernamen und die Freigabe ein",
+    connecting: "Verbinde…",
+    confirmRemoveNetwork: "Diesen Netzwerkordner aus der Mediathek entfernen?\n\n{0}\n\nDie Dateien bleiben unberührt, der Fernseher vergisst sie nur.",
+    tmdbNone: "⚠️ Kein Token: die Mediathek funktioniert ohne Poster und Beschreibungen.",
+    tmdbUser: "✅ Token gesetzt (auf dieser Seite eingegeben).",
+    tmdbBuiltIn: "✅ Das in die App eingebaute Token wird verwendet.",
+    confirmClearTmdb: "Das eingegebene TMDB-Token löschen?",
+  },
+};
+const LANG = TEXTS[document.documentElement.lang] ? document.documentElement.lang : "hu";
+const LOCALE = { hu: "hu-HU", en: "en-US", de: "de-DE" }[LANG];
+
+/** The text for [key] in the page's language, with {0}, {1}… filled in. */
+function t(key, ...args) {
+  const text = TEXTS[LANG][key] ?? TEXTS.hu[key] ?? key;
+  return text.replace(/\{(\d+)\}/g, (_, i) => String(args[i]));
+}
+
+for (const node of document.querySelectorAll("[data-t]")) node.textContent = t(node.dataset.t);
+// Only our own constant texts, which carry a little markup (<code>, <b>).
+for (const node of document.querySelectorAll("[data-t-html]")) node.innerHTML = t(node.dataset.tHtml);
+for (const node of document.querySelectorAll("[data-t-placeholder]")) node.placeholder = t(node.dataset.tPlaceholder);
+document.title = "MediaKing – " + t("upload");
 
 let code = localStorage.getItem("pairingCode") || "";
 let roots = [];
@@ -193,14 +449,14 @@ function formatBytes(bytes) {
   const units = ["KB", "MB", "GB", "TB"];
   let value = bytes / 1024, unit = 0;
   while (value >= 1024 && unit < units.length - 1) { value /= 1024; unit++; }
-  return value.toLocaleString("hu-HU", { maximumFractionDigits: value >= 100 ? 0 : 1 }) + " " + units[unit];
+  return value.toLocaleString(LOCALE, { maximumFractionDigits: value >= 100 ? 0 : 1 }) + " " + units[unit];
 }
 
 function formatEta(seconds) {
   if (!isFinite(seconds) || seconds <= 0) return "";
-  if (seconds >= 3600) return Math.floor(seconds / 3600) + " ó " + Math.floor(seconds % 3600 / 60) + " p";
-  if (seconds >= 60) return Math.floor(seconds / 60) + " p";
-  return Math.ceil(seconds) + " mp";
+  if (seconds >= 3600) return t("hm", Math.floor(seconds / 3600), Math.floor(seconds % 3600 / 60));
+  if (seconds >= 60) return t("m", Math.floor(seconds / 60));
+  return t("s", Math.ceil(seconds));
 }
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -265,16 +521,16 @@ function renderRoots() {
   box.replaceChildren(...roots.map((root) => el("button", {
     class: "root" + (current && current.root.path === root.path ? " active" : ""),
     onclick: () => openFolder(root, root.path),
-  }, root.kind === "library" ? "🎬 " + root.name : "💾 " + root.name, el("small", {}, formatBytes(root.freeBytes) + " szabad"))));
+  }, root.kind === "library" ? "🎬 " + root.name : "💾 " + root.name, el("small", {}, t("free", formatBytes(root.freeBytes))))));
 }
 
 async function openFolder(root, path) {
   current = { root, path };
   renderRoots();
   const result = await api("list?" + query({ dir: path }));
-  if (!result.ok) { $("listing").replaceChildren(el("li", { class: "error" }, result.body ? result.body.error : "Hiba")); return; }
+  if (!result.ok) { $("listing").replaceChildren(el("li", { class: "error" }, result.body ? result.body.error : t("error"))); return; }
   const listing = result.body;
-  $("free").textContent = formatBytes(listing.freeBytes) + " szabad a meghajtón";
+  $("free").textContent = t("freeOnDrive", formatBytes(listing.freeBytes));
   $("targetName").textContent = displayPath(path);
   renderCrumbs(root, path);
   const partials = new Map(listing.partials.map((p) => [p.name, p.received]));
@@ -283,44 +539,44 @@ async function openFolder(root, path) {
   $("listing").replaceChildren(
     ...listing.dirs.map((name) => el("li", { class: "dir", onclick: () => openFolder(root, path + "/" + name) },
       "📁", el("span", { class: "name" }, name),
-      libraryPaths.has(path + "/" + name) ? el("span", { class: "size" }, "médiatár") : deleteButton(name))),
+      libraryPaths.has(path + "/" + name) ? el("span", { class: "size" }, t("library")) : deleteButton(name))),
     ...listing.partials.map((p) => el("li", {}, "⏸", el("span", { class: "name muted" }, p.name),
-      el("span", { class: "size" }, "félbehagyva, " + formatBytes(p.received)),
-      el("button", { class: "small danger", onclick: () => discardPartial(p) }, "Eldobás"))),
+      el("span", { class: "size" }, t("partial", formatBytes(p.received))),
+      el("button", { class: "small danger", onclick: () => discardPartial(p) }, t("discard")))),
     ...listing.files.map((f) => el("li", {}, "🎞", el("span", { class: "name" }, f.name),
       el("span", { class: "size" }, formatBytes(f.size)), deleteButton(f.name))),
   );
   if (!listing.dirs.length && !listing.files.length && !partials.size) {
-    $("listing").replaceChildren(el("li", { class: "muted" }, "Üres mappa"));
+    $("listing").replaceChildren(el("li", { class: "muted" }, t("emptyFolder")));
   }
 }
 
 function deleteButton(name) {
   return el("button", {
     class: "small danger",
-    title: "Törlés",
+    title: t("delete"),
     onclick: (e) => { e.stopPropagation(); removeEntry(name); },
-  }, "Törlés");
+  }, t("delete"));
 }
 
 /** Permanent delete: Android has no recycle bin, so always show exactly what goes and ask first. */
 async function removeEntry(name) {
   const where = { dir: current.path, name };
   const stat = await api("stat?" + query(where));
-  if (!stat.ok) { alert(stat.body ? stat.body.error : "Nem törölhető"); return; }
+  if (!stat.ok) { alert(stat.body ? stat.body.error : t("cannotDelete")); return; }
   const p = stat.body;
-  const what = p.isDirectory
-    ? "ezt a mappát, benne " + p.files + " fájllal (" + formatBytes(p.bytes) + ")"
-    : "ezt a fájlt (" + formatBytes(p.bytes) + ")";
-  if (!confirm("Végleg törlöd " + what + "?\n\n„" + name + "”\n\nA törlés nem vonható vissza.")) return;
+  const question = p.isDirectory
+    ? t("confirmDeleteFolder", p.files, formatBytes(p.bytes), name)
+    : t("confirmDeleteFile", formatBytes(p.bytes), name);
+  if (!confirm(question)) return;
   const result = await api("delete?" + query(where), { method: "POST" });
-  if (!result.ok) alert(result.body ? result.body.error : "Nem sikerült törölni");
+  if (!result.ok) alert(result.body ? result.body.error : t("deleteFailed"));
   refreshRoots();
   openFolder(current.root, current.path);
 }
 
 async function discardPartial(partial) {
-  if (!confirm("Eldobod a félbehagyott feltöltést?\n\n„" + partial.name + "” (" + formatBytes(partial.received) + ")")) return;
+  if (!confirm(t("confirmDiscard", partial.name, formatBytes(partial.received)))) return;
   await api("upload?" + query({ dir: current.path, rel: "", name: partial.name }), { method: "DELETE" });
   openFolder(current.root, current.path);
 }
@@ -352,10 +608,10 @@ function renderCrumbs(root, path) {
 }
 
 $("mkdirButton").addEventListener("click", async () => {
-  const name = prompt("Az új mappa neve:");
+  const name = prompt(t("newFolderName"));
   if (!name || !current) return;
   const result = await api("mkdir?" + query({ dir: current.path, name: name.trim() }), { method: "POST" });
-  if (!result.ok) { alert(result.body ? result.body.error : "Nem sikerült létrehozni"); return; }
+  if (!result.ok) { alert(result.body ? result.body.error : t("createFailed")); return; }
   openFolder(current.root, current.path + "/" + result.body.name);
 });
 
@@ -371,7 +627,7 @@ function enqueue(files) {
       ? (relPath.includes("/") ? relPath.slice(0, relPath.lastIndexOf("/")) : "")
       : entry.rel;
     queue.push({
-      file, name: file.name, rel, dir: current.path, size: file.size, sent: 0, status: "várakozik",
+      file, name: file.name, rel, dir: current.path, size: file.size, sent: 0, status: "queued",
       error: "", paused: false, xhr: null, speed: 0, sample: null,
     });
   }
@@ -397,7 +653,7 @@ drop.addEventListener("drop", async (e) => {
   try {
     for (const entry of entries) await walkEntry(entry, "", found);
   } catch (err) {
-    alert("Nem sikerült beolvasni a mappát: " + err);
+    alert(t("readFolderFailed", err));
     return;
   }
   enqueue(found);
@@ -419,7 +675,7 @@ async function walkEntry(entry, parent, out) {
   }
 }
 $("clearDone").addEventListener("click", () => {
-  for (let i = queue.length - 1; i >= 0; i--) if (["kész", "már létezik"].includes(queue[i].status)) queue.splice(i, 1);
+  for (let i = queue.length - 1; i >= 0; i--) if (["done", "exists"].includes(queue[i].status)) queue.splice(i, 1);
   renderQueue();
 });
 
@@ -428,7 +684,7 @@ async function runQueue() {
   running = true;
   try {
     let next;
-    while ((next = queue.find((item) => item.status === "várakozik"))) {
+    while ((next = queue.find((item) => item.status === "queued"))) {
       await upload(next);
       renderQueue();
     }
@@ -444,55 +700,55 @@ function params(item, extra = {}) {
 }
 
 async function upload(item) {
-  item.status = "feltöltés";
+  item.status = "uploading";
   item.error = "";
   renderQueue();
   let status;
-  try { status = await api("upload/status?" + params(item)); } catch (_) { item.status = "hiba"; return; }
+  try { status = await api("upload/status?" + params(item)); } catch (_) { item.status = "error"; return; }
   if (!status.ok) { fail(item, status.body && status.body.error); return; }
-  if (status.body.exists) { item.status = "már létezik"; return; }
+  if (status.body.exists) { item.status = "exists"; return; }
   let offset = status.body.received;
   item.sent = offset;
   let failures = 0;
 
   while (true) {
-    if (item.paused) { item.status = "szünetel"; return; }
+    if (item.paused) { item.status = "paused"; return; }
     const end = Math.min(offset + CHUNK, item.size);
     let result = null;
     try { result = await putChunk(item, offset, end); } catch (_) { /* network error or abort */ }
-    if (item.paused) { item.status = "szünetel"; return; }
+    if (item.paused) { item.status = "paused"; return; }
 
     if (result && result.status === 200) {
       failures = 0;
       offset = result.body.received;
       item.sent = offset;
-      if (result.body.done) { item.status = "kész"; item.sent = item.size; return; }
+      if (result.body.done) { item.status = "done"; item.sent = item.size; return; }
       continue;
     }
     if (result && result.status === 409) {
       if (result.body && result.body.received != null) { offset = result.body.received; item.sent = offset; continue; }
-      item.status = "már létezik";
+      item.status = "exists";
       return;
     }
-    if (result && result.status === 401) { item.status = "várakozik"; showPairing("Újra párosítás szükséges."); return; }
+    if (result && result.status === 401) { item.status = "queued"; showPairing(t("pairAgain")); return; }
     if (result && [400, 403, 507].includes(result.status)) { fail(item, result.body && result.body.error); return; }
 
     // Network trouble (Wi-Fi hiccup, TV busy): back off, then ask the TV where to continue.
-    if (++failures > 8) { fail(item, "A kapcsolat többször megszakadt"); return; }
-    item.status = "újrapróbálás";
+    if (++failures > 8) { fail(item, t("connectionLost")); return; }
+    item.status = "retrying";
     renderQueue();
     await sleep(Math.min(30000, 1000 * 2 ** failures));
     try {
       const again = await api("upload/status?" + params(item));
       if (again.ok) { offset = again.body.received; item.sent = offset; }
     } catch (_) { /* keep trying */ }
-    item.status = "feltöltés";
+    item.status = "uploading";
   }
 }
 
 function fail(item, message) {
-  item.status = "hiba";
-  item.error = message || "Ismeretlen hiba";
+  item.status = "error";
+  item.error = message || t("unknownError");
 }
 
 function putChunk(item, offset, end) {
@@ -525,7 +781,7 @@ function measure(item) {
 }
 
 function pause(item) { item.paused = true; if (item.xhr) item.xhr.abort(); renderQueue(); }
-function resume(item) { item.paused = false; item.status = "várakozik"; item.sample = null; renderQueue(); runQueue(); }
+function resume(item) { item.paused = false; item.status = "queued"; item.sample = null; renderQueue(); runQueue(); }
 async function cancel(item) {
   item.paused = true;
   if (item.xhr) item.xhr.abort();
@@ -540,10 +796,10 @@ function renderQueue() {
   $("queueSection").classList.toggle("hidden", queue.length === 0);
   $("queue").replaceChildren(...queue.map((item) => {
     const actions = [];
-    if (["feltöltés", "újrapróbálás", "várakozik"].includes(item.status)) actions.push(el("button", { class: "small", onclick: () => pause(item) }, "Szünet"));
-    if (["szünetel", "hiba"].includes(item.status)) actions.push(el("button", { class: "small", onclick: () => resume(item) }, "Folytatás"));
-    if (!["kész", "már létezik"].includes(item.status)) actions.push(el("button", { class: "small", onclick: () => cancel(item) }, "Mégse"));
-    item.node = el("div", { class: "item" + (item.status === "kész" ? " done" : item.status === "hiba" ? " failed" : "") },
+    if (["uploading", "retrying", "queued"].includes(item.status)) actions.push(el("button", { class: "small", onclick: () => pause(item) }, t("pause")));
+    if (["paused", "error"].includes(item.status)) actions.push(el("button", { class: "small", onclick: () => resume(item) }, t("resume")));
+    if (!["done", "exists"].includes(item.status)) actions.push(el("button", { class: "small", onclick: () => cancel(item) }, t("cancel")));
+    item.node = el("div", { class: "item" + (item.status === "done" ? " done" : item.status === "error" ? " failed" : "") },
       el("div", { class: "top" }, el("span", { class: "title" }, (item.rel ? item.rel + "/" : "") + item.name), ...actions),
       el("div", { class: "bar" }, el("div")),
       el("div", { class: "meta" }));
@@ -557,13 +813,13 @@ function renderQueue() {
 
 function renderProgress(item) {
   if (!item.node) return;
-  const fraction = item.size ? item.sent / item.size : (item.status === "kész" ? 1 : 0);
+  const fraction = item.size ? item.sent / item.size : (item.status === "done" ? 1 : 0);
   item.node.querySelector(".bar > div").style.width = (fraction * 100).toFixed(1) + "%";
-  const parts = [formatBytes(item.sent) + " / " + formatBytes(item.size), item.status];
-  if (item.status === "feltöltés" && item.speed > 0) {
+  const parts = [formatBytes(item.sent) + " / " + formatBytes(item.size), t("status_" + item.status)];
+  if (item.status === "uploading" && item.speed > 0) {
     parts.push(formatBytes(item.speed) + "/s");
     const eta = formatEta((item.size - item.sent) / item.speed);
-    if (eta) parts.push("még kb. " + eta);
+    if (eta) parts.push(t("eta", eta));
   }
   if (item.error) parts.push(item.error);
   item.node.querySelector(".meta").textContent = parts.join(" · ");
@@ -576,12 +832,12 @@ async function loadAddons() {
   const list = result.ok ? result.body : [];
   $("addonList").replaceChildren(...(list.length ? list.map((a) => el("li", {},
     "🧩", el("span", { class: "name" }, a.name + " ", el("span", { class: "muted" }, "v" + a.version + " · " + a.id)),
-    el("span", { class: "size" }, a.channels + " csatorna"),
-    el("button", { class: "small danger", onclick: () => removeAddon(a) }, "Eltávolítás"))) : [el("li", { class: "muted" }, "Nincs telepített kiegészítő")]));
+    el("span", { class: "size" }, t(a.channels === 1 ? "channel" : "channels", a.channels)),
+    el("button", { class: "small danger", onclick: () => removeAddon(a) }, t("remove")))) : [el("li", { class: "muted" }, t("noAddons"))]));
 }
 
 function showAddonResult(result) {
-  $("addonError").textContent = result.ok ? "" : (result.body ? result.body.error : "Nem sikerült");
+  $("addonError").textContent = result.ok ? "" : (result.body ? result.body.error : t("failed"));
   if (result.ok) loadAddons();
 }
 
@@ -602,7 +858,7 @@ $("addonUrlButton").addEventListener("click", async () => {
 });
 
 async function removeAddon(addon) {
-  if (!confirm("Eltávolítod ezt a kiegészítőt?\n\n„" + addon.name + "”")) return;
+  if (!confirm(t("confirmRemoveAddon", addon.name))) return;
   showAddonResult(await api("addons?" + query({ id: addon.id }), { method: "DELETE" }));
 }
 
@@ -613,9 +869,9 @@ async function loadNetwork() {
   try { result = await api("network"); } catch (_) { return; }
   const list = result.ok ? result.body : [];
   $("networkList").replaceChildren(...(list.length ? list.map((f) => el("li", {},
-    "🖧", el("span", { class: "name" }, f.root + " ", el("span", { class: "muted" }, f.username ? "· " + f.username : "· vendég")),
-    el("span", { class: "size" }, f.items + " videó"),
-    el("button", { class: "small danger", onclick: () => removeNetwork(f) }, "Eltávolítás"))) : [el("li", { class: "muted" }, "Nincs hálózati mappa")]));
+    "🖧", el("span", { class: "name" }, f.root + " ", el("span", { class: "muted" }, "· " + (f.username || t("guest")))),
+    el("span", { class: "size" }, t(f.items === 1 ? "video" : "videos", f.items)),
+    el("button", { class: "small danger", onclick: () => removeNetwork(f) }, t("remove")))) : [el("li", { class: "muted" }, t("noNetworkFolders"))]));
 }
 
 $("netAdd").addEventListener("click", async () => {
@@ -623,9 +879,9 @@ $("netAdd").addEventListener("click", async () => {
     host: $("netHost").value.trim(), share: $("netShare").value.trim(), path: $("netPath").value.trim(),
     username: $("netUser").value.trim(), password: $("netPassword").value,
   };
-  if (!request.host || !request.share) { $("netError").textContent = "Add meg a gép nevét és a megosztást"; return; }
+  if (!request.host || !request.share) { $("netError").textContent = t("needHostAndShare"); return; }
   $("netAdd").disabled = true;
-  $("netError").textContent = "Kapcsolódás…";
+  $("netError").textContent = t("connecting");
   try {
     const result = await api("network", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(request) });
     if (result.ok) {
@@ -634,15 +890,15 @@ $("netAdd").addEventListener("click", async () => {
       $("netPath").value = "";
       loadNetwork();
     } else {
-      $("netError").textContent = result.body ? result.body.error : "Nem sikerült";
+      $("netError").textContent = result.body ? result.body.error : t("failed");
     }
   } finally { $("netAdd").disabled = false; }
 });
 
 async function removeNetwork(folder) {
-  if (!confirm("Kiveszed a médiatárból ezt a hálózati mappát?\n\n" + folder.root + "\n\nA fájlokhoz nem nyúl, csak a TV felejti el őket.")) return;
+  if (!confirm(t("confirmRemoveNetwork", folder.root))) return;
   const result = await api("network?" + query({ root: folder.root }), { method: "DELETE" });
-  $("netError").textContent = result.ok ? "" : (result.body ? result.body.error : "Nem sikerült");
+  $("netError").textContent = result.ok ? "" : (result.body ? result.body.error : t("failed"));
   loadNetwork();
 }
 
@@ -651,8 +907,7 @@ async function loadTmdb(result) {
   if (!result) { try { result = await api("tmdb"); } catch (_) { return; } }
   if (!result.ok) return;
   const s = result.body;
-  $("tmdbStatus").textContent = !s.configured ? "⚠️ Nincs token: a médiatár poszterek és leírások nélkül működik."
-    : s.source === "user" ? "✅ Token beállítva (ezen az oldalon megadva)." : "✅ Az alkalmazásba épített token van használatban.";
+  $("tmdbStatus").textContent = !s.configured ? t("tmdbNone") : s.source === "user" ? t("tmdbUser") : t("tmdbBuiltIn");
   $("tmdbClear").classList.toggle("hidden", s.source !== "user");
 }
 
@@ -664,17 +919,17 @@ $("tmdbSave").addEventListener("click", async () => {
   try {
     const result = await api("tmdb", { method: "POST", headers: { "Content-Type": "text/plain" }, body: token });
     if (result.ok) { $("tmdbToken").value = ""; loadTmdb(result); }
-    else $("tmdbError").textContent = result.body ? result.body.error : "Nem sikerült";
+    else $("tmdbError").textContent = result.body ? result.body.error : t("failed");
   } finally { $("tmdbSave").disabled = false; }
 });
 
 $("tmdbClear").addEventListener("click", async () => {
-  if (!confirm("Törlöd a megadott TMDB-tokent?")) return;
+  if (!confirm(t("confirmClearTmdb"))) return;
   loadTmdb(await api("tmdb", { method: "DELETE" }));
 });
 
 window.addEventListener("beforeunload", (e) => {
-  if (queue.some((i) => ["feltöltés", "újrapróbálás", "várakozik"].includes(i.status))) { e.preventDefault(); e.returnValue = ""; }
+  if (queue.some((i) => ["uploading", "retrying", "queued"].includes(i.status))) { e.preventDefault(); e.returnValue = ""; }
 });
 
 start();

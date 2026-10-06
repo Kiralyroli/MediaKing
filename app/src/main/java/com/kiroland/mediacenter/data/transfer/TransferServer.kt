@@ -136,7 +136,7 @@ class TransferServer(
                 lastError = e
             }
         }
-        throw IllegalStateException("Nincs szabad port (${ports.first}–${ports.last})", lastError)
+        throw IllegalStateException(AppLocale.text(R.string.server_no_port, ports.first, ports.last), lastError)
     }
 
     fun stop() {

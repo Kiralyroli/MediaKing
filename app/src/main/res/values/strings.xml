@@ -391,4 +391,6 @@
     <string name="json_path_unclosed">nem zárt [ ]</string>
     <string name="json_path_bad_filter">hibás szűrő: [%1$s]</string>
     <string name="json_path_bad_part">hibás rész: %1$s</string>
+    <!-- Upload server -->
+    <string name="server_no_port">Nincs szabad port (%1$d–%2$d)</string>
 </resources>

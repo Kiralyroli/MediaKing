@@ -89,7 +89,12 @@ class TransferRepository @Inject constructor(
             allowedRoots = { storage.volumeRoots() },
             protectedFolders = { runBlocking { libraryDao.folders() }.map { File(it.path) } },
         )
-        val newServer = TransferServer(this, store) { context.assets.open("web/index.html").use { it.readBytes() } }
+        val newServer = TransferServer(this, store) {
+            // The page picks its texts by <html lang>.
+            context.assets.open("web/index.html").use { it.readBytes() }.decodeToString()
+                .replaceFirst("<html lang=\"hu\">", "<html lang=\"${AppLocale.current.language}\">")
+                .encodeToByteArray()
+        }
         try {
             val port = newServer.start()
             server = newServer
