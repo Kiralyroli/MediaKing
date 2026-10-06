@@ -404,4 +404,23 @@
     <string name="news_announced">Season %1$d announced</string>
     <!-- Phone remote -->
     <string name="remote_not_in_front">MediaKing is not open on the TV.</string>
+    <!-- Statistics -->
+    <string name="watched_filter_stats">Statistics</string>
+    <string name="stats_loading">Calculating…</string>
+    <string name="stats_this_year">This year</string>
+    <string name="stats_total">In total</string>
+    <string name="stats_average">Average rating</string>
+    <string name="stats_hours">Watch time this year</string>
+    <string name="stats_hours_hint">films + episodes watched</string>
+    <string name="stats_per_month">Watched per month</string>
+    <string name="stats_genres">Favourite genres</string>
+    <string name="stats_ratings">Your ratings</string>
+    <plurals name="titles_count">
+        <item quantity="one">%d title</item>
+        <item quantity="other">%d titles</item>
+    </plurals>
+    <plurals name="hours_count">
+        <item quantity="one">about %d hour</item>
+        <item quantity="other">about %d hours</item>
+    </plurals>
 </resources>

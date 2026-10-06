@@ -404,4 +404,23 @@
     <string name="news_announced">Staffel %1$d angekündigt</string>
     <!-- Phone remote -->
     <string name="remote_not_in_front">MediaKing ist auf dem Fernseher nicht geöffnet.</string>
+    <!-- Statistics -->
+    <string name="watched_filter_stats">Statistik</string>
+    <string name="stats_loading">Wird berechnet…</string>
+    <string name="stats_this_year">Dieses Jahr</string>
+    <string name="stats_total">Insgesamt</string>
+    <string name="stats_average">Durchschnittliche Bewertung</string>
+    <string name="stats_hours">Sehzeit dieses Jahr</string>
+    <string name="stats_hours_hint">Filme + gesehene Folgen</string>
+    <string name="stats_per_month">Pro Monat gesehen</string>
+    <string name="stats_genres">Lieblingsgenres</string>
+    <string name="stats_ratings">Deine Bewertungen</string>
+    <plurals name="titles_count">
+        <item quantity="one">%d Titel</item>
+        <item quantity="other">%d Titel</item>
+    </plurals>
+    <plurals name="hours_count">
+        <item quantity="one">ca. %d Stunde</item>
+        <item quantity="other">ca. %d Stunden</item>
+    </plurals>
 </resources>

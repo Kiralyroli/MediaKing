@@ -405,4 +405,23 @@
     <string name="news_announced">Bejelentve: %1$d. évad</string>
     <!-- Phone remote -->
     <string name="remote_not_in_front">A MediaKing nincs megnyitva a TV-n.</string>
+    <!-- Statistics -->
+    <string name="watched_filter_stats">Statisztika</string>
+    <string name="stats_loading">Számolás…</string>
+    <string name="stats_this_year">Idén</string>
+    <string name="stats_total">Összesen</string>
+    <string name="stats_average">Átlagos értékelés</string>
+    <string name="stats_hours">Nézési idő idén</string>
+    <string name="stats_hours_hint">filmek + végignézett részek</string>
+    <string name="stats_per_month">Havonta megnézve</string>
+    <string name="stats_genres">Kedvenc műfajok</string>
+    <string name="stats_ratings">Értékeléseid</string>
+    <plurals name="titles_count">
+        <item quantity="one">%d cím</item>
+        <item quantity="other">%d cím</item>
+    </plurals>
+    <plurals name="hours_count">
+        <item quantity="one">kb. %d óra</item>
+        <item quantity="other">kb. %d óra</item>
+    </plurals>
 </resources>

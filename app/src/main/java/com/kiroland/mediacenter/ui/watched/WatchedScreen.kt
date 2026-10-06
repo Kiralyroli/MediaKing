@@ -1,5 +1,9 @@
 package com.kiroland.mediacenter.ui.watched
 
+import kotlinx.coroutines.flow.mapLatest
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import com.kiroland.mediacenter.data.library.WatchStatsRepository
+import com.kiroland.mediacenter.data.library.WatchStats
 import com.kiroland.mediacenter.R
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
@@ -40,8 +44,13 @@ import kotlinx.coroutines.flow.stateIn
 import javax.inject.Inject
 
 @HiltViewModel
-class WatchedViewModel @Inject constructor(watched: WatchedRepository) : ViewModel() {
+class WatchedViewModel @Inject constructor(watched: WatchedRepository, statsRepository: WatchStatsRepository) : ViewModel() {
     val all: StateFlow<List<WatchedTitleEntity>?> = watched.all.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
+    /** Worked out only while the statistics are shown (TMDB is asked for genres and runtimes). */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val stats: StateFlow<WatchStats?> = watched.all.mapLatest { statsRepository.stats(it) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 }
 
 private enum class WatchedFilter(@StringRes val label: Int) {
@@ -49,6 +58,7 @@ private enum class WatchedFilter(@StringRes val label: Int) {
     MOVIES(R.string.watched_filter_movies),
     SERIES(R.string.watched_filter_series),
     BEST(R.string.watched_filter_best),
+    STATS(R.string.watched_filter_stats),
 }
 
 /** Everything the user has marked as watched, newest first; opens the title's page (to re-rate it). */
@@ -62,6 +72,7 @@ fun WatchedScreen(onOpenStreaming: (isMovie: Boolean, tmdbId: Int) -> Unit, view
         WatchedFilter.MOVIES -> all.filter { it.isMovie }
         WatchedFilter.SERIES -> all.filterNot { it.isMovie }
         WatchedFilter.BEST -> all.filter { it.rating != null }.sortedWith(compareByDescending<WatchedTitleEntity> { it.rating }.thenByDescending { it.watchedAt })
+        WatchedFilter.STATS -> emptyList()
     }
 
     LazyVerticalGrid(
@@ -91,6 +102,12 @@ fun WatchedScreen(onOpenStreaming: (isMovie: Boolean, tmdbId: Int) -> Unit, view
                         WatchedFilter.entries.forEach { f -> PillButton(stringResource(f.label), selected = f == filter, onClick = { filter = f }) }
                     }
                 }
+            }
+        }
+        if (filter == WatchedFilter.STATS) {
+            item(span = { GridItemSpan(maxLineSpan) }) {
+                val stats by viewModel.stats.collectAsStateWithLifecycle()
+                WatchStatsView(stats)
             }
         }
         items(shown, key = { it.key }) { entry ->

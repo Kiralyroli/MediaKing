@@ -14,8 +14,14 @@ private const val WITH_PROGRESS = """
     FROM media m LEFT JOIN watch_progress p ON p.path = m.path
 """
 
+data class FinishedEpisode(val durationMs: Long, val updatedAt: Long)
+
 @Dao
 interface LibraryDao {
+
+    /** Library episodes watched to the end, for the statistics' watch time. */
+    @Query("SELECT p.durationMs AS durationMs, p.updatedAt AS updatedAt FROM watch_progress p JOIN media m ON m.path = p.path WHERE p.finished = 1 AND m.kind = 'EPISODE'")
+    suspend fun finishedEpisodes(): List<FinishedEpisode>
 
     // --- Library folders ---
 
