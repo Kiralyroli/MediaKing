@@ -118,6 +118,7 @@ class PlayerActivity : ComponentActivity() {
         setContentView(R.layout.player_screen)
         playerView = findViewById(R.id.player_view)
         installControls()
+        installControllerFade()
         WindowCompat.getInsetsController(window, window.decorView).apply {
             hide(WindowInsetsCompat.Type.systemBars())
             systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
@@ -146,6 +147,8 @@ class PlayerActivity : ComponentActivity() {
     }
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        // Any key keeps the controls up a while longer (and brings them back fully if they were fading).
+        if (event.action == KeyEvent.ACTION_DOWN) scheduleControllerHide()
         if (handlePrompts(event)) return true
         if (handleShortcut(event)) return true
         if (handleZapping(event)) return true
@@ -533,6 +536,43 @@ class PlayerActivity : ComponentActivity() {
         playerView.findViewById<View>(R.id.player_subtitle).visibility = if (hasText) View.VISIBLE else View.GONE
     }
 
+    private var hideJob: Job? = null
+
+    /**
+     * Media3's own hide animation takes the controls down in two steps, the time bar first. Instead,
+     * its animation and timeout are off, and after [CONTROLLER_TIMEOUT_MS] without a key press the
+     * whole controller fades out at once (only while playing, as Media3 does).
+     */
+    private fun installControllerFade() {
+        playerView.setControllerAnimationEnabled(false)
+        playerView.controllerShowTimeoutMs = 0
+        playerView.setControllerVisibilityListener(PlayerView.ControllerVisibilityListener { visibility ->
+            if (visibility == View.VISIBLE) {
+                controllerView()?.apply { animate().cancel(); alpha = 1f }
+                scheduleControllerHide()
+            } else {
+                hideJob?.cancel()
+            }
+        })
+    }
+
+    private fun controllerView(): View? = playerView.findViewById(androidx.media3.ui.R.id.exo_controller)
+
+    private fun scheduleControllerHide() {
+        hideJob?.cancel()
+        controllerView()?.apply { animate().cancel(); alpha = 1f }
+        hideJob = lifecycleScope.launch {
+            delay(CONTROLLER_TIMEOUT_MS)
+            while (player?.isPlaying != true) delay(500) // Paused: stay until playback goes on.
+            val view = controllerView() ?: return@launch
+            if (!playerView.isControllerFullyVisible) return@launch
+            view.animate().alpha(0f).setDuration(CONTROLLER_FADE_MS).withEndAction {
+                playerView.hideController()
+                view.alpha = 1f
+            }.start()
+        }
+    }
+
     private fun installControls() {
         playerView.findViewById<View>(R.id.player_audio).setOnClickListener { showTrackDialog(C.TRACK_TYPE_AUDIO) }
         playerView.findViewById<View>(R.id.player_subtitle).setOnClickListener { showTrackDialog(C.TRACK_TYPE_TEXT) }
@@ -624,6 +664,8 @@ class PlayerActivity : ComponentActivity() {
         private const val PROGRESS_INTERVAL_MS = 10_000L
         private const val SEEK_BACK_MS = 10_000L
         private const val SEGMENT_TICK_MS = 500L
+        private const val CONTROLLER_TIMEOUT_MS = 4_000L
+        private const val CONTROLLER_FADE_MS = 300L
         private const val SKIP_MIN_LEFT_MS = 3_000L
         private const val NEXT_FALLBACK_MS = 30_000L
         private const val NEXT_COUNTDOWN_MS = 10_000L
