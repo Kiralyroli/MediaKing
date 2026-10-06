@@ -1,5 +1,7 @@
 package com.kiroland.mediacenter.ui.live
 
+import com.kiroland.mediacenter.R
+import androidx.compose.ui.res.stringResource
 import android.widget.Toast
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
@@ -102,11 +104,11 @@ fun GuideScreen(viewModel: GuideViewModel = hiltViewModel()) {
 
     Column(Modifier.fillMaxSize().padding(top = 36.dp)) {
         Column(Modifier.padding(horizontal = 48.dp).height(150.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            Text("Műsorújság", style = MaterialTheme.typography.headlineMedium)
+            Text(stringResource(R.string.live_guide), style = MaterialTheme.typography.headlineMedium)
             val sel = selected
             if (sel == null) {
                 Text(
-                    if (rows.isEmpty()) "Nincs műsorújság. Egy kiegészítő adhat hozzá (\"epg\" mező), vagy még töltődik." else "",
+                    if (rows.isEmpty()) stringResource(R.string.guide_empty) else "",
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             } else {
@@ -145,8 +147,8 @@ fun GuideScreen(viewModel: GuideViewModel = hiltViewModel()) {
                                             onAir -> context.startActivity(
                                                 PlayerActivity.liveIntent(context, row.addonId, row.channel.id),
                                             )
-                                            p != null && p.stop <= now -> Toast.makeText(context, "Ez a műsor már véget ért", Toast.LENGTH_SHORT).show()
-                                            p != null -> Toast.makeText(context, "${clock(p.start)}-kor kezdődik", Toast.LENGTH_SHORT).show()
+                                            p != null && p.stop <= now -> Toast.makeText(context, context.getString(R.string.guide_ended), Toast.LENGTH_SHORT).show()
+                                            p != null -> Toast.makeText(context, context.getString(R.string.guide_starts_at, clock(p.start)), Toast.LENGTH_SHORT).show()
                                         }
                                     },
                                 )

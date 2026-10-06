@@ -1,5 +1,7 @@
 package com.kiroland.mediacenter.data.streaming
 
+import com.kiroland.mediacenter.R
+import androidx.annotation.StringRes
 import com.kiroland.mediacenter.data.metadata.tmdb.CountryProviders
 import com.kiroland.mediacenter.data.metadata.tmdb.TmdbImages
 
@@ -171,22 +173,22 @@ object Subscriptions {
  * A genre to browse by. TMDB numbers film and series genres differently; null when the other kind
  * has no such genre (no "Horror" for series).
  */
-data class BrowseGenre(val name: String, val movieGenres: String?, val tvGenres: String?)
+data class BrowseGenre(@StringRes val name: Int, val movieGenres: String?, val tvGenres: String?)
 
 object Genres {
     val all = listOf(
-        BrowseGenre("Akció és kaland", "28|12", "10759"),
-        BrowseGenre("Vígjáték", "35", "35"),
-        BrowseGenre("Dráma", "18", "18"),
-        BrowseGenre("Bűnügyi", "80", "80"),
-        BrowseGenre("Thriller", "53", null),
-        BrowseGenre("Sci-Fi és fantasy", "878|14", "10765"),
-        BrowseGenre("Horror", "27", null),
-        BrowseGenre("Rejtély", "9648", "9648"),
-        BrowseGenre("Romantikus", "10749", null),
-        BrowseGenre("Animációs", "16", "16"),
-        BrowseGenre("Családi", "10751", "10751"),
-        BrowseGenre("Dokumentum", "99", "99"),
-        BrowseGenre("Háborús", "10752", "10768"),
+        BrowseGenre(R.string.genre_action, "28|12", "10759"),
+        BrowseGenre(R.string.genre_comedy, "35", "35"),
+        BrowseGenre(R.string.genre_drama, "18", "18"),
+        BrowseGenre(R.string.genre_crime, "80", "80"),
+        BrowseGenre(R.string.genre_thriller, "53", null),
+        BrowseGenre(R.string.genre_scifi, "878|14", "10765"),
+        BrowseGenre(R.string.genre_horror, "27", null),
+        BrowseGenre(R.string.genre_mystery, "9648", "9648"),
+        BrowseGenre(R.string.genre_romance, "10749", null),
+        BrowseGenre(R.string.genre_animation, "16", "16"),
+        BrowseGenre(R.string.genre_family, "10751", "10751"),
+        BrowseGenre(R.string.genre_documentary, "99", "99"),
+        BrowseGenre(R.string.genre_war, "10752", "10768"),
     )
 }

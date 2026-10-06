@@ -1,5 +1,7 @@
 package com.kiroland.mediacenter.ui.live
 
+import com.kiroland.mediacenter.R
+import androidx.compose.ui.res.stringResource
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -121,7 +123,7 @@ fun LiveTvScreen(onOpenGuide: () -> Unit, viewModel: LiveTvViewModel = hiltViewM
     fun guideLines(addonId: String, channel: AddonChannel): Pair<String?, String?> {
         if (guides.isEmpty()) return null to null
         val (current, next) = viewModel.nowNext(addonId, channel, now)
-        return current?.let { "Most: ${it.title}" } to next?.let { "${clock(it.start)} ${it.title}" }
+        return current?.let { context.getString(R.string.live_now, it.title) } to next?.let { "${clock(it.start)} ${it.title}" }
     }
     val anyInApp = PublicChannels.all.any { viewModel.addonFor(it) != null }
     // Add-on channels that are not attached to a built-in tile get rows of their own.
@@ -138,13 +140,12 @@ fun LiveTvScreen(onOpenGuide: () -> Unit, viewModel: LiveTvViewModel = hiltViewM
     ) {
         item {
             Column(Modifier.padding(horizontal = 48.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text("Élő TV", style = MaterialTheme.typography.headlineMedium)
+                Text(stringResource(R.string.live_title), style = MaterialTheme.typography.headlineMedium)
                 Text(
                     if (anyInApp) {
-                        "A csatornák a beépített lejátszóban indulnak. Csatornaváltás: fel/le vagy a csatornagombok."
+                        stringResource(R.string.live_intro_in_app)
                     } else {
-                        "A közmédia csatornái a hivatalos Médiaklikk alkalmazásban nyílnak meg, ha telepítve van, " +
-                            "különben a mediaklikk.hu élő oldalán, a TV böngészőjében."
+                        stringResource(R.string.live_intro_mediaklikk)
                     },
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -152,7 +153,7 @@ fun LiveTvScreen(onOpenGuide: () -> Unit, viewModel: LiveTvViewModel = hiltViewM
                     OutlinedButton(onClick = onOpenGuide, modifier = Modifier.padding(top = 6.dp)) {
                         Icon(Icons.Outlined.CalendarViewDay, contentDescription = null, modifier = Modifier.size(20.dp))
                         Spacer(Modifier.width(8.dp))
-                        Text("Műsorújság")
+                        Text(stringResource(R.string.live_guide))
                     }
                 }
             }
@@ -160,7 +161,7 @@ fun LiveTvScreen(onOpenGuide: () -> Unit, viewModel: LiveTvViewModel = hiltViewM
 
         item {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text("Közmédia", style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(start = 48.dp))
+                Text(stringResource(R.string.live_public), style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(start = 48.dp))
                 LazyRow(
                     contentPadding = PaddingValues(horizontal = 48.dp, vertical = 8.dp),
                     horizontalArrangement = Arrangement.spacedBy(20.dp),
@@ -172,13 +173,13 @@ fun LiveTvScreen(onOpenGuide: () -> Unit, viewModel: LiveTvViewModel = hiltViewM
                             title = channel.name,
                             detail = nextLine,
                             caption = if (viaAddon != null) {
-                                nowLine ?: "Lejátszás itt · ${viaAddon.first.name}"
+                                nowLine ?: stringResource(R.string.live_play_here, viaAddon.first.name)
                             } else {
                                 when (LiveTvPlanner.mode(channel, installed, hasBrowser)) {
                                     LaunchMode.MEDIAKLIKK -> "Médiaklikk"
-                                    LaunchMode.M4_SPORT_APP -> "M4 Sport alkalmazás"
-                                    LaunchMode.WEBSITE -> "mediaklikk.hu – böngészőben"
-                                    LaunchMode.INSTALL -> "Alkalmazás telepítése"
+                                    LaunchMode.M4_SPORT_APP -> stringResource(R.string.live_m4_app)
+                                    LaunchMode.WEBSITE -> stringResource(R.string.live_website)
+                                    LaunchMode.INSTALL -> stringResource(R.string.live_install_app)
                                 }
                             },
                             color = channel.color,
@@ -190,7 +191,7 @@ fun LiveTvScreen(onOpenGuide: () -> Unit, viewModel: LiveTvViewModel = hiltViewM
                                     )
                                     !viewModel.open(channel) -> Toast.makeText(
                                         context,
-                                        "Nem sikerült megnyitni: nincs Médiaklikk alkalmazás és böngésző sem.",
+                                        context.getString(R.string.live_open_failed),
                                         Toast.LENGTH_LONG,
                                     ).show()
                                 }
@@ -214,7 +215,7 @@ fun LiveTvScreen(onOpenGuide: () -> Unit, viewModel: LiveTvViewModel = hiltViewM
                             Tile(
                                 title = channel.name,
                                 logo = channel.logo,
-                                caption = nowLine ?: "Lejátszás itt · ${addon.name}",
+                                caption = nowLine ?: stringResource(R.string.live_play_here, addon.name),
                                 detail = nextLine,
                                 color = channel.color?.let(::parseColor) ?: DEFAULT_TILE_COLOR,
                                 onClick = { context.startActivity(PlayerActivity.liveIntent(context, addon.id, channel.id)) },
@@ -228,16 +229,16 @@ fun LiveTvScreen(onOpenGuide: () -> Unit, viewModel: LiveTvViewModel = hiltViewM
         if (tuner != null) {
             item {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text("Antenna", style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(start = 48.dp))
+                    Text(stringResource(R.string.live_antenna), style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(start = 48.dp))
                     LazyRow(contentPadding = PaddingValues(horizontal = 48.dp, vertical = 8.dp)) {
                         item {
                             Tile(
-                                title = "TV-adás",
-                                caption = "Antenna és behangolt csatornák kellenek hozzá",
+                                title = stringResource(R.string.live_broadcast),
+                                caption = stringResource(R.string.live_broadcast_caption),
                                 color = 0xFF37474F,
                                 onClick = {
                                     if (!viewModel.openTuner()) {
-                                        Toast.makeText(context, "A TV tuner-alkalmazása nem indítható", Toast.LENGTH_SHORT).show()
+                                        Toast.makeText(context, context.getString(R.string.live_tuner_failed), Toast.LENGTH_SHORT).show()
                                     }
                                 },
                             ) {
@@ -256,12 +257,12 @@ fun LiveTvScreen(onOpenGuide: () -> Unit, viewModel: LiveTvViewModel = hiltViewM
                         showAntenna = !showAntenna
                         viewModel.showAntenna = showAntenna
                     }) {
-                        Text(if (showAntenna) "Antennás TV-adás elrejtése" else "Antennás TV-adás megjelenítése")
+                        Text(stringResource(if (showAntenna) R.string.live_hide_antenna else R.string.live_show_antenna))
                     }
                 }
                 if (!anyInApp) {
                     Text(
-                        "Az adást az MTVA hivatalos alkalmazása vagy weboldala játssza le; ez az app csak megnyitja a csatornát.",
+                        stringResource(R.string.live_mtva_note),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )

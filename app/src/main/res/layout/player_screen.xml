@@ -72,7 +72,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="6dp"
                 android:fontFamily="@font/manrope"
-                android:text="OK: indítás most · Vissza: bezárás"
+                android:text="@string/player_next_hint"
                 android:textColor="@color/player_text_secondary"
                 android:textSize="12sp" />
         </LinearLayout>

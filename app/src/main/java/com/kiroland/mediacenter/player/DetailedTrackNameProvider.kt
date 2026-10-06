@@ -1,15 +1,17 @@
 package com.kiroland.mediacenter.player
 
+import android.content.res.Resources
 import androidx.annotation.OptIn
 import androidx.media3.common.C
 import androidx.media3.common.Format
 import androidx.media3.common.MimeTypes
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.ui.TrackNameProvider
+import com.kiroland.mediacenter.R
 import java.util.Locale
 
 /**
- * Track names with everything useful for choosing on a TV, in Hungarian, e.g.
+ * Track names with everything useful for choosing on a TV, in the app's language, e.g.
  * "Magyar · SRT · Kényszerített · külső fájl" or "Angol · Dolby TrueHD · 7.1 · Kommentár".
  * Media3's default provider only shows language and label.
  */
@@ -17,6 +19,37 @@ import java.util.Locale
 object DetailedTrackNameProvider : TrackNameProvider {
 
     const val EXTERNAL_ID_PREFIX = "external:"
+
+    /** Words used in track names; Hungarian until [bind] gives the app's language (unit tests use the default). */
+    class Labels(
+        val unknownTrack: String = "Ismeretlen sáv",
+        val unknownLanguage: String = "Ismeretlen nyelv",
+        val forced: String = "Kényszerített",
+        val commentary: String = "Kommentár",
+        val described: String = "Narrált",
+        val external: (String?) -> String = { "külső fájl: $it" },
+        val mp4Text: String = "MP4 szöveg",
+        val imageBased: (String) -> String = { "$it (képalapú)" },
+        val stereo: String = "Sztereó",
+        val channels: (Int) -> String = { "$it csatorna" },
+    )
+
+    private var labels = Labels()
+
+    fun bind(res: Resources) {
+        labels = Labels(
+            unknownTrack = res.getString(R.string.track_unknown),
+            unknownLanguage = res.getString(R.string.track_unknown_language),
+            forced = res.getString(R.string.track_forced),
+            commentary = res.getString(R.string.track_commentary),
+            described = res.getString(R.string.track_described),
+            external = { res.getString(R.string.track_external, it.orEmpty()) },
+            mp4Text = res.getString(R.string.track_mp4_text),
+            imageBased = { res.getString(R.string.track_image_based, it) },
+            stereo = res.getString(R.string.track_stereo),
+            channels = { res.getString(R.string.track_channels, it) },
+        )
+    }
 
     // Track languages are named in the app's language ("Magyar", "Hungarian", "Ungarisch").
     private val HU get() = com.kiroland.mediacenter.util.AppLocale.current
@@ -31,7 +64,7 @@ object DetailedTrackNameProvider : TrackNameProvider {
             else -> listOfNotNull(languageName(format.language), format.label)
         }
         // A label that only repeats the language ("magyar" next to "Magyar") is dropped.
-        return parts.filterNot { it.isNullOrBlank() }.distinctBy { it!!.lowercase(HU) }.joinToString(" · ").ifEmpty { "Ismeretlen sáv" }
+        return parts.filterNot { it.isNullOrBlank() }.distinctBy { it!!.lowercase(HU) }.joinToString(" · ").ifEmpty { labels.unknownTrack }
     }
 
     /** Subtitles parsed during extraction are re-labelled as Media3 cues; the original type is in `codecs`. */
@@ -41,33 +74,33 @@ object DetailedTrackNameProvider : TrackNameProvider {
     private fun textParts(format: Format, mime: String?): List<String?> {
         val external = format.id?.contains(EXTERNAL_ID_PREFIX) == true
         return buildList {
-            add(languageName(format.language) ?: "Ismeretlen nyelv")
+            add(languageName(format.language) ?: labels.unknownLanguage)
             // Embedded tracks often carry a useful title ("Forced", "SDH"); for files it is the file name, shown last.
             if (!external) add(format.label)
             add(subtitleFormatName(mime))
             // Many MKVs only say "forced" / "SDH" in the track title, without setting the flags.
             val label = format.label.orEmpty()
             if (format.selectionFlags and C.SELECTION_FLAG_FORCED != 0 || label.contains("forced", ignoreCase = true)) {
-                add("Kényszerített")
+                add(labels.forced)
             }
             if (format.roleFlags and (C.ROLE_FLAG_CAPTION or C.ROLE_FLAG_DESCRIBES_MUSIC_AND_SOUND) != 0 ||
                 label.contains("sdh", ignoreCase = true)
             ) {
                 add("SDH")
             }
-            if (format.roleFlags and C.ROLE_FLAG_COMMENTARY != 0) add("Kommentár")
-            if (external) add("külső fájl: ${format.label}")
+            if (format.roleFlags and C.ROLE_FLAG_COMMENTARY != 0) add(labels.commentary)
+            if (external) add(labels.external(format.label))
         }
     }
 
     private fun audioParts(format: Format, mime: String?): List<String?> = buildList {
-        add(languageName(format.language) ?: if (format.label.isNullOrBlank()) "Ismeretlen nyelv" else null)
+        add(languageName(format.language) ?: if (format.label.isNullOrBlank()) labels.unknownLanguage else null)
         add(format.label)
         add(audioCodecName(mime))
         add(channelLayout(format.channelCount))
         if (format.bitrate > 0) add("${format.bitrate / 1000} kbps")
-        if (format.roleFlags and C.ROLE_FLAG_COMMENTARY != 0) add("Kommentár")
-        if (format.roleFlags and C.ROLE_FLAG_DESCRIBES_VIDEO != 0) add("Narrált")
+        if (format.roleFlags and C.ROLE_FLAG_COMMENTARY != 0) add(labels.commentary)
+        if (format.roleFlags and C.ROLE_FLAG_DESCRIBES_VIDEO != 0) add(labels.described)
     }
 
     private fun videoParts(format: Format, mime: String?): List<String?> = buildList {
@@ -95,10 +128,10 @@ object DetailedTrackNameProvider : TrackNameProvider {
         MimeTypes.TEXT_SSA -> "ASS/SSA"
         MimeTypes.TEXT_VTT, MimeTypes.APPLICATION_MP4VTT -> "WebVTT"
         MimeTypes.APPLICATION_TTML -> "TTML"
-        MimeTypes.APPLICATION_TX3G -> "MP4 szöveg"
-        MimeTypes.APPLICATION_PGS -> "PGS (képalapú)"
-        MimeTypes.APPLICATION_VOBSUB -> "VobSub (képalapú)"
-        MimeTypes.APPLICATION_DVBSUBS -> "DVB (képalapú)"
+        MimeTypes.APPLICATION_TX3G -> labels.mp4Text
+        MimeTypes.APPLICATION_PGS -> labels.imageBased("PGS")
+        MimeTypes.APPLICATION_VOBSUB -> labels.imageBased("VobSub")
+        MimeTypes.APPLICATION_DVBSUBS -> labels.imageBased("DVB")
         MimeTypes.APPLICATION_CEA608, MimeTypes.APPLICATION_CEA708, MimeTypes.APPLICATION_MP4CEA608 -> "CC"
         null -> null
         else -> mime.substringAfterLast('/').removePrefix("x-").uppercase()
@@ -138,9 +171,9 @@ object DetailedTrackNameProvider : TrackNameProvider {
     fun channelLayout(channels: Int): String? = when (channels) {
         Format.NO_VALUE, 0 -> null
         1 -> "Mono"
-        2 -> "Sztereó"
+        2 -> labels.stereo
         6 -> "5.1"
         8 -> "7.1"
-        else -> "$channels csatorna"
+        else -> labels.channels(channels)
     }
 }

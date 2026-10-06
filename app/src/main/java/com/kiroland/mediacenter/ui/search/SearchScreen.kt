@@ -1,5 +1,8 @@
 package com.kiroland.mediacenter.ui.search
 
+import com.kiroland.mediacenter.ui.library.seasonsAndEpisodes
+import com.kiroland.mediacenter.R
+import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -132,6 +135,7 @@ fun SearchScreen(
     val streamingResults by viewModel.streamingResults.collectAsStateWithLifecycle()
     val recentSearches by viewModel.recentSearches.collectAsStateWithLifecycle()
     val genre by viewModel.genre.collectAsStateWithLifecycle()
+    val genreName = genre?.let { stringResource(it.name) }.orEmpty()
     val genreResults by viewModel.genreResults.collectAsStateWithLifecycle()
     var fieldFocused by remember { mutableStateOf(false) }
     val field = remember { FocusRequester() }
@@ -154,7 +158,7 @@ fun SearchScreen(
     ) {
         item {
             Column(Modifier.padding(horizontal = 48.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text("Keresés", style = MaterialTheme.typography.headlineMedium)
+                Text(stringResource(R.string.search_title), style = MaterialTheme.typography.headlineMedium)
                 BasicTextField(
                     value = query,
                     onValueChange = { viewModel.query.value = it },
@@ -165,7 +169,7 @@ fun SearchScreen(
                     keyboardActions = KeyboardActions(onSearch = { toResults() }),
                     decorationBox = { inner ->
                         if (query.isEmpty()) {
-                            Text("Cím, eredeti cím, szereplő…", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(stringResource(R.string.search_hint), style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                         inner()
                     },
@@ -182,12 +186,12 @@ fun SearchScreen(
                         .padding(horizontal = 16.dp, vertical = 12.dp),
                 )
                 if (results.query.isNotBlank() && results.movies.isEmpty() && results.series.isEmpty()) {
-                    Text("A médiatárban nincs találat.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(stringResource(R.string.search_no_library_results), color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
         }
         if (results.movies.isNotEmpty()) {
-            shelf("Filmek (${results.movies.size})") {
+            shelf(R.string.search_movies, results.movies.size) {
                 items(results.movies, key = { it.media.path }) { item ->
                     PosterCard(
                         title = item.displayTitle,
@@ -202,11 +206,11 @@ fun SearchScreen(
             }
         }
         if (results.series.isNotEmpty()) {
-            shelf("Sorozatok (${results.series.size})") {
+            shelf(R.string.search_series, results.series.size) {
                 items(results.series, key = { it.seriesKey }) { summary ->
                     PosterCard(
                         title = summary.title,
-                        subtitle = "${summary.seasonCount} évad · ${summary.episodeCount} rész",
+                        subtitle = seasonsAndEpisodes(summary.seasonCount, summary.episodeCount),
                         imageUrl = TmdbImages.poster(summary.metadata?.posterPath),
                         onClick = { opened = summary.seriesKey; viewModel.rememberSearch(); onOpenSeries(summary.seriesKey) },
                         modifier = cardModifier(summary.seriesKey),
@@ -215,12 +219,12 @@ fun SearchScreen(
             }
         }
         if (streamingResults.isNotEmpty()) {
-            shelf("Streamingen – hol nézheted?") {
+            shelf(R.string.search_streaming) {
                 items(streamingResults, key = { (if (it.isMovie) "m" else "t") + it.tmdbId }) { title ->
                     val key = "stream:" + (if (title.isMovie) "m" else "t") + title.tmdbId
                     PosterCard(
                         title = title.title,
-                        subtitle = listOfNotNull(if (title.isMovie) "Film" else "Sorozat", title.year?.toString()).joinToString(" · "),
+                        subtitle = listOfNotNull(stringResource(if (title.isMovie) R.string.kind_movie else R.string.kind_series), title.year?.toString()).joinToString(" · "),
                         imageUrl = TmdbImages.poster(title.posterPath),
                         onClick = { opened = key; viewModel.rememberSearch(); onOpenStreaming(title.isMovie, title.tmdbId) },
                         modifier = cardModifier(key),
@@ -234,34 +238,34 @@ fun SearchScreen(
             if (recentSearches.isNotEmpty()) {
                 item(key = "recent") {
                     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Text("Legutóbbi keresések", style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(start = 48.dp))
+                        Text(stringResource(R.string.search_recent), style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(start = 48.dp))
                         LazyRow(contentPadding = PaddingValues(horizontal = 48.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                             items(recentSearches, key = { it }) { q ->
                                 PillButton(q, selected = false, onClick = { viewModel.query.value = q })
                             }
-                            item(key = "clear") { PillButton("Előzmények törlése", selected = false, dimmed = true, onClick = viewModel::clearHistory) }
+                            item(key = "clear") { PillButton(stringResource(R.string.search_clear_history), selected = false, dimmed = true, onClick = viewModel::clearHistory) }
                         }
                     }
                 }
             }
             item(key = "genres") {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text("Böngéssz műfaj szerint", style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(start = 48.dp))
+                    Text(stringResource(R.string.search_browse_genres), style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(start = 48.dp))
                     LazyRow(contentPadding = PaddingValues(horizontal = 48.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         items(Genres.all, key = { it.name }) { g ->
-                            PillButton(g.name, selected = g == genre, onClick = { viewModel.genre.value = if (g == genre) null else g })
+                            PillButton(stringResource(g.name), selected = g == genre, onClick = { viewModel.genre.value = if (g == genre) null else g })
                         }
                     }
                 }
             }
             val picked = genre
             if (picked != null && genreResults.isNotEmpty()) {
-                shelf("${picked.name} a szolgáltatásaidon") {
+                shelf(R.string.search_genre_on_services, genreName) {
                     items(genreResults, key = { "g" + (if (it.isMovie) "m" else "t") + it.tmdbId }) { title ->
                         val key = "genre:" + (if (title.isMovie) "m" else "t") + title.tmdbId
                         PosterCard(
                             title = title.title,
-                            subtitle = listOfNotNull(if (title.isMovie) "Film" else "Sorozat", title.year?.toString()).joinToString(" · "),
+                            subtitle = listOfNotNull(stringResource(if (title.isMovie) R.string.kind_movie else R.string.kind_series), title.year?.toString()).joinToString(" · "),
                             imageUrl = TmdbImages.poster(title.posterPath),
                             onClick = { opened = key; onOpenStreaming(title.isMovie, title.tmdbId) },
                             modifier = cardModifier(key),

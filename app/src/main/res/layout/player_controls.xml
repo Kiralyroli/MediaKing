@@ -127,7 +127,7 @@
                 android:id="@id/exo_rew_with_amount"
                 android:nextFocusUp="@id/exo_progress"
                 style="@style/PlayerRound"
-                android:contentDescription="Vissza 10 másodpercet"
+                android:contentDescription="@string/player_rewind"
                 android:text="10" />
 
             <ImageView
@@ -138,7 +138,7 @@
                 android:layout_marginStart="8dp"
                 android:layout_marginEnd="8dp"
                 android:background="@drawable/player_play"
-                android:contentDescription="Lejátszás / szünet"
+                android:contentDescription="@string/player_play_pause"
                 android:focusable="true"
                 android:padding="17dp"
                 android:scaleType="fitCenter"
@@ -148,7 +148,7 @@
                 android:id="@id/exo_ffwd_with_amount"
                 android:nextFocusUp="@id/exo_progress"
                 style="@style/PlayerRound"
-                android:contentDescription="Előre 30 másodpercet"
+                android:contentDescription="@string/player_forward"
                 android:text="30" />
 
             <Space
@@ -161,7 +161,7 @@
                 android:nextFocusUp="@id/exo_progress"
                 style="@style/PlayerPill">
 
-                <TextView style="@style/PlayerPillLabel" android:text="Hang" />
+                <TextView style="@style/PlayerPillLabel" android:text="@string/player_audio_short" />
 
                 <TextView android:id="@+id/player_audio_value" style="@style/PlayerPillValue" />
             </LinearLayout>
@@ -171,7 +171,7 @@
                 android:nextFocusUp="@id/exo_progress"
                 style="@style/PlayerPill">
 
-                <TextView style="@style/PlayerPillLabel" android:text="Felirat" />
+                <TextView style="@style/PlayerPillLabel" android:text="@string/player_subtitles" />
 
                 <TextView android:id="@+id/player_subtitle_value" style="@style/PlayerPillValue" />
             </LinearLayout>
@@ -183,7 +183,7 @@
                 android:layout_height="52dp"
                 android:layout_marginStart="10dp"
                 android:background="@drawable/player_round"
-                android:contentDescription="Beállítások"
+                android:contentDescription="@string/player_settings"
                 android:focusable="true"
                 android:padding="14dp"
                 android:src="@drawable/exo_ic_settings"
@@ -202,7 +202,7 @@
                 android:gravity="center"
                 android:paddingStart="20dp"
                 android:paddingEnd="20dp"
-                android:text="Következő rész ›"
+                android:text="@string/player_next_episode_button"
                 android:textColor="@color/player_on_accent"
                 android:textSize="14sp"
                 android:visibility="gone" />

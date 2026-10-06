@@ -1,5 +1,6 @@
 package com.kiroland.mediacenter.data.streaming
 
+import com.kiroland.mediacenter.util.AppLocale
 import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
@@ -87,13 +88,13 @@ class StreamingRepository @Inject constructor(
     /** Provider apps installed right now (they can be installed while the app runs). */
     fun installedPackages(): Set<String> = StreamingProviders.allPackages.filterTo(HashSet()) { isInstalled(it) }
 
-    private val popularCache = HashMap<Int, Pair<Long, List<Title>>>()
+    private val popularCache = HashMap<String, Pair<Long, List<Title>>>()
 
     /** What is popular on one provider in Hungary (films and series together); empty when unknown. */
     suspend fun popularOn(providerId: Int): List<Title> {
         if (!credentials.isConfigured) return emptyList()
         synchronized(popularCache) {
-            popularCache[providerId]?.takeIf { System.currentTimeMillis() - it.first < CACHE_MS }?.let { return it.second }
+            popularCache["$providerId/${AppLocale.tmdbLanguage}"]?.takeIf { System.currentTimeMillis() - it.first < CACHE_MS }?.let { return it.second }
         }
         return try {
             fun List<DiscoverResult>.titles(isMovie: Boolean) = filter { it.posterPath != null }.map {
@@ -102,7 +103,7 @@ class StreamingRepository @Inject constructor(
             val movies = api.discover("movie", providerId.toString()).results.titles(isMovie = true)
             val series = api.discover("tv", providerId.toString()).results.titles(isMovie = false)
             val result = mergeByPopularity(movies, series, { it.second }, { it.first.title }, limit = 20).map { it.first }
-            synchronized(popularCache) { popularCache[providerId] = System.currentTimeMillis() to result }
+            synchronized(popularCache) { popularCache["$providerId/${AppLocale.tmdbLanguage}"] = System.currentTimeMillis() to result }
             result
         } catch (e: CancellationException) {
             throw e
@@ -121,7 +122,7 @@ class StreamingRepository @Inject constructor(
     suspend fun byGenre(genre: BrowseGenre): List<Title> {
         if (!credentials.isConfigured) return emptyList()
         val providers = mySubscriptions().sorted().joinToString("|").ifEmpty { null }
-        val cacheKey = genre.name + "/" + providers
+        val cacheKey = "${genre.name}/$providers/${AppLocale.tmdbLanguage}"
         synchronized(genreCache) {
             genreCache[cacheKey]?.takeIf { System.currentTimeMillis() - it.first < CACHE_MS }?.let { return it.second }
         }

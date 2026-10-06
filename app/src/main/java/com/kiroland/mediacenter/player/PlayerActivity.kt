@@ -1,5 +1,6 @@
 package com.kiroland.mediacenter.player
 
+import com.kiroland.mediacenter.util.AppLocale
 import android.app.AlertDialog
 import android.content.Context
 import android.content.Intent
@@ -106,6 +107,7 @@ class PlayerActivity : ComponentActivity() {
     private var countdownStartedAt: Long? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        DetailedTrackNameProvider.bind(resources)
         super.onCreate(savedInstanceState)
         val addonId = savedInstanceState?.getString(STATE_ADDON) ?: intent.getStringExtra(EXTRA_ADDON)
         val channelId = savedInstanceState?.getString(STATE_CHANNEL) ?: intent.getStringExtra(EXTRA_CHANNEL)
@@ -197,7 +199,7 @@ class PlayerActivity : ComponentActivity() {
 
                 override fun onPlayerError(error: PlaybackException) {
                     if (live != null && recoverLive(this@apply)) return
-                    Toast.makeText(this@PlayerActivity, "Lejátszási hiba: ${error.errorCodeName}", Toast.LENGTH_LONG).show()
+                    Toast.makeText(this@PlayerActivity, getString(R.string.player_error, error.errorCodeName), Toast.LENGTH_LONG).show()
                 }
 
                 override fun onPlaybackStateChanged(playbackState: Int) {
@@ -230,7 +232,7 @@ class PlayerActivity : ComponentActivity() {
         val result = runCatching { addons.resolve(ref.addonId, ref.channelId) }
         if (player !== exoPlayer || live != ref) return // Released or zapped meanwhile.
         val url = result.getOrElse { error ->
-            Toast.makeText(this, "Nem sikerült elindítani: ${channel?.name ?: ref.channelId}\n${error.message}", Toast.LENGTH_LONG).show()
+            Toast.makeText(this, getString(R.string.player_live_failed, channel?.name ?: ref.channelId, error.message.orEmpty()), Toast.LENGTH_LONG).show()
             finish()
             return
         }
@@ -243,9 +245,9 @@ class PlayerActivity : ComponentActivity() {
         exoPlayer.prepare()
         exoPlayer.playWhenReady = true
         val onNow = channel?.let { epg.nowNext(ref.addonId, it).first?.title }
-        setHeader("Élő · ${channel?.name ?: ref.channelId}", onNow ?: channel?.name.orEmpty())
+        setHeader(getString(R.string.player_live_header, channel?.name ?: ref.channelId), onNow ?: channel?.name.orEmpty())
         playerView.findViewById<View>(R.id.player_next).visibility = View.GONE
-        val label = listOfNotNull(channel?.name ?: ref.channelId, onNow?.let { "Most: $it" }).joinToString("\n")
+        val label = listOfNotNull(channel?.name ?: ref.channelId, onNow?.let { getString(R.string.live_now, it) }).joinToString("\n")
         Toast.makeText(this, label, Toast.LENGTH_SHORT).show()
     }
 
@@ -387,7 +389,7 @@ class PlayerActivity : ComponentActivity() {
 
     private suspend fun playEpisode(exoPlayer: ExoPlayer, next: MediaEntity) {
         currentPath = next.path
-        Toast.makeText(this, "Következik: ${episodeCode(next.season, next.episode, next.episodeEnd)}", Toast.LENGTH_LONG).show()
+        Toast.makeText(this, getString(R.string.player_up_next, episodeCode(next.season, next.episode, next.episodeEnd)), Toast.LENGTH_LONG).show()
         load(exoPlayer, next.path, savedStart(next.path))
         exoPlayer.playWhenReady = true
     }
@@ -414,7 +416,7 @@ class PlayerActivity : ComponentActivity() {
                         .joinToString(" · ")
                 }
             } else {
-                setHeader(listOfNotNull("Film", item.displayYear?.toString()).joinToString(" · "), item.displayTitle)
+                setHeader(listOfNotNull(getString(R.string.kind_movie), item.displayYear?.toString()).joinToString(" · "), item.displayTitle)
                 nextUp = null
                 nextTitle = null
             }
@@ -456,9 +458,9 @@ class PlayerActivity : ComponentActivity() {
             return
         }
         view.text = when (segment.type) {
-            SegmentType.RECAP -> "Előzmények átugrása"
-            SegmentType.PREVIEW -> "Előzetes átugrása"
-            else -> "Főcím átugrása"
+            SegmentType.RECAP -> getString(R.string.player_skip_recap)
+            SegmentType.PREVIEW -> getString(R.string.player_skip_preview)
+            else -> getString(R.string.player_skip_intro)
         }
         view.visibility = View.VISIBLE
     }
@@ -476,13 +478,13 @@ class PlayerActivity : ComponentActivity() {
         findViewById<TextView>(R.id.player_next_title).text = nextTitle.orEmpty()
         val label = findViewById<TextView>(R.id.player_next_label)
         if (!settings.current.autoNextEpisode || !exoPlayer.isPlaying) {
-            label.text = "Következő rész"
+            label.text = getString(R.string.player_next_episode)
             countdownStartedAt = null
             return
         }
         val started = countdownStartedAt ?: System.currentTimeMillis().also { countdownStartedAt = it }
         val left = ((NEXT_COUNTDOWN_MS - (System.currentTimeMillis() - started) + 999) / 1000).coerceAtLeast(0)
-        label.text = "Következő rész · $left mp"
+        label.text = getString(R.string.player_next_episode_in, left.toInt())
         if (left == 0L) playNextFromCredits(exoPlayer)
     }
 
@@ -537,7 +539,7 @@ class PlayerActivity : ComponentActivity() {
         playerView.findViewById<TextView>(R.id.player_audio_value).text =
             selected(C.TRACK_TYPE_AUDIO)?.let { DetailedTrackNameProvider.getTrackName(it) } ?: "—"
         playerView.findViewById<TextView>(R.id.player_subtitle_value).text =
-            selected(C.TRACK_TYPE_TEXT)?.let { DetailedTrackNameProvider.getTrackName(it) } ?: "Kikapcsolva"
+            selected(C.TRACK_TYPE_TEXT)?.let { DetailedTrackNameProvider.getTrackName(it) } ?: getString(R.string.player_off)
         playerView.findViewById<View>(R.id.player_subtitle).visibility = if (hasText) View.VISIBLE else View.GONE
     }
 
@@ -601,8 +603,8 @@ class PlayerActivity : ComponentActivity() {
 
     private fun showSettingsMenu() {
         AlertDialog.Builder(this, DIALOG_THEME)
-            .setTitle("Beállítások")
-            .setItems(arrayOf("Hangsáv", "Felirat", "Lejátszási sebesség")) { _, which ->
+            .setTitle(R.string.player_settings)
+            .setItems(arrayOf(getString(R.string.player_audio), getString(R.string.player_subtitles), getString(R.string.player_speed))) { _, which ->
                 when (which) {
                     0 -> showTrackDialog(C.TRACK_TYPE_AUDIO)
                     1 -> showTrackDialog(C.TRACK_TYPE_TEXT)
@@ -616,10 +618,10 @@ class PlayerActivity : ComponentActivity() {
         val player = player ?: return
         val isText = trackType == C.TRACK_TYPE_TEXT
         if (player.currentTracks.groups.none { it.type == trackType }) {
-            Toast.makeText(this, if (isText) "Nincs felirat" else "Nincs választható hangsáv", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, getString(if (isText) R.string.player_no_subtitles else R.string.player_no_audio), Toast.LENGTH_SHORT).show()
             return
         }
-        TrackSelectionDialogBuilder(this, if (isText) "Felirat" else "Hangsáv", player, trackType)
+        TrackSelectionDialogBuilder(this, getString(if (isText) R.string.player_subtitles else R.string.player_audio), player, trackType)
             .setTheme(DIALOG_THEME)
             .setTrackNameProvider(DetailedTrackNameProvider)
             .setShowDisableOption(isText)
@@ -631,10 +633,10 @@ class PlayerActivity : ComponentActivity() {
     private fun showSpeedDialog() {
         val player = player ?: return
         val speeds = floatArrayOf(0.5f, 0.75f, 1f, 1.25f, 1.5f, 2f)
-        val labels = speeds.map { if (it == 1f) "Normál" else "${it}×".replace('.', ',') }.toTypedArray()
+        val labels = speeds.map { if (it == 1f) getString(R.string.player_speed_normal) else String.format(AppLocale.current, "%s×", java.text.NumberFormat.getInstance(AppLocale.current).format(it)) }.toTypedArray()
         val current = speeds.indexOfFirst { it == player.playbackParameters.speed }
         AlertDialog.Builder(this, DIALOG_THEME)
-            .setTitle("Lejátszási sebesség")
+            .setTitle(R.string.player_speed)
             .setSingleChoiceItems(labels, current) { dialog, which ->
                 player.setPlaybackSpeed(speeds[which])
                 dialog.dismiss()
