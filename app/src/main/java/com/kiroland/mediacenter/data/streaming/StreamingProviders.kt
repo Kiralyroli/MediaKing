@@ -166,3 +166,27 @@ object Subscriptions {
     fun isIncluded(offer: ProviderOffer, mine: Set<Int>): Boolean =
         if (Offer.SUBSCRIPTION in offer.offers) offer.providerId in mine else Offer.FREE in offer.offers
 }
+
+/**
+ * A genre to browse by. TMDB numbers film and series genres differently; null when the other kind
+ * has no such genre (no "Horror" for series).
+ */
+data class BrowseGenre(val name: String, val movieGenres: String?, val tvGenres: String?)
+
+object Genres {
+    val all = listOf(
+        BrowseGenre("Akció és kaland", "28|12", "10759"),
+        BrowseGenre("Vígjáték", "35", "35"),
+        BrowseGenre("Dráma", "18", "18"),
+        BrowseGenre("Bűnügyi", "80", "80"),
+        BrowseGenre("Thriller", "53", null),
+        BrowseGenre("Sci-Fi és fantasy", "878|14", "10765"),
+        BrowseGenre("Horror", "27", null),
+        BrowseGenre("Rejtély", "9648", "9648"),
+        BrowseGenre("Romantikus", "10749", null),
+        BrowseGenre("Animációs", "16", "16"),
+        BrowseGenre("Családi", "10751", "10751"),
+        BrowseGenre("Dokumentum", "99", "99"),
+        BrowseGenre("Háborús", "10752", "10768"),
+    )
+}

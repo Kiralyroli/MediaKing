@@ -111,6 +111,49 @@ class StreamingRepository @Inject constructor(
         }
     }
 
+    private val genreCache = HashMap<String, Pair<Long, List<Title>>>()
+
+    /**
+     * Popular titles of a genre on the user's services (or anywhere, if none are set), films and
+     * series together; empty when unknown.
+     */
+    suspend fun byGenre(genre: BrowseGenre): List<Title> {
+        if (!credentials.isConfigured) return emptyList()
+        val providers = mySubscriptions().sorted().joinToString("|").ifEmpty { null }
+        val cacheKey = genre.name + "/" + providers
+        synchronized(genreCache) {
+            genreCache[cacheKey]?.takeIf { System.currentTimeMillis() - it.first < CACHE_MS }?.let { return it.second }
+        }
+        return try {
+            suspend fun fetch(type: String, genres: String?, isMovie: Boolean): List<Pair<Title, Double>> {
+                genres ?: return emptyList()
+                return api.discover(
+                    type = type,
+                    providers = providers,
+                    region = if (providers == null) null else REGION,
+                    monetization = if (providers == null) null else "flatrate",
+                    genres = genres,
+                    // Without a provider filter the list would start with barely known titles.
+                    minVotes = if (providers == null) MIN_VOTES else null,
+                ).results.filter { it.posterPath != null }.map {
+                    Title(isMovie, it.id, (if (isMovie) it.title else it.name).orEmpty(), (if (isMovie) it.releaseDate else it.firstAirDate)?.take(4)?.toIntOrNull(), it.posterPath) to it.popularity
+                }
+            }
+            val result = mergeByPopularity(
+                fetch("movie", genre.movieGenres, isMovie = true),
+                fetch("tv", genre.tvGenres, isMovie = false),
+                { it.second }, { it.first.title }, limit = 30,
+            ).map { it.first }
+            synchronized(genreCache) { genreCache[cacheKey] = System.currentTimeMillis() to result }
+            result
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.w(TAG, "Genre ${genre.name} failed: ${e.message}")
+            emptyList()
+        }
+    }
+
     // --- Watchlist ---
 
     val watchlist: Flow<List<WatchlistEntity>> = dao.observeWatchlist()

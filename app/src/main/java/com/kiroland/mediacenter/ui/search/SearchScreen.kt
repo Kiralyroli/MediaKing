@@ -60,6 +60,11 @@ import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.stateIn
 import javax.inject.Inject
 import com.kiroland.mediacenter.data.streaming.StreamingRepository
+import com.kiroland.mediacenter.data.streaming.BrowseGenre
+import com.kiroland.mediacenter.data.streaming.Genres
+import com.kiroland.mediacenter.data.settings.SearchHistory
+import com.kiroland.mediacenter.ui.library.PillButton
+import androidx.compose.foundation.lazy.LazyRow
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
@@ -68,8 +73,27 @@ import kotlinx.coroutines.flow.mapLatest
 data class SearchResults(val query: String = "", val movies: List<MediaWithProgress> = emptyList(), val series: List<SeriesSummary> = emptyList())
 
 @HiltViewModel
-class SearchViewModel @Inject constructor(repository: LibraryRepository, streaming: StreamingRepository) : ViewModel() {
+class SearchViewModel @Inject constructor(
+    repository: LibraryRepository,
+    private val streaming: StreamingRepository,
+    private val history: SearchHistory,
+) : ViewModel() {
     val query = MutableStateFlow("")
+
+    val recentSearches: StateFlow<List<String>> = history.entries
+
+    /** A result was opened: the search was worth remembering. */
+    fun rememberSearch() = history.add(query.value)
+
+    fun clearHistory() = history.clear()
+
+    /** The genre picked for browsing (while the field is empty), and its titles on the user's services. */
+    val genre = MutableStateFlow<BrowseGenre?>(null)
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val genreResults: StateFlow<List<StreamingRepository.Title>> = genre
+        .mapLatest { g -> g?.let { streaming.byGenre(it) }.orEmpty() }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     /** TMDB's films and series for the query, for "where to watch"; asked after a longer pause in typing. */
     @OptIn(FlowPreview::class, ExperimentalCoroutinesApi::class)
@@ -106,6 +130,9 @@ fun SearchScreen(
     val query by viewModel.query.collectAsStateWithLifecycle()
     val results by viewModel.results.collectAsStateWithLifecycle()
     val streamingResults by viewModel.streamingResults.collectAsStateWithLifecycle()
+    val recentSearches by viewModel.recentSearches.collectAsStateWithLifecycle()
+    val genre by viewModel.genre.collectAsStateWithLifecycle()
+    val genreResults by viewModel.genreResults.collectAsStateWithLifecycle()
     var fieldFocused by remember { mutableStateOf(false) }
     val field = remember { FocusRequester() }
     // The result that was opened, to put focus back on it when coming back.
@@ -168,7 +195,7 @@ fun SearchScreen(
                         imageUrl = TmdbImages.poster(item.metadata?.posterPath),
                         progress = item.progressFraction,
                         watched = item.isWatched,
-                        onClick = { opened = item.media.path; onOpenMovie(item.media.path) },
+                        onClick = { opened = item.media.path; viewModel.rememberSearch(); onOpenMovie(item.media.path) },
                         modifier = cardModifier(item.media.path),
                     )
                 }
@@ -181,7 +208,7 @@ fun SearchScreen(
                         title = summary.title,
                         subtitle = "${summary.seasonCount} évad · ${summary.episodeCount} rész",
                         imageUrl = TmdbImages.poster(summary.metadata?.posterPath),
-                        onClick = { opened = summary.seriesKey; onOpenSeries(summary.seriesKey) },
+                        onClick = { opened = summary.seriesKey; viewModel.rememberSearch(); onOpenSeries(summary.seriesKey) },
                         modifier = cardModifier(summary.seriesKey),
                     )
                 }
@@ -195,18 +222,61 @@ fun SearchScreen(
                         title = title.title,
                         subtitle = listOfNotNull(if (title.isMovie) "Film" else "Sorozat", title.year?.toString()).joinToString(" · "),
                         imageUrl = TmdbImages.poster(title.posterPath),
-                        onClick = { opened = key; onOpenStreaming(title.isMovie, title.tmdbId) },
+                        onClick = { opened = key; viewModel.rememberSearch(); onOpenStreaming(title.isMovie, title.tmdbId) },
                         modifier = cardModifier(key),
                     )
+                }
+            }
+        }
+
+        // With an empty field: recent searches, and browsing by genre on the user's services.
+        if (query.isBlank()) {
+            if (recentSearches.isNotEmpty()) {
+                item(key = "recent") {
+                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Text("Legutóbbi keresések", style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(start = 48.dp))
+                        LazyRow(contentPadding = PaddingValues(horizontal = 48.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            items(recentSearches, key = { it }) { q ->
+                                PillButton(q, selected = false, onClick = { viewModel.query.value = q })
+                            }
+                            item(key = "clear") { PillButton("Előzmények törlése", selected = false, dimmed = true, onClick = viewModel::clearHistory) }
+                        }
+                    }
+                }
+            }
+            item(key = "genres") {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text("Böngéssz műfaj szerint", style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(start = 48.dp))
+                    LazyRow(contentPadding = PaddingValues(horizontal = 48.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        items(Genres.all, key = { it.name }) { g ->
+                            PillButton(g.name, selected = g == genre, onClick = { viewModel.genre.value = if (g == genre) null else g })
+                        }
+                    }
+                }
+            }
+            val picked = genre
+            if (picked != null && genreResults.isNotEmpty()) {
+                shelf("${picked.name} a szolgáltatásaidon") {
+                    items(genreResults, key = { "g" + (if (it.isMovie) "m" else "t") + it.tmdbId }) { title ->
+                        val key = "genre:" + (if (title.isMovie) "m" else "t") + title.tmdbId
+                        PosterCard(
+                            title = title.title,
+                            subtitle = listOfNotNull(if (title.isMovie) "Film" else "Sorozat", title.year?.toString()).joinToString(" · "),
+                            imageUrl = TmdbImages.poster(title.posterPath),
+                            onClick = { opened = key; onOpenStreaming(title.isMovie, title.tmdbId) },
+                            modifier = cardModifier(key),
+                        )
+                    }
                 }
             }
         }
     }
     // Only on a fresh search; coming back from a result focuses that result instead.
     LaunchedEffect(Unit) { if (query.isEmpty()) runCatching { field.requestFocus() } }
-    LaunchedEffect(results, streamingResults) {
+    LaunchedEffect(results, streamingResults, genreResults) {
         val key = opened ?: return@LaunchedEffect
-        val streamingKeys = streamingResults.map { "stream:" + (if (it.isMovie) "m" else "t") + it.tmdbId }
+        val streamingKeys = streamingResults.map { "stream:" + (if (it.isMovie) "m" else "t") + it.tmdbId } +
+            genreResults.map { "genre:" + (if (it.isMovie) "m" else "t") + it.tmdbId }
         if (results.movies.any { it.media.path == key } || results.series.any { it.seriesKey == key } || key in streamingKeys) {
             runCatching { openedCard.requestFocus() }
             opened = null

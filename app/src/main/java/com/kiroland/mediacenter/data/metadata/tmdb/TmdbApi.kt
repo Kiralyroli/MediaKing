@@ -35,9 +35,11 @@ interface TmdbApi {
     @GET("discover/{type}")
     suspend fun discover(
         @Path("type") type: String,
-        @Query("with_watch_providers") providers: String,
-        @Query("watch_region") region: String = "HU",
-        @Query("with_watch_monetization_types") monetization: String = "flatrate",
+        @Query("with_watch_providers") providers: String?,
+        @Query("watch_region") region: String? = "HU",
+        @Query("with_watch_monetization_types") monetization: String? = "flatrate",
+        @Query("with_genres") genres: String? = null,
+        @Query("vote_count.gte") minVotes: Int? = null,
         @Query("sort_by") sortBy: String = "popularity.desc",
         @Query("language") language: String = LANGUAGE,
         @Query("include_adult") includeAdult: Boolean = false,

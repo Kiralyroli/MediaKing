@@ -25,6 +25,8 @@ Portfólióprojekt, egy valódi Xiaomi Mi TV-n (Android 10) fejlesztve és teszt
   adatlappal és „Hol nézheted?” résszel; a Beállításokban megadott előfizetéseidet teszi előre („benne van az előfizetésedben”)
 - **Megnézendők és „Népszerű nálad”** – streaming-címek félretehetők a Megnézendők közé (kezdőlapi sor); a kezdőlapon
   előfizetésenként egy „Népszerű · Szolgáltató” sor mutatja, mi megy most a te szolgáltatásaidon
+- **Keresési előzmények és műfajok** – üres keresőmezőnél az utolsó 10 keresés és műfaj szerinti böngészés
+  (pl. „Vígjáték a szolgáltatásaidon”)
 - **Hálózati mappák (SMB)** – számítógép vagy NAS megosztott mappája a médiatárban, másolás nélkül; lejátszás közvetlenül
   a hálózatról (előreolvasó pufferrel), feliratokkal együtt; beállítás a feltöltő oldalon, kapcsolatpróbával
 - **Lejátszó** (Media3 / ExoPlayer)
