@@ -1,5 +1,7 @@
 package com.kiroland.mediacenter.data.metadata
 
+import com.kiroland.mediacenter.R
+import com.kiroland.mediacenter.util.AppLocale
 import android.content.Context
 import com.kiroland.mediacenter.BuildConfig
 import com.kiroland.mediacenter.data.metadata.tmdb.TmdbApi
@@ -39,7 +41,7 @@ class TmdbCredentials @Inject constructor(
     /** Checks the token with TMDB first; a rejected token is not stored. */
     suspend fun set(token: String): Result<Unit> = runCatching {
         val candidate = token.trim()
-        require(candidate.length in 20..2048 && candidate.none { it.isWhitespace() }) { "Ez nem úgy néz ki, mint egy TMDB-token" }
+        require(candidate.length in 20..2048 && candidate.none { it.isWhitespace() }) { AppLocale.text(R.string.tmdb_token_invalid) }
         val accepted = withContext(Dispatchers.IO) {
             val request = Request.Builder()
                 .url(TmdbApi.BASE_URL + "authentication")

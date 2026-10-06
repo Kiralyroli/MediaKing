@@ -1,5 +1,7 @@
 package com.kiroland.mediacenter.ui.storage
 
+import com.kiroland.mediacenter.R
+import androidx.compose.ui.res.stringResource
 import android.Manifest
 import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -74,7 +76,7 @@ fun StorageScreen(
             .padding(horizontal = 48.dp, vertical = 36.dp),
         verticalArrangement = Arrangement.spacedBy(24.dp),
     ) {
-        Text("Tárhelyek", style = MaterialTheme.typography.headlineMedium)
+        Text(stringResource(R.string.storage_title), style = MaterialTheme.typography.headlineMedium)
 
         if (!permissionGranted) {
             PermissionRequest(onRequest = { permissionLauncher.launch(STORAGE_PERMISSIONS) })
@@ -83,8 +85,8 @@ fun StorageScreen(
 
         val list = volumes
         when {
-            list == null -> Text("Keresés…", color = MaterialTheme.colorScheme.onSurfaceVariant)
-            list.isEmpty() -> Text("Nem található tárhely.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            list == null -> Text(stringResource(R.string.storage_searching), color = MaterialTheme.colorScheme.onSurfaceVariant)
+            list.isEmpty() -> Text(stringResource(R.string.storage_none), color = MaterialTheme.colorScheme.onSurfaceVariant)
             else -> VolumeRow(list, onOpenVolume)
         }
     }
@@ -95,11 +97,11 @@ private fun PermissionRequest(onRequest: () -> Unit) {
     val focusRequester = remember { FocusRequester() }
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         Text(
-            "A médiatárhoz hozzáférés kell a tárhelyekhez (belső tár és USB-meghajtó).",
+            stringResource(R.string.storage_permission_needed),
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Button(onClick = onRequest, modifier = Modifier.focusRequester(focusRequester)) {
-            Text("Hozzáférés engedélyezése")
+            Text(stringResource(R.string.storage_grant))
         }
     }
     LaunchedEffect(Unit) { focusRequester.requestFocus() }
@@ -143,7 +145,7 @@ private fun VolumeCard(volume: StorageVolumeInfo, onClick: () -> Unit, modifier:
             Spacer(Modifier.height(8.dp))
             UsageBar(used = volume.totalBytes - volume.freeBytes, total = volume.totalBytes)
             Text(
-                "${formatBytes(volume.freeBytes)} szabad · ${formatBytes(volume.totalBytes)}",
+                stringResource(R.string.storage_free_of, formatBytes(volume.freeBytes), formatBytes(volume.totalBytes)),
                 style = MaterialTheme.typography.bodyMedium,
             )
         }

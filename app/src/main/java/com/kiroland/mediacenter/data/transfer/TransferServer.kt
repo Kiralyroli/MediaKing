@@ -1,5 +1,7 @@
 package com.kiroland.mediacenter.data.transfer
 
+import com.kiroland.mediacenter.R
+import com.kiroland.mediacenter.util.AppLocale
 import io.ktor.http.ContentType
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.ApplicationCall
@@ -167,7 +169,7 @@ class TransferServer(
             val dir = targetDir(call) ?: return@post
             val name = call.parameters["name"].orEmpty().trim()
             val created = withContext(Dispatchers.IO) { store.createFolder(dir, name) }
-            if (created == null) call.respondError(HttpStatusCode.BadRequest, "Érvénytelen mappanév")
+            if (created == null) call.respondError(HttpStatusCode.BadRequest, AppLocale.text(R.string.server_bad_folder_name))
             else call.respondJson(EntryDto(created.name, 0))
         }
 
@@ -191,7 +193,7 @@ class TransferServer(
             val length = call.request.contentLength()
             if (offset == null || total == null || length == null) {
                 body.discard()
-                call.respondError(HttpStatusCode.BadRequest, "Hiányzó offset, total vagy Content-Length")
+                call.respondError(HttpStatusCode.BadRequest, AppLocale.text(R.string.server_missing_headers))
                 return@put
             }
             val input = body.toInputStream()
@@ -210,11 +212,11 @@ class TransferServer(
                     call.respondJson(ChunkDto(result.received, result.done))
                 }
                 is UploadResult.OffsetMismatch ->
-                    call.respondError(HttpStatusCode.Conflict, "Eltérő pozíció", received = result.received)
+                    call.respondError(HttpStatusCode.Conflict, AppLocale.text(R.string.server_offset_mismatch), received = result.received)
                 UploadResult.AlreadyExists ->
-                    call.respondError(HttpStatusCode.Conflict, "Ilyen nevű fájl már van a mappában")
+                    call.respondError(HttpStatusCode.Conflict, AppLocale.text(R.string.server_file_exists))
                 is UploadResult.NotEnoughSpace ->
-                    call.respondError(HttpStatusCode.InsufficientStorage, "Nincs elég hely a meghajtón")
+                    call.respondError(HttpStatusCode.InsufficientStorage, AppLocale.text(R.string.server_no_space))
                 is UploadResult.Rejected -> call.respondError(HttpStatusCode.BadRequest, result.reason)
             }
         }
@@ -223,7 +225,7 @@ class TransferServer(
             if (!authorized(call)) return@get
             val dir = targetDir(call) ?: return@get
             val preview = withContext(Dispatchers.IO) { store.inspect(dir, call.parameters["name"].orEmpty()) }
-            if (preview == null) call.respondError(HttpStatusCode.NotFound, "Nem található, vagy nem törölhető")
+            if (preview == null) call.respondError(HttpStatusCode.NotFound, AppLocale.text(R.string.server_not_found_or_protected))
             else call.respondJson(PreviewDto(preview.isDirectory, preview.files, preview.bytes))
         }
 
@@ -233,7 +235,7 @@ class TransferServer(
             val name = call.parameters["name"].orEmpty()
             val deleted = withContext(Dispatchers.IO) { store.delete(dir, name) }
             if (!deleted) {
-                call.respondError(HttpStatusCode.Forbidden, "Nem törölhető (védett mappa, vagy már nem létezik)")
+                call.respondError(HttpStatusCode.Forbidden, AppLocale.text(R.string.server_cannot_delete))
                 return@post
             }
             host.onDeleted(File(dir, name))
@@ -250,24 +252,24 @@ class TransferServer(
             val length = call.request.contentLength() ?: 0
             if (length > MAX_ADDON_BYTES) {
                 call.receiveChannel().discard()
-                call.respondError(HttpStatusCode.PayloadTooLarge, "Túl nagy fájl egy kiegészítőhöz")
+                call.respondError(HttpStatusCode.PayloadTooLarge, AppLocale.text(R.string.server_addon_too_large))
                 return@post
             }
             val text = call.receiveText()
             val result = withContext(Dispatchers.IO) { host.installAddon(text) }
-            result.fold({ call.respondJson(it) }, { call.respondError(HttpStatusCode.BadRequest, it.message ?: "Hibás kiegészítő") })
+            result.fold({ call.respondJson(it) }, { call.respondError(HttpStatusCode.BadRequest, it.message ?: AppLocale.text(R.string.server_bad_addon)) })
         }
 
         post("/api/addons/url") {
             if (!authorized(call)) return@post
             val result = host.installAddonFromUrl(call.parameters["url"].orEmpty())
-            result.fold({ call.respondJson(it) }, { call.respondError(HttpStatusCode.BadRequest, it.message ?: "Nem sikerült") })
+            result.fold({ call.respondJson(it) }, { call.respondError(HttpStatusCode.BadRequest, it.message ?: AppLocale.text(R.string.server_failed)) })
         }
 
         delete("/api/addons") {
             if (!authorized(call)) return@delete
             if (host.removeAddon(call.parameters["id"].orEmpty())) call.respondJson(ChunkDto(0, true))
-            else call.respondError(HttpStatusCode.NotFound, "Nincs ilyen kiegészítő")
+            else call.respondError(HttpStatusCode.NotFound, AppLocale.text(R.string.server_no_addon))
         }
 
         get("/api/tmdb") {
@@ -279,11 +281,11 @@ class TransferServer(
             if (!authorized(call)) return@post
             if ((call.request.contentLength() ?: 0) > MAX_TOKEN_BYTES) {
                 call.receiveChannel().discard()
-                call.respondError(HttpStatusCode.PayloadTooLarge, "Túl hosszú")
+                call.respondError(HttpStatusCode.PayloadTooLarge, AppLocale.text(R.string.server_too_long))
                 return@post
             }
             host.setTmdbToken(call.receiveText())
-                .fold({ call.respondJson(it) }, { call.respondError(HttpStatusCode.BadRequest, it.message ?: "Nem sikerült") })
+                .fold({ call.respondJson(it) }, { call.respondError(HttpStatusCode.BadRequest, it.message ?: AppLocale.text(R.string.server_failed)) })
         }
 
         delete("/api/tmdb") {
@@ -300,22 +302,22 @@ class TransferServer(
             if (!authorized(call)) return@post
             if ((call.request.contentLength() ?: 0) > MAX_TOKEN_BYTES) {
                 call.receiveChannel().discard()
-                call.respondError(HttpStatusCode.PayloadTooLarge, "Túl nagy kérés")
+                call.respondError(HttpStatusCode.PayloadTooLarge, AppLocale.text(R.string.server_request_too_large))
                 return@post
             }
             val request = runCatching { json.decodeFromString<NetworkFolderRequest>(call.receiveText()) }.getOrNull()
             if (request == null) {
-                call.respondError(HttpStatusCode.BadRequest, "Hibás kérés")
+                call.respondError(HttpStatusCode.BadRequest, AppLocale.text(R.string.server_bad_request))
                 return@post
             }
             host.addNetworkFolder(request)
-                .fold({ call.respondJson(it) }, { call.respondError(HttpStatusCode.BadRequest, it.message ?: "Nem sikerült") })
+                .fold({ call.respondJson(it) }, { call.respondError(HttpStatusCode.BadRequest, it.message ?: AppLocale.text(R.string.server_failed)) })
         }
 
         delete("/api/network") {
             if (!authorized(call)) return@delete
             if (host.removeNetworkFolder(call.parameters["root"].orEmpty())) call.respondJson(ChunkDto(0, true))
-            else call.respondError(HttpStatusCode.NotFound, "Nincs ilyen hálózati mappa")
+            else call.respondError(HttpStatusCode.NotFound, AppLocale.text(R.string.server_no_network_folder))
         }
 
         delete("/api/upload") {
@@ -332,11 +334,11 @@ class TransferServer(
         return when (check) {
             PairingGuard.Check.Ok -> true
             PairingGuard.Check.Wrong -> {
-                call.respondError(HttpStatusCode.Unauthorized, "Hibás párosítási kód")
+                call.respondError(HttpStatusCode.Unauthorized, AppLocale.text(R.string.server_wrong_code))
                 false
             }
             is PairingGuard.Check.Locked -> {
-                call.respondError(HttpStatusCode.TooManyRequests, "Túl sok hibás kód, várj egy percet", retryAfterMs = check.retryAfterMs)
+                call.respondError(HttpStatusCode.TooManyRequests, AppLocale.text(R.string.server_too_many_attempts), retryAfterMs = check.retryAfterMs)
                 false
             }
         }
@@ -349,7 +351,7 @@ class TransferServer(
         val resolved = withContext(Dispatchers.IO) { store.resolveDir(dir, rel) }
         if (resolved == null) {
             body?.discard()
-            call.respondError(HttpStatusCode.Forbidden, "Ide nem lehet feltölteni")
+            call.respondError(HttpStatusCode.Forbidden, AppLocale.text(R.string.server_upload_forbidden))
         }
         return resolved
     }

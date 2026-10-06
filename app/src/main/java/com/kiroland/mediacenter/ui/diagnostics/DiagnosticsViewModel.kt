@@ -1,5 +1,7 @@
 package com.kiroland.mediacenter.ui.diagnostics
 
+import com.kiroland.mediacenter.R
+import com.kiroland.mediacenter.util.AppLocale
 import android.app.ActivityManager
 import android.content.Context
 import android.os.Build
@@ -76,11 +78,11 @@ class DiagnosticsViewModel @Inject constructor(
         }
         val display = context.resources.displayMetrics
         return listOf(
-            "Készülék" to "${Build.MANUFACTURER} ${Build.MODEL}",
+            AppLocale.text(R.string.diag_device) to "${Build.MANUFACTURER} ${Build.MODEL}",
             "Android" to "${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT})",
             "ABI" to Build.SUPPORTED_ABIS.joinToString(),
-            "Memória" to "${formatBytes(memory.availMem)} szabad / ${formatBytes(memory.totalMem)}",
-            "Kijelző" to "${display.widthPixels}×${display.heightPixels}, ${display.densityDpi} dpi",
+            AppLocale.text(R.string.diag_memory) to AppLocale.text(R.string.diag_memory_value, formatBytes(memory.availMem), formatBytes(memory.totalMem)),
+            AppLocale.text(R.string.diag_display) to "${display.widthPixels}×${display.heightPixels}, ${display.densityDpi} dpi",
         )
     }
 }

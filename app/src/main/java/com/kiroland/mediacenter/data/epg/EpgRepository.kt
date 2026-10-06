@@ -1,5 +1,7 @@
 package com.kiroland.mediacenter.data.epg
 
+import com.kiroland.mediacenter.R
+import com.kiroland.mediacenter.util.AppLocale
 import android.util.Log
 import com.kiroland.mediacenter.data.addons.AddonChannel
 import com.kiroland.mediacenter.data.addons.AddonRepository
@@ -107,7 +109,7 @@ class EpgRepository @Inject constructor(
         override fun read(b: ByteArray, off: Int, len: Int): Int = super.read(b, off, len).also { if (it > 0) check(it.toLong()) }
         private fun check(n: Long) {
             count += n
-            if (count > limit) throw IOException("A műsorújság túl nagy")
+            if (count > limit) throw IOException(AppLocale.text(R.string.epg_too_large))
         }
     }
 

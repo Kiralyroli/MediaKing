@@ -1,5 +1,8 @@
 package com.kiroland.mediacenter.ui.diagnostics
 
+import com.kiroland.mediacenter.R
+import androidx.compose.ui.res.stringResource
+import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
@@ -36,15 +39,15 @@ fun DiagnosticsScreen(viewModel: DiagnosticsViewModel = hiltViewModel()) {
         contentPadding = PaddingValues(vertical = 36.dp),
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
-        item { Text("Diagnosztika", style = MaterialTheme.typography.headlineMedium) }
+        item { Text(stringResource(R.string.nav_diagnostics), style = MaterialTheme.typography.headlineMedium) }
 
-        section("Készülék")
+        section(R.string.diag_device)
         items(state.device) { (label, value) -> InfoRow(label, value) }
 
-        section("Tárhelyek – írásteszt")
+        section(R.string.diag_write_test)
         item {
             Text(
-                "A teszt egy 4 MB-os ideiglenes fájlt ír ki és töröl. Csak kérésre fut.",
+                stringResource(R.string.diag_write_test_note),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -54,22 +57,22 @@ fun DiagnosticsScreen(viewModel: DiagnosticsViewModel = hiltViewModel()) {
             ListItem(
                 selected = false,
                 onClick = { viewModel.runWriteTest(volume) },
-                headlineContent = { Text("${volume.name} · ${formatBytes(volume.freeBytes)} szabad") },
+                headlineContent = { Text(stringResource(R.string.diag_free, volume.name, formatBytes(volume.freeBytes))) },
                 supportingContent = {
                     when {
                         state.armedPath == volume.path ->
-                            Text("Külső meghajtó: a teszt írni fog rá. Nyomd meg újra az indításhoz.", color = Color(0xFFFFC857))
+                            Text(stringResource(R.string.diag_external_warning), color = Color(0xFFFFC857))
                         probe == null -> Text(volume.path)
-                        probe == ProbeState.Running -> Text("Teszt fut…")
+                        probe == ProbeState.Running -> Text(stringResource(R.string.diag_running))
                         probe is ProbeState.Done -> ProbeSummary(probe.report)
                     }
                 },
                 trailingContent = {
                     Text(
                         when {
-                            state.armedPath == volume.path -> "Megerősítés"
-                            probe == null -> "Teszt indítása"
-                            else -> "Újra"
+                            state.armedPath == volume.path -> stringResource(R.string.diag_confirm)
+                            probe == null -> stringResource(R.string.diag_start)
+                            else -> stringResource(R.string.diag_again)
                         },
                     )
                 },
@@ -78,12 +81,12 @@ fun DiagnosticsScreen(viewModel: DiagnosticsViewModel = hiltViewModel()) {
 
         val codecs = state.codecs
         if (codecs != null) {
-            section("Videó dekóderek")
+            section(R.string.diag_video_decoders)
             items(codecs.video) { CodecRow(it) }
-            section("Hang dekóderek")
+            section(R.string.diag_audio_decoders)
             item {
                 Text(
-                    "FFmpeg bővítmény: ${codecs.ffmpegVersion ?: "nem érhető el"}",
+                    stringResource(R.string.diag_ffmpeg, codecs.ffmpegVersion ?: stringResource(R.string.diag_unavailable)),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -91,9 +94,9 @@ fun DiagnosticsScreen(viewModel: DiagnosticsViewModel = hiltViewModel()) {
             items(codecs.audio) { CodecRow(it) }
         }
 
-        section("Adatforrás")
+        section(R.string.diag_data_source)
         item {
-            InfoRow("Film- és sorozatadatok", "The Movie Database (TMDB)")
+            InfoRow(stringResource(R.string.diag_movie_data), "The Movie Database (TMDB)")
         }
         item {
             // Attribution required by the TMDB API terms.
@@ -106,10 +109,10 @@ fun DiagnosticsScreen(viewModel: DiagnosticsViewModel = hiltViewModel()) {
     }
 }
 
-private fun LazyListScope.section(title: String) {
+private fun LazyListScope.section(@StringRes title: Int) {
     item {
         Text(
-            title,
+            stringResource(title),
             modifier = Modifier.padding(top = 24.dp, bottom = 4.dp),
             style = MaterialTheme.typography.titleMedium,
             color = MaterialTheme.colorScheme.primary,
@@ -131,10 +134,10 @@ private fun InfoRow(label: String, value: String) {
 @Composable
 private fun CodecRow(codec: CodecSupport) {
     val (status, color) = when {
-        codec.platformDecoders.isNotEmpty() && codec.hardwareAccelerated -> "Hardveres" to Success
-        codec.platformDecoders.isNotEmpty() -> "Szoftveres (rendszer)" to Success
+        codec.platformDecoders.isNotEmpty() && codec.hardwareAccelerated -> stringResource(R.string.diag_hardware) to Success
+        codec.platformDecoders.isNotEmpty() -> stringResource(R.string.diag_software) to Success
         codec.ffmpeg -> "FFmpeg" to Success
-        else -> "Nem támogatott" to Danger
+        else -> stringResource(R.string.diag_unsupported) to Danger
     }
     ListItem(
         selected = false,
@@ -148,9 +151,9 @@ private fun CodecRow(codec: CodecSupport) {
 @Composable
 private fun ProbeSummary(report: ProbeReport) {
     val lines = buildList {
-        add((if (report.readable) "✔ Olvasható" else "✖ Nem olvasható") + " (${report.visibleEntries} elem)")
-        add("Mappába írás: " + report.directWrite.describe())
-        report.appDirWrite?.let { add("Alkalmazásmappa: " + it.describe()) }
+        add(stringResource(if (report.readable) R.string.diag_readable else R.string.diag_unreadable, report.visibleEntries))
+        add(stringResource(R.string.diag_folder_write, report.directWrite.describe()))
+        report.appDirWrite?.let { add(stringResource(R.string.diag_app_folder, it.describe())) }
     }
     val ok = report.readable && report.directWrite.success
     Text(lines.joinToString("\n"), color = if (ok) Success else Color(0xFFFFC857))

@@ -1,5 +1,7 @@
 package com.kiroland.mediacenter.ui.browser
 
+import com.kiroland.mediacenter.R
+import androidx.compose.ui.res.stringResource
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
@@ -80,14 +82,14 @@ fun BrowserScreen(
             when (val status = libraryStatus) {
                 LibraryStatus.NotIncluded -> OutlinedButton(onClick = viewModel::toggleLibrary) {
                     Icon(Icons.Outlined.LibraryAdd, contentDescription = null, modifier = Modifier.padding(end = 8.dp).size(20.dp))
-                    Text("Hozzáadás a médiatárhoz")
+                    Text(stringResource(R.string.browser_add_to_library))
                 }
                 LibraryStatus.Included -> OutlinedButton(onClick = viewModel::toggleLibrary) {
                     Icon(Icons.Outlined.LibraryAddCheck, contentDescription = null, modifier = Modifier.padding(end = 8.dp).size(20.dp))
-                    Text("Médiatárban · eltávolítás")
+                    Text(stringResource(R.string.browser_in_library_remove))
                 }
                 is LibraryStatus.IncludedVia -> Text(
-                    "A médiatár része (${File(status.folder).name})",
+                    stringResource(R.string.browser_part_of_library, File(status.folder).name),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.primary,
                 )
@@ -96,9 +98,9 @@ fun BrowserScreen(
 
         val entries = state.entries
         when {
-            entries == null -> Message("Betöltés…")
-            state.unreadable -> Message("A mappa nem olvasható. Lehet, hogy a meghajtót leválasztották.")
-            entries.isEmpty() -> Message("Üres mappa")
+            entries == null -> Message(stringResource(R.string.browser_loading))
+            state.unreadable -> Message(stringResource(R.string.browser_unreadable))
+            entries.isEmpty() -> Message(stringResource(R.string.browser_empty))
             else -> EntryList(
                 entries = entries,
                 // Re-run focus handling for every directory change.
@@ -108,7 +110,7 @@ fun BrowserScreen(
                     when {
                         entry.isDirectory -> viewModel.open(entry)
                         entry.type.isPlayable -> onPlay(entry)
-                        else -> Toast.makeText(context, "Ez a fájltípus még nem nyitható meg", Toast.LENGTH_SHORT).show()
+                        else -> Toast.makeText(context, context.getString(R.string.browser_cannot_open), Toast.LENGTH_SHORT).show()
                     }
                 },
             )
@@ -160,8 +162,9 @@ private fun EntryList(
     }
 }
 
+@Composable
 private fun FileEntry.details(): String =
-    if (isDirectory) "Mappa · ${formatDate(lastModified)}" else "${formatBytes(sizeBytes)} · ${formatDate(lastModified)}"
+    if (isDirectory) stringResource(R.string.browser_folder, formatDate(lastModified)) else "${formatBytes(sizeBytes)} · ${formatDate(lastModified)}"
 
 private fun FileEntry.icon(): ImageVector = when {
     isDirectory -> Icons.Outlined.Folder

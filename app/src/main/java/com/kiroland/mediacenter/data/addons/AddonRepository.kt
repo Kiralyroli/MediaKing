@@ -1,5 +1,7 @@
 package com.kiroland.mediacenter.data.addons
 
+import com.kiroland.mediacenter.R
+import com.kiroland.mediacenter.util.AppLocale
 import android.content.Context
 import android.util.Log
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -59,7 +61,7 @@ class AddonRepository @Inject constructor(
         val target = File(dir, "${addon.id}.json")
         val temp = File(dir, "${addon.id}.json.tmp")
         temp.writeText(text)
-        check(temp.renameTo(target) || (target.delete() && temp.renameTo(target))) { "Nem sikerült menteni" }
+        check(temp.renameTo(target) || (target.delete() && temp.renameTo(target))) { AppLocale.text(R.string.addon_save_failed) }
         _addons.value = (_addons.value.filterNot { it.id == addon.id } + addon).sortedBy { it.name.lowercase() }
         Log.i(TAG, "Installed add-on ${addon.id} v${addon.version}")
         if (addon.playlist != null) scope.launch { refreshPlaylist(addon) }
@@ -67,7 +69,7 @@ class AddonRepository @Inject constructor(
     }
 
     suspend fun installFromUrl(url: String): Result<AddonManifest> = runCatching {
-        require(url.startsWith("https://") || url.startsWith("http://")) { "Csak http(s) cím adható meg" }
+        require(url.startsWith("https://") || url.startsWith("http://")) { AppLocale.text(R.string.addon_url_http_only) }
         fetch(url, emptyMap(), MAX_ADDON_BYTES)
     }.mapCatching { install(it).getOrThrow() }
 
@@ -107,7 +109,7 @@ class AddonRepository @Inject constructor(
 
     /** @throws AddonException when the add-on or channel is gone, or a step fails. */
     suspend fun resolve(addonId: String, channelId: String): String {
-        val addon = find(addonId) ?: throw AddonException("A kiegészítő már nincs telepítve")
+        val addon = find(addonId) ?: throw AddonException(AppLocale.text(R.string.addon_not_installed))
         val channel = channels(addonId).firstOrNull { it.id == channelId } ?: throw AddonException("Ismeretlen csatorna")
         return engine.resolve(addon, channel)
     }
@@ -118,7 +120,7 @@ class AddonRepository @Inject constructor(
             if (!response.isSuccessful) throw AddonException("HTTP ${response.code}")
             val source = response.body.source()
             source.request(limit + 1)
-            if (source.buffer.size > limit) throw AddonException("Túl nagy válasz (${limit / 1024} KB fölött)")
+            if (source.buffer.size > limit) throw AddonException(AppLocale.text(R.string.addon_response_too_large, (limit / 1024).toInt()))
             source.readUtf8()
         }
     }

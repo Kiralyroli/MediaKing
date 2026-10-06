@@ -1,5 +1,6 @@
 package com.kiroland.mediacenter.data.transfer
 
+import com.kiroland.mediacenter.util.TestStrings
 import org.junit.After
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
@@ -17,6 +18,10 @@ import kotlin.random.Random
 
 /** End-to-end over real HTTP: the actual Ktor server on a local port, driven like the web page does. */
 class TransferServerTest {
+    init {
+        TestStrings.install()
+    }
+
 
     @get:Rule
     val tmp = TemporaryFolder()

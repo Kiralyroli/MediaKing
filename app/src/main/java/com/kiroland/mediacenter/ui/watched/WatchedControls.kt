@@ -1,6 +1,7 @@
 package com.kiroland.mediacenter.ui.watched
 
 import com.kiroland.mediacenter.R
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
@@ -48,7 +49,7 @@ fun RatingRow(rating: Int?, onRate: (Int?) -> Unit, modifier: Modifier = Modifie
             ) {
                 Icon(
                     if (filled) Icons.Filled.Star else Icons.Outlined.StarBorder,
-                    contentDescription = stringResource(R.string.rating_star, star),
+                    contentDescription = pluralStringResource(R.plurals.rating_star, star, star),
                     modifier = Modifier.padding(6.dp).size(28.dp),
                 )
             }

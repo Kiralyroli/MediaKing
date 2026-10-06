@@ -1,5 +1,7 @@
 package com.kiroland.mediacenter.data.addons
 
+import com.kiroland.mediacenter.R
+import com.kiroland.mediacenter.util.AppLocale
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonPrimitive
 import java.net.URLEncoder
@@ -24,28 +26,28 @@ class AddonEngine(private val fetcher: Fetcher) {
                 step.get != null -> {
                     val url = template(step.get, channel, encode = true)
                     runCatching { fetcher.get(url, addon.headers + step.headers) }
-                        .getOrElse { throw AddonException("$n. lépés: a letöltés nem sikerült (${it.message})") }
+                        .getOrElse { throw AddonException(AppLocale.text(R.string.addon_step_download_failed, n, it.message.orEmpty())) }
                 }
                 step.regex != null -> {
                     val match = Regex(step.regex, RegexOption.DOT_MATCHES_ALL).find(value)
-                        ?: throw AddonException("$n. lépés: a regex nem talált egyezést")
+                        ?: throw AddonException(AppLocale.text(R.string.addon_step_no_match, n))
                     match.groupValues.getOrNull(step.group)
-                        ?: throw AddonException("$n. lépés: nincs ${step.group}. csoport")
+                        ?: throw AddonException(AppLocale.text(R.string.addon_step_no_group, n, step.group))
                 }
                 step.json != null -> {
                     val root = runCatching { json.parseToJsonElement(value) }
-                        .getOrElse { throw AddonException("$n. lépés: nem JSON") }
+                        .getOrElse { throw AddonException(AppLocale.text(R.string.addon_step_not_json, n)) }
                     val found = JsonPath.parse(step.json).evaluate(root) as? JsonPrimitive
-                        ?: throw AddonException("$n. lépés: nincs ilyen mező: ${step.json}")
+                        ?: throw AddonException(AppLocale.text(R.string.addon_step_no_field, n, step.json.orEmpty()))
                     found.content
                 }
                 step.replace != null -> Regex(step.replace).replace(value, template(step.with, channel, encode = false))
-                else -> throw AddonException("$n. lépés: nincs művelet")
+                else -> throw AddonException(AppLocale.text(R.string.addon_step_no_op, n))
             }
         }
         val url = value.trim()
         if (!url.startsWith("https://") && !url.startsWith("http://")) {
-            throw AddonException("A kapott cím nem http(s): ${url.take(60)}")
+            throw AddonException(AppLocale.text(R.string.addon_result_not_http, url.take(60)))
         }
         return url
     }

@@ -1,5 +1,7 @@
 package com.kiroland.mediacenter.data.transfer
 
+import com.kiroland.mediacenter.R
+import com.kiroland.mediacenter.util.AppLocale
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
@@ -64,9 +66,9 @@ class UploadStore(
         input: InputStream,
         onBytes: (Long) -> Unit = {},
     ): UploadResult {
-        if (!isSafeName(name)) return UploadResult.Rejected("Érvénytelen fájlnév: $name")
-        if (total < 0 || offset < 0 || length < 0 || offset + length > total) return UploadResult.Rejected("Hibás méretadatok")
-        blockingFile(dir)?.let { return UploadResult.Rejected("Mappa helyett fájl van ezen a néven: ${it.name}") }
+        if (!isSafeName(name)) return UploadResult.Rejected(AppLocale.text(R.string.upload_bad_file_name, name))
+        if (total < 0 || offset < 0 || length < 0 || offset + length > total) return UploadResult.Rejected(AppLocale.text(R.string.upload_bad_sizes))
+        blockingFile(dir)?.let { return UploadResult.Rejected(AppLocale.text(R.string.upload_file_in_the_way, it.name)) }
         val target = File(dir, name)
         if (target.exists()) return UploadResult.AlreadyExists
 
@@ -75,7 +77,7 @@ class UploadStore(
         if (received != offset) return UploadResult.OffsetMismatch(received)
 
         if (offset == 0L) {
-            if (!dir.isDirectory && !dir.mkdirs()) return UploadResult.Rejected("Nem sikerült létrehozni a mappát: ${dir.name}")
+            if (!dir.isDirectory && !dir.mkdirs()) return UploadResult.Rejected(AppLocale.text(R.string.upload_mkdir_failed, dir.name))
             val available = freeSpace(dir) - reserveBytes
             if (total > available) return UploadResult.NotEnoughSpace(total, available.coerceAtLeast(0))
         }
@@ -96,13 +98,13 @@ class UploadStore(
                 length - remaining
             }
         } catch (e: IOException) {
-            return UploadResult.Rejected("Írási hiba: ${e.message}")
+            return UploadResult.Rejected(AppLocale.text(R.string.upload_write_error, e.message.orEmpty()))
         }
         if (written != length) return UploadResult.OffsetMismatch(part.length())
 
         val now = part.length()
         if (now < total) return UploadResult.Accepted(now, done = false, file = target)
-        if (!part.renameTo(target)) return UploadResult.Rejected("Nem sikerült átnevezni: ${target.name}")
+        if (!part.renameTo(target)) return UploadResult.Rejected(AppLocale.text(R.string.upload_rename_failed, target.name))
         return UploadResult.Accepted(total, done = true, file = target)
     }
 

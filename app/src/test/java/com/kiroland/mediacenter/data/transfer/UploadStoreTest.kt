@@ -1,5 +1,6 @@
 package com.kiroland.mediacenter.data.transfer
 
+import com.kiroland.mediacenter.util.TestStrings
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -13,6 +14,10 @@ import java.io.File
 import kotlin.random.Random
 
 class UploadStoreTest {
+    init {
+        TestStrings.install()
+    }
+
 
     @get:Rule
     val tmp = TemporaryFolder()

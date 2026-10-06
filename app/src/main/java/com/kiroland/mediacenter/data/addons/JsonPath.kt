@@ -1,5 +1,7 @@
 package com.kiroland.mediacenter.data.addons
 
+import com.kiroland.mediacenter.R
+import com.kiroland.mediacenter.util.AppLocale
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
@@ -52,7 +54,7 @@ class JsonPath private constructor(private val segments: List<Segment>) {
         private val FILTER = Regex("""^([A-Za-z0-9_]+)(!=|!~|=|~)(.*)$""")
 
         fun parse(path: String): JsonPath {
-            require(path.isNotBlank()) { "üres út" }
+            require(path.isNotBlank()) { AppLocale.text(R.string.json_path_empty) }
             val segments = mutableListOf<Segment>()
             // Split on dots that are not inside brackets.
             var depth = 0
@@ -65,7 +67,7 @@ class JsonPath private constructor(private val segments: List<Segment>) {
                     else -> parts.last().append(ch)
                 }
             }
-            require(depth == 0) { "nem zárt [ ]" }
+            require(depth == 0) { AppLocale.text(R.string.json_path_unclosed) }
             for (part in parts.map { it.toString() }) {
                 val name = part.substringBefore('[')
                 if (name.isNotEmpty()) segments += Segment.Field(name)
@@ -75,10 +77,10 @@ class JsonPath private constructor(private val segments: List<Segment>) {
                     segments += when {
                         index != null -> Segment.Index(index)
                         else -> FILTER.matchEntire(inner)?.let { Segment.Filter(it.groupValues[1], it.groupValues[2], it.groupValues[3]) }
-                            ?: throw IllegalArgumentException("hibás szűrő: [$inner]")
+                            ?: throw IllegalArgumentException(AppLocale.text(R.string.json_path_bad_filter, inner))
                     }
                 }
-                require(name.isNotEmpty() || part.startsWith("[")) { "hibás rész: $part" }
+                require(name.isNotEmpty() || part.startsWith("[")) { AppLocale.text(R.string.json_path_bad_part, part) }
             }
             return JsonPath(segments)
         }

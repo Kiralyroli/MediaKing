@@ -1,5 +1,7 @@
 package com.kiroland.mediacenter.data.network
 
+import com.kiroland.mediacenter.R
+import com.kiroland.mediacenter.util.AppLocale
 import android.util.Log
 import com.hierynomus.msdtyp.AccessMask
 import com.hierynomus.msfscc.FileAttributes
@@ -107,7 +109,7 @@ class SmbClient @Inject constructor(private val shares: NetworkShareRepository) 
         val connection = try {
             client.connect(credentials.host)
         } catch (e: IOException) {
-            throw SmbAccessException("A(z) „${credentials.host}” gép nem érhető el. Be van kapcsolva, és ugyanazon a hálózaton van?", e)
+            throw SmbAccessException(AppLocale.text(R.string.smb_unreachable, credentials.host), e)
         }
         val auth = if (credentials.username.isBlank()) {
             AuthenticationContext.guest()
@@ -116,7 +118,7 @@ class SmbClient @Inject constructor(private val shares: NetworkShareRepository) 
         }
         return try {
             connection.authenticate(auth).connectShare(credentials.share) as? DiskShare
-                ?: throw SmbAccessException("A(z) „${credentials.share}” nem mappamegosztás")
+                ?: throw SmbAccessException(AppLocale.text(R.string.smb_not_disk_share, credentials.share))
         } catch (e: Exception) {
             runCatching { connection.close() }
             throw describe(e)
@@ -127,8 +129,8 @@ class SmbClient @Inject constructor(private val shares: NetworkShareRepository) 
         if (e is SmbAccessException) return e
         val status = (e as? SMBApiException)?.statusCode ?: (e.cause as? SMBApiException)?.statusCode
         return when (status?.let { java.lang.Long.toHexString(it) }) {
-            "c000006d", "c0000022" -> SmbAccessException("Hibás felhasználónév vagy jelszó, vagy nincs hozzáférés", e)
-            "c00000cc" -> SmbAccessException("Nincs ilyen megosztás", e)
+            "c000006d", "c0000022" -> SmbAccessException(AppLocale.text(R.string.smb_bad_login), e)
+            "c00000cc" -> SmbAccessException(AppLocale.text(R.string.smb_no_share), e)
             "c0000034", "c000003a" -> SmbAccessException("Nincs ilyen mappa", e)
             else -> e as? Exception ?: Exception(e)
         }

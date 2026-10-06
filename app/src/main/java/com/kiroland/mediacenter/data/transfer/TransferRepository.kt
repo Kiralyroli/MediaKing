@@ -1,5 +1,7 @@
 package com.kiroland.mediacenter.data.transfer
 
+import com.kiroland.mediacenter.R
+import com.kiroland.mediacenter.util.AppLocale
 import android.content.Context
 import android.net.ConnectivityManager
 import android.os.Build
@@ -92,7 +94,7 @@ class TransferRepository @Inject constructor(
             val port = newServer.start()
             server = newServer
             val url = lanAddress()?.let { "http://$it:$port" }
-            _state.update { it.copy(running = true, url = url, error = if (url == null) "Nincs hálózati kapcsolat" else null) }
+            _state.update { it.copy(running = true, url = url, error = if (url == null) AppLocale.text(R.string.upload_no_network) else null) }
             Log.i(TAG, "Upload server listening on $url")
         } catch (e: Exception) {
             Log.e(TAG, "Could not start upload server", e)
@@ -123,7 +125,7 @@ class TransferRepository @Inject constructor(
         val volumes = storage.volumeRoots()
         return libraryFolders.map { dto(it, "library", it.name) } +
             volumes.map { root ->
-                val label = if (root.path.contains("emulated")) "Belső tárhely" else "USB-meghajtó (${root.name})"
+                val label = if (root.path.contains("emulated")) AppLocale.text(R.string.upload_internal_storage) else AppLocale.text(R.string.upload_usb_drive, root.name)
                 dto(root, "drive", label)
             }
     }
@@ -202,11 +204,11 @@ class TransferRepository @Inject constructor(
 
     override suspend fun addNetworkFolder(request: NetworkFolderRequest): Result<NetworkFolderDto> = runCatching {
         val host = request.host.trim().removePrefix("\\\\").removePrefix("smb://").trimEnd('/', '\\')
-        require(SmbPath.isHost(host)) { "Hibás gépnév vagy IP-cím" }
+        require(SmbPath.isHost(host)) { AppLocale.text(R.string.smb_bad_host) }
         val share = request.share.trim().trim('/', '\\')
-        require(share.isNotEmpty() && share.none { it == '/' || it == '\\' }) { "Add meg a megosztás nevét" }
+        require(share.isNotEmpty() && share.none { it == '/' || it == '\\' }) { AppLocale.text(R.string.smb_need_share) }
         val sub = request.path.trim().replace('\\', '/').trim('/')
-        val root = SmbPath.parse("smb://$host/$share/$sub") ?: throw IllegalArgumentException("Hibás mappa")
+        val root = SmbPath.parse("smb://$host/$share/$sub") ?: throw IllegalArgumentException(AppLocale.text(R.string.smb_bad_folder))
         val saved = networkShares.find(host, share)
         // Adding a second folder of the same share does not need the password again.
         val password = request.password.ifEmpty { saved?.takeIf { it.username == request.username.trim() }?.password.orEmpty() }

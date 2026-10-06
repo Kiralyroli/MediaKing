@@ -1,5 +1,8 @@
 package com.kiroland.mediacenter.ui.addons
 
+import com.kiroland.mediacenter.R
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -48,16 +51,15 @@ fun AddonsScreen(viewModel: AddonsViewModel = hiltViewModel()) {
     ) {
         item {
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text("Kiegészítők", style = MaterialTheme.typography.headlineMedium)
+                Text(stringResource(R.string.addons_title), style = MaterialTheme.typography.headlineMedium)
                 Text(
-                    "A kiegészítők élő csatornákat adnak az Élő TV menühöz. Telepítés: Feltöltés → Bekapcsolás, " +
-                        "majd a böngészőben a „Kiegészítők” résznél fájlból vagy URL-ről.",
+                    stringResource(R.string.addons_intro),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
         }
         if (addons.isEmpty()) {
-            item { Text("Nincs telepített kiegészítő.", color = MaterialTheme.colorScheme.onSurfaceVariant) }
+            item { Text(stringResource(R.string.addons_empty), color = MaterialTheme.colorScheme.onSurfaceVariant) }
         }
         items(addons, key = { it.id }) { addon ->
             val isArmed = armed == addon.id
@@ -75,12 +77,12 @@ fun AddonsScreen(viewModel: AddonsViewModel = hiltViewModel()) {
                 headlineContent = { Text("${addon.name}  ·  v${addon.version}") },
                 supportingContent = {
                     Text(
-                        if (isArmed) "Nyomd meg újra az eltávolításhoz."
-                        else listOfNotNull(addon.description, "${addon.channels.size} csatorna", addon.id).joinToString(" · "),
+                        if (isArmed) stringResource(R.string.addons_press_again)
+                        else listOfNotNull(addon.description, pluralStringResource(R.plurals.channels_count, addon.channels.size, addon.channels.size), addon.id).joinToString(" · "),
                         color = if (isArmed) Color(0xFFFFC857) else MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 },
-                trailingContent = { Text(if (isArmed) "Eltávolítás" else "") },
+                trailingContent = { Text(if (isArmed) stringResource(R.string.addons_remove) else "") },
             )
         }
     }

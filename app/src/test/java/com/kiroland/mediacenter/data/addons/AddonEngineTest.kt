@@ -1,5 +1,6 @@
 package com.kiroland.mediacenter.data.addons
 
+import com.kiroland.mediacenter.util.TestStrings
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonPrimitive
@@ -10,6 +11,10 @@ import org.junit.Assert.fail
 import org.junit.Test
 
 class AddonEngineTest {
+    init {
+        TestStrings.install()
+    }
+
 
     // A web player page of the common "player.setup({...});" kind, with a station ident first.
     private val page = """

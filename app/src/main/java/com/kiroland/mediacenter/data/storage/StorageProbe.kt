@@ -1,5 +1,7 @@
 package com.kiroland.mediacenter.data.storage
 
+import com.kiroland.mediacenter.R
+import com.kiroland.mediacenter.util.AppLocale
 import android.content.Context
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
@@ -62,12 +64,12 @@ class StorageProbe @Inject constructor(
             val seconds = (System.nanoTime() - started) / 1e9
             val readBack = file.readBytes()
             if (!readBack.contentEquals(payload)) {
-                WriteTestResult(dir.absolutePath, false, "A visszaolvasott adat eltér")
+                WriteTestResult(dir.absolutePath, false, AppLocale.text(R.string.probe_mismatch))
             } else {
                 WriteTestResult(
                     location = dir.absolutePath,
                     success = true,
-                    message = "Írás és visszaolvasás rendben",
+                    message = AppLocale.text(R.string.probe_ok),
                     writeMbPerSec = PROBE_SIZE_BYTES / 1_048_576.0 / seconds,
                 )
             }

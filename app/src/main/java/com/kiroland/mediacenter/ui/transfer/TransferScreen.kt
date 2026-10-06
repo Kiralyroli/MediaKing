@@ -1,5 +1,7 @@
 package com.kiroland.mediacenter.ui.transfer
 
+import com.kiroland.mediacenter.R
+import androidx.compose.ui.res.stringResource
 import android.content.Context
 import android.graphics.Bitmap
 import androidx.compose.foundation.Image
@@ -88,19 +90,18 @@ fun TransferScreen(viewModel: TransferViewModel = hiltViewModel()) {
         contentPadding = PaddingValues(horizontal = 48.dp, vertical = 36.dp),
         verticalArrangement = Arrangement.spacedBy(20.dp),
     ) {
-        item { Text("Wi-Fi feltöltés", style = MaterialTheme.typography.headlineMedium) }
+        item { Text(stringResource(R.string.upload_title), style = MaterialTheme.typography.headlineMedium) }
 
         if (!state.running) {
             item {
                 Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                     Text(
-                        "Tölts fel filmeket és sorozatokat telefonról vagy számítógépről, böngészőből, " +
-                            "közvetlenül a TV-re kötött meghajtóra. Az eszköznek ugyanazon a hálózaton kell lennie.",
+                        stringResource(R.string.upload_intro),
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                     state.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
                     Button(onClick = { viewModel.start(context) }, modifier = Modifier.focusRequester(primaryAction)) {
-                        ButtonContent(Icons.Outlined.CloudUpload, "Bekapcsolás")
+                        ButtonContent(Icons.Outlined.CloudUpload, stringResource(R.string.upload_start))
                     }
                 }
             }
@@ -109,21 +110,21 @@ fun TransferScreen(viewModel: TransferViewModel = hiltViewModel()) {
             item {
                 Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                     OutlinedButton(onClick = { viewModel.stop(context) }, modifier = Modifier.focusRequester(primaryAction)) {
-                        ButtonContent(Icons.Outlined.StopCircle, "Kikapcsolás")
+                        ButtonContent(Icons.Outlined.StopCircle, stringResource(R.string.upload_stop))
                     }
                     OutlinedButton(onClick = viewModel::newCode) {
-                        ButtonContent(Icons.Outlined.Refresh, "Új párosítási kód")
+                        ButtonContent(Icons.Outlined.Refresh, stringResource(R.string.upload_new_code))
                     }
                 }
             }
         }
 
         if (state.active.isNotEmpty()) {
-            item { Text("Folyamatban", style = MaterialTheme.typography.titleLarge) }
+            item { Text(stringResource(R.string.upload_in_progress), style = MaterialTheme.typography.titleLarge) }
             items(state.active, key = { it.path }) { ActiveUpload(it) }
         }
         if (state.received.isNotEmpty()) {
-            item { Text("Megérkezett", style = MaterialTheme.typography.titleLarge) }
+            item { Text(stringResource(R.string.upload_received), style = MaterialTheme.typography.titleLarge) }
             items(state.received, key = { "done-" + it.path + it.at }) { file ->
                 ListItem(
                     selected = false,
@@ -152,13 +153,13 @@ private fun ConnectCard(state: TransferState) {
                     .background(Color.White)
                     .padding(12.dp),
             ) {
-                Image(qr.asImageBitmap(), contentDescription = "QR-kód a feltöltő oldalhoz", filterQuality = FilterQuality.None)
+                Image(qr.asImageBitmap(), contentDescription = stringResource(R.string.upload_qr), filterQuality = FilterQuality.None)
             }
         }
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Text("Telefonon olvasd be a QR-kódot, vagy nyisd meg a böngészőben:", color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Text(url ?: "Nincs hálózati cím", style = MaterialTheme.typography.displaySmall, fontWeight = FontWeight.SemiBold)
-            Text("Párosítási kód:", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(stringResource(R.string.upload_scan_or_open), color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(url ?: stringResource(R.string.upload_no_address), style = MaterialTheme.typography.displaySmall, fontWeight = FontWeight.SemiBold)
+            Text(stringResource(R.string.upload_pairing_code), color = MaterialTheme.colorScheme.onSurfaceVariant)
             Text(
                 PairingGuard.display(state.pairingCode),
                 style = MaterialTheme.typography.displaySmall,
@@ -182,17 +183,18 @@ private fun ActiveUpload(upload: UploadProgress) {
                 "${formatBytes(upload.received)} / ${formatBytes(upload.total)}",
                 "${(fraction * 100).toInt()}%",
                 upload.bytesPerSecond.takeIf { it > 0 }?.let { "${formatBytes(it)}/s" },
-                eta?.let { "még kb. ${formatEta(it)}" },
+                eta?.let { stringResource(R.string.upload_eta, formatEta(it)) },
             ).joinToString(" · "),
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
 }
 
+@Composable
 private fun formatEta(seconds: Long): String = when {
-    seconds >= 3600 -> "${seconds / 3600} ó ${seconds % 3600 / 60} p"
-    seconds >= 60 -> "${seconds / 60} p"
-    else -> "$seconds mp"
+    seconds >= 3600 -> stringResource(R.string.runtime_hm, (seconds / 3600).toInt(), (seconds % 3600 / 60).toInt())
+    seconds >= 60 -> stringResource(R.string.runtime_m, (seconds / 60).toInt())
+    else -> stringResource(R.string.duration_s, seconds.toInt())
 }
 
 private fun qrBitmap(content: String, size: Int = 512): Bitmap {

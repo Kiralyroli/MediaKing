@@ -1,5 +1,7 @@
 package com.kiroland.mediacenter.data.transfer
 
+import com.kiroland.mediacenter.R
+import com.kiroland.mediacenter.util.AppLocale
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -66,7 +68,7 @@ class TransferService : Service() {
     private fun notification(): Notification {
         val manager = getSystemService(NotificationManager::class.java)
         manager.createNotificationChannel(
-            NotificationChannel(CHANNEL_ID, "Wi-Fi feltöltés", NotificationManager.IMPORTANCE_LOW),
+            NotificationChannel(CHANNEL_ID, AppLocale.text(R.string.upload_notification_channel), NotificationManager.IMPORTANCE_LOW),
         )
         val open = PendingIntent.getActivity(
             this, 0, Intent(this, MainActivity::class.java), PendingIntent.FLAG_IMMUTABLE,
@@ -77,10 +79,10 @@ class TransferService : Service() {
         val state = repository.state.value
         return Notification.Builder(this, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.stat_sys_upload)
-            .setContentTitle("Wi-Fi feltöltés bekapcsolva")
-            .setContentText(state.url ?: "Indítás…")
+            .setContentTitle(AppLocale.text(R.string.upload_notification_title))
+            .setContentText(state.url ?: AppLocale.text(R.string.upload_notification_starting))
             .setContentIntent(open)
-            .addAction(Notification.Action.Builder(null, "Leállítás", stop).build())
+            .addAction(Notification.Action.Builder(null, AppLocale.text(R.string.upload_notification_stop), stop).build())
             .setOngoing(true)
             .build()
     }

@@ -40,6 +40,7 @@ class MediaCenterApp : Application(), SingletonImageLoader.Factory {
 
     override fun onCreate() {
         super.onCreate()
+        com.kiroland.mediacenter.util.AppLocale.init(this)
         if (settings.current.uploadAutoStart) TransferService.start(this)
         // Rescan at start and whenever a drive comes or goes (mount events arrive in bursts).
         appScope.launch {

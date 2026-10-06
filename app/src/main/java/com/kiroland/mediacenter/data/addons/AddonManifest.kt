@@ -1,5 +1,7 @@
 package com.kiroland.mediacenter.data.addons
 
+import com.kiroland.mediacenter.R
+import com.kiroland.mediacenter.util.AppLocale
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 
@@ -80,34 +82,34 @@ object AddonParser {
         val manifest = try {
             json.decodeFromString(AddonManifest.serializer(), text)
         } catch (e: Exception) {
-            throw IllegalArgumentException("Nem érvényes kiegészítő-fájl: ${e.message?.lineSequence()?.firstOrNull()}")
+            throw IllegalArgumentException(AppLocale.text(R.string.addon_invalid_file, e.message?.lineSequence()?.firstOrNull().orEmpty()))
         }
         validate(manifest)
         manifest
     }
 
     private fun validate(m: AddonManifest) {
-        require(ID.matches(m.id)) { "Az azonosító csak kisbetűt, számot, pontot, kötőjelet tartalmazhat: ${m.id}" }
-        require(m.name.isNotBlank()) { "Hiányzik a név" }
+        require(ID.matches(m.id)) { AppLocale.text(R.string.addon_bad_id, m.id) }
+        require(m.name.isNotBlank()) { AppLocale.text(R.string.addon_missing_name) }
         require(m.channels.isNotEmpty() || m.playlist != null) { "Nincs egyetlen csatorna sem (se channels, se playlist)" }
-        require(m.playlist == null || isHttp(m.playlist)) { "A playlist címe csak http(s) lehet" }
-        require(m.epg == null || isHttp(m.epg)) { "Az epg címe csak http(s) lehet" }
+        require(m.playlist == null || isHttp(m.playlist)) { AppLocale.text(R.string.addon_playlist_not_http) }
+        require(m.epg == null || isHttp(m.epg)) { AppLocale.text(R.string.addon_epg_not_http) }
         val ids = m.channels.map { it.id }
-        require(ids.size == ids.toSet().size) { "Ismétlődő csatorna-azonosító" }
+        require(ids.size == ids.toSet().size) { AppLocale.text(R.string.addon_duplicate_channel) }
         m.channels.forEach { c ->
-            require(c.id.isNotBlank() && c.name.isNotBlank()) { "Csatorna azonosító vagy név nélkül" }
-            require(c.color == null || COLOR.matches(c.color)) { "Hibás szín (${c.name}): ${c.color}" }
-            require(c.url == null || isHttp(c.url)) { "A cím csak http(s) lehet (${c.name})" }
-            require(c.url != null || m.resolve.isNotEmpty()) { "${c.name}: nincs se url, se resolve lépés" }
+            require(c.id.isNotBlank() && c.name.isNotBlank()) { AppLocale.text(R.string.addon_channel_without_id) }
+            require(c.color == null || COLOR.matches(c.color)) { AppLocale.text(R.string.addon_bad_color, c.name, c.color.orEmpty()) }
+            require(c.url == null || isHttp(c.url)) { AppLocale.text(R.string.addon_url_not_http, c.name) }
+            require(c.url != null || m.resolve.isNotEmpty()) { AppLocale.text(R.string.addon_no_url, c.name) }
         }
         m.resolve.forEachIndexed { i, step ->
             val ops = listOfNotNull(step.get, step.regex, step.json, step.replace)
-            require(ops.size == 1) { "A(z) ${i + 1}. lépésben pontosan egy művelet kell (get, regex, json vagy replace)" }
-            step.get?.let { require(isHttp(it)) { "A(z) ${i + 1}. lépés címe csak http(s) lehet" } }
+            require(ops.size == 1) { AppLocale.text(R.string.addon_step_one_op, i + 1) }
+            step.get?.let { require(isHttp(it)) { AppLocale.text(R.string.addon_step_not_http, i + 1) } }
             // Compiled here, with the platform's regex engine, so a bad pattern fails at install time.
-            step.regex?.let { runCatching { Regex(it) }.getOrElse { e -> throw IllegalArgumentException("Hibás regex a(z) ${i + 1}. lépésben: ${e.message}") } }
-            step.replace?.let { runCatching { Regex(it) }.getOrElse { e -> throw IllegalArgumentException("Hibás regex a(z) ${i + 1}. lépésben: ${e.message}") } }
-            step.json?.let { runCatching { JsonPath.parse(it) }.getOrElse { e -> throw IllegalArgumentException("Hibás json-út a(z) ${i + 1}. lépésben: ${e.message}") } }
+            step.regex?.let { runCatching { Regex(it) }.getOrElse { e -> throw IllegalArgumentException(AppLocale.text(R.string.addon_step_bad_regex, i + 1, e.message.orEmpty())) } }
+            step.replace?.let { runCatching { Regex(it) }.getOrElse { e -> throw IllegalArgumentException(AppLocale.text(R.string.addon_step_bad_regex, i + 1, e.message.orEmpty())) } }
+            step.json?.let { runCatching { JsonPath.parse(it) }.getOrElse { e -> throw IllegalArgumentException(AppLocale.text(R.string.addon_step_bad_json_path, i + 1, e.message.orEmpty())) } }
         }
     }
 
