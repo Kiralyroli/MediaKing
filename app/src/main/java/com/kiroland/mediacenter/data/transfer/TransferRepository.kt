@@ -1,5 +1,6 @@
 package com.kiroland.mediacenter.data.transfer
 
+import com.kiroland.mediacenter.data.remote.RemoteControl
 import com.kiroland.mediacenter.R
 import com.kiroland.mediacenter.util.AppLocale
 import android.content.Context
@@ -182,6 +183,15 @@ class TransferRepository @Inject constructor(
         addonRepository.installFromUrl(url).map { it.toDto() }
 
     override fun removeAddon(id: String): Boolean = addonRepository.remove(id)
+
+    override fun remoteKey(key: String): Boolean =
+        RemoteControl.Key.entries.firstOrNull { it.name.equals(key, ignoreCase = true) }?.let { RemoteControl.press(it) } ?: false
+
+    override fun remoteSearch(text: String): Boolean = text.isNotBlank() && RemoteControl.search(text)
+
+    override suspend fun remoteStatus(): RemoteStatusDto = RemoteControl.status().let {
+        RemoteStatusDto(it.inFront, it.title, it.subtitle, it.positionMs, it.durationMs, it.playing)
+    }
 
     override fun tmdbStatus() = TmdbDto(tmdb.isConfigured, tmdb.source?.name?.lowercase())
 

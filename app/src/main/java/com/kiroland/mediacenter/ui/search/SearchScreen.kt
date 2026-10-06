@@ -1,5 +1,7 @@
 package com.kiroland.mediacenter.ui.search
 
+import kotlinx.coroutines.delay
+import com.kiroland.mediacenter.data.remote.RemoteControl
 import com.kiroland.mediacenter.ui.library.seasonsAndEpisodes
 import com.kiroland.mediacenter.R
 import androidx.compose.ui.res.stringResource
@@ -150,6 +152,24 @@ fun SearchScreen(
         keyboard?.hide()
         focusManager.moveFocus(FocusDirection.Down)
     }
+    // A search typed on the phone remote: no on-screen keyboard, focus goes to the results.
+    var jumpToResults by remember { mutableStateOf(false) }
+    val remoteSearch by RemoteControl.searchRequests.collectAsStateWithLifecycle()
+    LaunchedEffect(remoteSearch) {
+        RemoteControl.takeSearch()?.let {
+            viewModel.query.value = it
+            viewModel.rememberSearch()
+            jumpToResults = true
+            keyboard?.hide()
+        }
+    }
+    LaunchedEffect(jumpToResults, results, streamingResults) {
+        if (!jumpToResults || (results.movies.isEmpty() && results.series.isEmpty() && streamingResults.isEmpty())) return@LaunchedEffect
+        delay(300) // the shelves lay out first
+        runCatching { field.requestFocus() }
+        toResults()
+        jumpToResults = false
+    }
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -276,7 +296,7 @@ fun SearchScreen(
         }
     }
     // Only on a fresh search; coming back from a result focuses that result instead.
-    LaunchedEffect(Unit) { if (query.isEmpty()) runCatching { field.requestFocus() } }
+    LaunchedEffect(Unit) { if (query.isEmpty() && !jumpToResults) runCatching { field.requestFocus() } }
     LaunchedEffect(results, streamingResults, genreResults) {
         val key = opened ?: return@LaunchedEffect
         val streamingKeys = streamingResults.map { "stream:" + (if (it.isMovie) "m" else "t") + it.tmdbId } +

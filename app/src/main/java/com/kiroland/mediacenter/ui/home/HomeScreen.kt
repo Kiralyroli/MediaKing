@@ -1,5 +1,7 @@
 package com.kiroland.mediacenter.ui.home
 
+import com.kiroland.mediacenter.data.remote.RemoteControl
+import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.res.stringResource
 import androidx.annotation.StringRes
 import androidx.compose.foundation.background
@@ -102,6 +104,8 @@ fun HomeScreen(
     onOpenStreaming: (isMovie: Boolean, tmdbId: Int) -> Unit,
 ) {
     var section by rememberSaveable { mutableStateOf(HomeSection.Home) }
+    val remoteSearch by RemoteControl.searchRequests.collectAsState()
+    LaunchedEffect(remoteSearch) { if (remoteSearch != null) section = HomeSection.Search }
     // Sections reached from Settings keep "Beállítások" highlighted in the drawer.
     val drawerSection = if (section.inDrawer) section else HomeSection.Settings
     // Entering the drawer lands on the current section, not on whichever item is nearest.

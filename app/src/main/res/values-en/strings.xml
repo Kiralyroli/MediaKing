@@ -402,4 +402,6 @@
     <string name="news_season_out">Season %1$d is out</string>
     <string name="news_announced_on">Season %1$d: %2$s</string>
     <string name="news_announced">Season %1$d announced</string>
+    <!-- Phone remote -->
+    <string name="remote_not_in_front">MediaKing is not open on the TV.</string>
 </resources>

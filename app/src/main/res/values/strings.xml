@@ -403,4 +403,6 @@
     <string name="news_season_out">Megjelent: %1$d. évad</string>
     <string name="news_announced_on">%1$d. évad: %2$s</string>
     <string name="news_announced">Bejelentve: %1$d. évad</string>
+    <!-- Phone remote -->
+    <string name="remote_not_in_front">A MediaKing nincs megnyitva a TV-n.</string>
 </resources>

@@ -53,6 +53,15 @@
   .item.failed .bar > div { background: var(--err); }
   .meta { font-size: 13px; color: var(--muted); }
   .pair { max-width: 420px; margin: 40px auto; display: grid; gap: 12px; }
+  .remote { display: grid; gap: 12px; }
+  .pad { display: grid; grid-template-columns: repeat(3, 64px); grid-template-rows: repeat(3, 64px); gap: 8px; justify-content: center; }
+  .pad button, .keys button { font-size: 20px; padding: 0; }
+  .pad button { border-radius: 16px; }
+  .pad .ok { background: var(--accent); color: #101820; font-weight: 700; font-size: 16px; }
+  .keys { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+  .keys button { min-width: 64px; height: 44px; }
+  .now { text-align: center; }
+  .now b { display: block; }
   .pair input { font-size: 22px; letter-spacing: .15em; text-transform: uppercase; text-align: center; }
 </style>
 </head>
@@ -73,6 +82,30 @@
   </section>
 
   <div id="app" class="hidden" style="display:grid;gap:16px">
+    <section class="remote">
+      <h2 data-t="remote"></h2>
+      <div class="now muted" id="nowPlaying"></div>
+      <div class="row">
+        <input type="text" id="remoteSearch" data-t-placeholder="remoteSearchHint" autocomplete="off" style="flex:1;min-width:180px">
+        <button class="primary" id="remoteSearchButton" data-t="search"></button>
+      </div>
+      <div class="pad">
+        <span></span><button data-key="up" aria-label="▲">▲</button><span></span>
+        <button data-key="left" aria-label="◀">◀</button><button class="ok" data-key="ok">OK</button><button data-key="right" aria-label="▶">▶</button>
+        <span></span><button data-key="down" aria-label="▼">▼</button><span></span>
+      </div>
+      <div class="keys">
+        <button data-key="back" data-t-title="back">↩</button>
+        <button data-key="rewind" data-t-title="rewind">⏪</button>
+        <button data-key="play_pause" data-t-title="playPause">⏯</button>
+        <button data-key="forward" data-t-title="forward">⏩</button>
+        <button data-key="subtitles" data-t-title="subtitles">CC</button>
+        <button data-key="menu" data-t-title="menu">⚙</button>
+      </div>
+      <p class="muted" style="font-size:13px;margin:0" data-t="remoteTip"></p>
+      <p class="error" id="remoteError" style="margin:0"></p>
+    </section>
+
     <section>
       <h2 data-t="where"></h2>
       <div class="roots" id="roots"></div>
@@ -165,6 +198,18 @@ const $ = (id) => document.getElementById(id);
 // --- texts: the TV serves the page with its language in <html lang> ---
 const TEXTS = {
   hu: {
+    remote: "Távirányító",
+    remoteSearchHint: "Keresés a TV-n (cím, szereplő…)",
+    search: "Keresés",
+    back: "Vissza",
+    rewind: "Vissza 10 mp",
+    playPause: "Lejátszás / szünet",
+    forward: "Előre 30 mp",
+    subtitles: "Felirat",
+    menu: "Lejátszó beállításai",
+    remoteTip: "Gépen a nyilak, az Enter, a Backspace és a szóköz is működik. A MediaKingnek a TV-n nyitva kell lennie.",
+    notInFront: "A MediaKing nincs megnyitva a TV-n.",
+    nothingPlaying: "Most nem megy semmi.",
     upload: "feltöltés",
     pairing: "Párosítás",
     pairingHelp: "Írd be a TV-n, a Feltöltés menüben látható kódot, vagy olvasd be a QR-kódot a telefonoddal.",
@@ -246,6 +291,18 @@ const TEXTS = {
     confirmClearTmdb: "Törlöd a megadott TMDB-tokent?",
   },
   en: {
+    remote: "Remote",
+    remoteSearchHint: "Search on the TV (title, cast…)",
+    search: "Search",
+    back: "Back",
+    rewind: "Back 10 s",
+    playPause: "Play / pause",
+    forward: "Forward 30 s",
+    subtitles: "Subtitles",
+    menu: "Player settings",
+    remoteTip: "On a computer the arrow keys, Enter, Backspace and Space work too. MediaKing has to be open on the TV.",
+    notInFront: "MediaKing is not open on the TV.",
+    nothingPlaying: "Nothing is playing.",
     upload: "upload",
     pairing: "Pairing",
     pairingHelp: "Enter the code shown on the TV in the Upload menu, or scan the QR code with your phone.",
@@ -327,6 +384,18 @@ const TEXTS = {
     confirmClearTmdb: "Delete the TMDB token you entered?",
   },
   de: {
+    remote: "Fernbedienung",
+    remoteSearchHint: "Auf dem Fernseher suchen (Titel, Besetzung…)",
+    search: "Suchen",
+    back: "Zurück",
+    rewind: "10 s zurück",
+    playPause: "Wiedergabe / Pause",
+    forward: "30 s vor",
+    subtitles: "Untertitel",
+    menu: "Player-Einstellungen",
+    remoteTip: "Am Computer gehen auch die Pfeiltasten, Enter, Rücktaste und Leertaste. MediaKing muss auf dem Fernseher geöffnet sein.",
+    notInFront: "MediaKing ist auf dem Fernseher nicht geöffnet.",
+    nothingPlaying: "Gerade läuft nichts.",
     upload: "Upload",
     pairing: "Kopplung",
     pairingHelp: "Gib den Code ein, den der Fernseher im Menü Hochladen zeigt, oder scanne den QR-Code mit dem Handy.",
@@ -421,6 +490,7 @@ for (const node of document.querySelectorAll("[data-t]")) node.textContent = t(n
 // Only our own constant texts, which carry a little markup (<code>, <b>).
 for (const node of document.querySelectorAll("[data-t-html]")) node.innerHTML = t(node.dataset.tHtml);
 for (const node of document.querySelectorAll("[data-t-placeholder]")) node.placeholder = t(node.dataset.tPlaceholder);
+for (const node of document.querySelectorAll("[data-t-title]")) node.title = t(node.dataset.tTitle);
 document.title = "MediaKing – " + t("upload");
 
 let code = localStorage.getItem("pairingCode") || "";
@@ -510,6 +580,7 @@ async function start() {
   $("device").textContent = info.body.device;
   roots = info.body.roots;
   renderRoots();
+  refreshRemote();
   loadAddons();
   loadTmdb();
   loadNetwork();
@@ -824,6 +895,61 @@ function renderProgress(item) {
   if (item.error) parts.push(item.error);
   item.node.querySelector(".meta").textContent = parts.join(" · ");
 }
+
+// --- remote ---
+function formatTime(ms) {
+  const total = Math.floor(ms / 1000), h = Math.floor(total / 3600), m = Math.floor(total % 3600 / 60), sec = total % 60;
+  const two = (n) => String(n).padStart(2, "0");
+  return h ? h + ":" + two(m) + ":" + two(sec) : m + ":" + two(sec);
+}
+
+function showRemote(status) {
+  const box = $("nowPlaying");
+  if (!status.inFront) { box.textContent = t("notInFront"); return; }
+  if (!status.title) { box.textContent = t("nothingPlaying"); return; }
+  const time = status.durationMs ? formatTime(status.positionMs || 0) + " / " + formatTime(status.durationMs) : "";
+  box.replaceChildren(el("b", {}, (status.playing ? "▶ " : "⏸ ") + status.title), [status.subtitle, time].filter(Boolean).join(" · "));
+}
+
+async function refreshRemote() {
+  try {
+    const result = await api("remote");
+    if (result.ok) showRemote(result.body);
+  } catch (_) { /* pairing shown */ }
+}
+
+async function remote(path, options) {
+  let result;
+  try { result = await api(path, options); } catch (_) { return; }
+  $("remoteError").textContent = result.ok ? "" : (result.body ? result.body.error : t("failed"));
+  if (result.ok) showRemote(result.body);
+}
+
+const pressKey = (key) => remote("remote/key?" + query({ k: key }), { method: "POST" });
+for (const button of document.querySelectorAll("[data-key]")) button.addEventListener("click", () => pressKey(button.dataset.key));
+
+function sendSearch() {
+  const text = $("remoteSearch").value.trim();
+  if (!text) return;
+  remote("remote/search", { method: "POST", headers: { "Content-Type": "text/plain" }, body: text });
+}
+$("remoteSearchButton").addEventListener("click", sendSearch);
+$("remoteSearch").addEventListener("keydown", (e) => { if (e.key === "Enter") sendSearch(); });
+
+// A computer keyboard works as the remote while no text field is in use.
+const KEYS = { ArrowUp: "up", ArrowDown: "down", ArrowLeft: "left", ArrowRight: "right", Enter: "ok", Backspace: "back", " ": "play_pause" };
+document.addEventListener("keydown", (e) => {
+  if ($("app").classList.contains("hidden") || e.target.closest("input, textarea, select")) return;
+  // Enter and Space on a focused button already click it.
+  if (e.target.closest("button, label") && (e.key === "Enter" || e.key === " ")) return;
+  const key = KEYS[e.key];
+  if (!key) return;
+  e.preventDefault();
+  pressKey(key);
+});
+
+// The playing line follows the TV while the page is visible.
+setInterval(() => { if (!document.hidden && !$("app").classList.contains("hidden")) refreshRemote(); }, 3000);
 
 // --- add-ons ---
 async function loadAddons() {

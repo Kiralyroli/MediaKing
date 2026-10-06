@@ -104,7 +104,22 @@ interface TransferHost {
     suspend fun networkFolders(): List<NetworkFolderDto>
     suspend fun addNetworkFolder(request: NetworkFolderRequest): Result<NetworkFolderDto>
     suspend fun removeNetworkFolder(root: String): Boolean
+
+    /** The phone remote; false when MediaKing is not on screen. */
+    fun remoteKey(key: String): Boolean = false
+    fun remoteSearch(text: String): Boolean = false
+    suspend fun remoteStatus(): RemoteStatusDto = RemoteStatusDto(false)
 }
+
+@Serializable
+data class RemoteStatusDto(
+    val inFront: Boolean,
+    val title: String? = null,
+    val subtitle: String? = null,
+    val positionMs: Long? = null,
+    val durationMs: Long? = null,
+    val playing: Boolean? = null,
+)
 
 /**
  * The HTTP side of Wi-Fi uploads: serves the web page and a small JSON API.
@@ -318,6 +333,28 @@ class TransferServer(
             if (!authorized(call)) return@delete
             if (host.removeNetworkFolder(call.parameters["root"].orEmpty())) call.respondJson(ChunkDto(0, true))
             else call.respondError(HttpStatusCode.NotFound, AppLocale.text(R.string.server_no_network_folder))
+        }
+
+        get("/api/remote") {
+            if (!authorized(call)) return@get
+            call.respondJson(host.remoteStatus())
+        }
+
+        post("/api/remote/key") {
+            if (!authorized(call)) return@post
+            if (host.remoteKey(call.parameters["k"].orEmpty())) call.respondJson(host.remoteStatus())
+            else call.respondError(HttpStatusCode.Conflict, AppLocale.text(R.string.remote_not_in_front))
+        }
+
+        post("/api/remote/search") {
+            if (!authorized(call)) return@post
+            if ((call.request.contentLength() ?: 0) > MAX_TOKEN_BYTES) {
+                call.receiveChannel().discard()
+                call.respondError(HttpStatusCode.PayloadTooLarge, AppLocale.text(R.string.server_too_long))
+                return@post
+            }
+            if (host.remoteSearch(call.receiveText())) call.respondJson(host.remoteStatus())
+            else call.respondError(HttpStatusCode.Conflict, AppLocale.text(R.string.remote_not_in_front))
         }
 
         delete("/api/upload") {

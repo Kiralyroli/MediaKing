@@ -2,6 +2,10 @@ package com.kiroland.mediacenter.ui
 
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import com.kiroland.mediacenter.data.remote.RemoteControl
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.compose.NavHost
@@ -47,6 +51,12 @@ fun MediaCenterNavHost() {
     val context = LocalContext.current
     val play = { path: String, fromStart: Boolean ->
         context.startActivity(PlayerActivity.intent(context, path, fromStart))
+    }
+
+    // A search typed on the phone remote: back to the home screen, which opens the search.
+    val remoteSearch by RemoteControl.searchRequests.collectAsState()
+    LaunchedEffect(remoteSearch) {
+        if (remoteSearch != null) navController.popBackStack(HomeRoute, inclusive = false)
     }
 
     NavHost(

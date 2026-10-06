@@ -1,5 +1,6 @@
 package com.kiroland.mediacenter.player
 
+import com.kiroland.mediacenter.data.remote.RemoteControl
 import com.kiroland.mediacenter.util.AppLocale
 import android.app.AlertDialog
 import android.content.Context
@@ -138,6 +139,7 @@ class PlayerActivity : ComponentActivity() {
     }
 
     override fun onStop() {
+        RemoteControl.nowPlaying = null
         releasePlayer()
         super.onStop()
     }
@@ -529,6 +531,7 @@ class PlayerActivity : ComponentActivity() {
     private fun setHeader(label: String, title: String) {
         playerView.findViewById<TextView>(R.id.player_label).text = label
         playerView.findViewById<TextView>(R.id.player_title).text = title
+        player?.let { RemoteControl.nowPlaying = RemoteControl.NowPlaying(title, label, java.lang.ref.WeakReference(it)) }
     }
 
     /** What the audio and subtitle pills show: the selected tracks, named like in the pickers. */
