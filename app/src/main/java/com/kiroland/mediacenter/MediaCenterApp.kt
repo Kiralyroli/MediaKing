@@ -31,6 +31,7 @@ class MediaCenterApp : Application(), SingletonImageLoader.Factory {
     @Inject @ApplicationScope lateinit var appScope: CoroutineScope
     @Inject lateinit var okHttpClient: OkHttpClient
     @Inject lateinit var settings: SettingsRepository
+    @Inject lateinit var metadata: com.kiroland.mediacenter.data.metadata.MetadataRepository
     // Created here so the add-on guides start loading with the app, not when Live TV first opens.
     @Inject lateinit var epg: EpgRepository
 
@@ -42,6 +43,7 @@ class MediaCenterApp : Application(), SingletonImageLoader.Factory {
         super.onCreate()
         com.kiroland.mediacenter.util.AppLocale.init(this)
         if (settings.current.uploadAutoStart) TransferService.start(this)
+        appScope.launch { metadata.refreshLanguageIfChanged() }
         // Rescan at start and whenever a drive comes or goes (mount events arrive in bursts).
         appScope.launch {
             @OptIn(kotlinx.coroutines.FlowPreview::class)

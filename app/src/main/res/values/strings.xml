@@ -393,4 +393,8 @@
     <string name="json_path_bad_part">hibás rész: %1$s</string>
     <!-- Upload server -->
     <string name="server_no_port">Nincs szabad port (%1$d–%2$d)</string>
+    <plurals name="episodes_count_short">
+        <item quantity="one">%d rész</item>
+        <item quantity="other">%d rész</item>
+    </plurals>
 </resources>

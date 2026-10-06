@@ -111,7 +111,7 @@
     <string name="detail_on_watchlist">On watchlist</string>
     <string name="detail_add_watchlist">Add to watchlist</string>
     <string name="series_unavailable">The show\'s episodes are not available.</string>
-    <string name="series_in_total">%1$s in total</string>
+    <string name="series_in_total">overall: %1$s</string>
     <string name="series_long_press_tip">Tip: hold OK on an episode to mark it watched, or to clear the mark.</string>
     <string name="series_watched">Show watched</string>
     <string name="series_mark_watched">I watched the show</string>
@@ -392,4 +392,8 @@
     <string name="json_path_bad_part">invalid part: %1$s</string>
     <!-- Upload server -->
     <string name="server_no_port">No free port (%1$d–%2$d)</string>
+    <plurals name="episodes_count_short">
+        <item quantity="one">%d ep.</item>
+        <item quantity="other">%d eps.</item>
+    </plurals>
 </resources>

@@ -58,7 +58,8 @@ object AppLocale {
     fun locale(context: Context): Locale {
         cached?.let { return it }
         val tag = language(context).tag
-            ?: Locale.getDefault().language.takeIf { it in SUPPORTED }
+            // The TV's own setting: Locale.getDefault() is ours once a language has been applied.
+            ?: Resources.getSystem().configuration.locales.get(0).language.takeIf { it in SUPPORTED }
             ?: "hu"
         return Locale.forLanguageTag(tag).also {
             cached = it

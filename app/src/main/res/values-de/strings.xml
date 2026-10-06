@@ -392,4 +392,8 @@
     <string name="json_path_bad_part">ungültiger Teil: %1$s</string>
     <!-- Upload server -->
     <string name="server_no_port">Kein freier Port (%1$d–%2$d)</string>
+    <plurals name="episodes_count_short">
+        <item quantity="one">%d Folge</item>
+        <item quantity="other">%d Folgen</item>
+    </plurals>
 </resources>

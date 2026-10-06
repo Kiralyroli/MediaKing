@@ -1,5 +1,8 @@
 package com.kiroland.mediacenter.data.metadata
 
+import android.content.Context
+import com.kiroland.mediacenter.util.AppLocale
+import dagger.hilt.android.qualifiers.ApplicationContext
 import android.util.Log
 import com.kiroland.mediacenter.data.library.db.EpisodeMetadataEntity
 import com.kiroland.mediacenter.data.library.db.MediaKind
@@ -22,6 +25,7 @@ import javax.inject.Singleton
 /** Fills in TMDB data for library items that have none yet. Failures are logged and retried next time. */
 @Singleton
 class MetadataRepository @Inject constructor(
+    @ApplicationContext private val context: Context,
     private val dao: MetadataDao,
     private val api: TmdbApi,
     private val credentials: TmdbCredentials,
@@ -96,8 +100,18 @@ class MetadataRepository @Inject constructor(
      * After a language change: every matched title's texts again, in the new language. The matches
      * themselves (manual fixes too) stay; episode lists are reloaded by the next enrichment.
      */
+    /**
+     * Reloads titles and overviews when they were fetched in another language than the app's now,
+     * e.g. after the TV's own language changed while the app follows it.
+     */
+    suspend fun refreshLanguageIfChanged() {
+        val loaded = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString(KEY_LANGUAGE, null)
+        if (loaded != AppLocale.tmdbLanguage) refreshLanguage()
+    }
+
     suspend fun refreshLanguage() {
         if (!isConfigured) return
+        val language = AppLocale.tmdbLanguage
         for (old in dao.matched()) {
             val id = old.tmdbId ?: continue
             runLogged("language ${old.key}") {
@@ -107,6 +121,7 @@ class MetadataRepository @Inject constructor(
         dao.clearEpisodes()
         dao.resetSeasonEpisodes()
         enrichMissing()
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putString(KEY_LANGUAGE, language).apply()
     }
 
     suspend fun reloadAll() {
@@ -266,6 +281,9 @@ class MetadataRepository @Inject constructor(
 
     companion object {
         private const val TAG = "MetadataRepository"
+        private const val PREFS = "settings"
+        /** The TMDB language the stored titles and overviews were fetched in. */
+        private const val KEY_LANGUAGE = "metadata_language"
         private const val CAST_SIZE = 8
         private const val NOT_FOUND_RETRY_MS = 7L * 24 * 60 * 60 * 1000
         private const val SEASONS_REFRESH_MS = 7L * 24 * 60 * 60 * 1000

@@ -339,10 +339,10 @@ private fun remaining(res: Resources, item: MediaWithProgress): String? {
     return if (minutes >= 60) res.getString(R.string.remaining_hm, minutes / 60, minutes % 60) else res.getString(R.string.remaining_m, minutes)
 }
 
-/** "3 évad · 44 rész" / "3 seasons · 44 episodes" */
+/** "3 évad · 44 rész" / "3 seasons · 44 eps.", short enough for a poster card. */
 @Composable
 fun seasonsAndEpisodes(seasons: Int, episodes: Int): String =
-    pluralStringResource(R.plurals.seasons_count, seasons, seasons) + " · " + pluralStringResource(R.plurals.episodes_count, episodes, episodes)
+    pluralStringResource(R.plurals.seasons_count, seasons, seasons) + " · " + pluralStringResource(R.plurals.episodes_count_short, episodes, episodes)
 
 @Composable
 fun ScanStatus(state: ScanState) {

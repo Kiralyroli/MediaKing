@@ -138,6 +138,8 @@ fun SettingsScreen(onOpenStorage: () -> Unit, onOpenDiagnostics: () -> Unit, vie
                             AppLanguage.GERMAN -> "Deutsch"
                         },
                         selected = lang == chosen,
+                        // Focus starts here: after a language change the screen comes back on the same pill.
+                        modifier = if (lang == chosen) Modifier.focusRequester(first) else Modifier,
                         onClick = { if (lang != chosen) viewModel.setLanguage(lang) { context.findActivity()?.recreate() } },
                     )
                 }
@@ -150,7 +152,6 @@ fun SettingsScreen(onOpenStorage: () -> Unit, onOpenDiagnostics: () -> Unit, vie
                 title = stringResource(R.string.settings_auto_next),
                 description = stringResource(R.string.settings_auto_next_hint),
                 checked = settings.autoNextEpisode,
-                modifier = Modifier.focusRequester(first),
             ) { value -> viewModel.update { it.copy(autoNextEpisode = value) } }
         }
         item {

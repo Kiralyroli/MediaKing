@@ -1,5 +1,7 @@
 package com.kiroland.mediacenter.ui.library
 
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.horizontalScroll
 import com.kiroland.mediacenter.R
 import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.background
@@ -105,7 +107,8 @@ fun MovieScreen(
                 )
 
                 Spacer(Modifier.height(8.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                // Scrolls sideways when the labels are long (English, German).
+                Row(horizontalArrangement = Arrangement.spacedBy(16.dp), modifier = Modifier.horizontalScroll(rememberScrollState())) {
                     Button(onClick = { onPlay(media.path, false) }, modifier = Modifier.focusRequester(playFocus)) {
                         ButtonContent(Icons.Filled.PlayArrow, stringResource(if (resumeAt != null) R.string.detail_continue else R.string.detail_play))
                     }
@@ -210,5 +213,5 @@ private fun Credit(label: String, names: String) {
 @Composable
 fun ButtonContent(icon: ImageVector, label: String) {
     Icon(icon, contentDescription = null, modifier = Modifier.padding(end = 8.dp).size(20.dp))
-    Text(label)
+    Text(label, maxLines = 1, softWrap = false)
 }
