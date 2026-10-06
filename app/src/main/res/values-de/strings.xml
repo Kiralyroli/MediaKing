@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Side menu -->
+    <string name="nav_search">Suche</string>
+    <string name="nav_home">Startseite</string>
+    <string name="nav_movies">Filme</string>
+    <string name="nav_series">Serien</string>
+    <string name="nav_watched">Gesehen</string>
+    <string name="nav_live_tv">Live-TV</string>
+    <string name="nav_upload">Hochladen</string>
+    <string name="nav_addons">Add-ons</string>
+    <string name="nav_storage">Speicher</string>
+    <string name="nav_settings">Einstellungen</string>
+    <string name="nav_diagnostics">Diagnose</string>
+    <!-- Settings -->
+    <string name="settings_title">Einstellungen</string>
+    <string name="settings_language">Sprache</string>
+    <string name="settings_language_hint">Sprache der App, der Datumsangaben und der Filmdaten (Titel, Beschreibungen). Beim Wechsel werden die Filmdaten in der neuen Sprache neu geladen.</string>
+    <string name="settings_language_system">Wie der Fernseher</string>
+    <string name="settings_playback">Wiedergabe</string>
+    <string name="settings_auto_next">Nächste Folge automatisch</string>
+    <string name="settings_auto_next_hint">Am Ende einer Folge startet sofort die nächste.</string>
+    <string name="settings_auto_subtitles">Automatische Untertitel</string>
+    <string name="settings_auto_subtitles_hint">Bei ungarischem Ton die erzwungenen, bei anderem Ton die vollständigen ungarischen Untertitel.</string>
+    <string name="settings_subscriptions">Meine Abos</string>
+    <string name="settings_subscriptions_hint">„Wo ansehen?“ zeigt diese zuerst und grün markiert. Bis du wählst, zählen die auf dem Fernseher installierten Apps.</string>
+    <string name="settings_app_installed">Die App ist installiert.</string>
+    <string name="settings_app_not_installed">Die App ist nicht installiert.</string>
+    <string name="settings_live_tv">Live-TV</string>
+    <string name="settings_antenna">Antennenfernsehen</string>
+    <string name="settings_antenna_hint">Der eingebaute Tuner des Fernsehers. Braucht eine Antenne und einen Sendersuchlauf.</string>
+    <string name="settings_upload">WLAN-Upload</string>
+    <string name="settings_upload_autostart">Mit der App starten</string>
+    <string name="settings_upload_autostart_hint">Der Upload-Server startet von selbst, wenn du die App öffnest.</string>
+    <string name="settings_library">Mediathek</string>
+    <string name="settings_storage">Laufwerke und Ordner</string>
+    <string name="settings_storage_hint">Laufwerke durchsuchen, Ordner zur Mediathek hinzufügen.</string>
+    <string name="settings_rescan">Jetzt neu durchsuchen</string>
+    <string name="settings_rescan_hint">Nach neuen, gelöschten oder umbenannten Dateien in den Mediathek-Ordnern suchen.</string>
+    <string name="settings_rescan_started">Mediathek wird aktualisiert</string>
+    <string name="settings_reload">Metadaten neu laden</string>
+    <string name="settings_reload_armed">Nochmal drücken: alle TMDB-Daten (auch manuelle Korrekturen) werden gelöscht und neu geladen.</string>
+    <string name="settings_reload_hint">Poster, Beschreibungen und Folgentitel erneut von TMDB laden.</string>
+    <string name="settings_reload_started">Metadaten werden neu geladen</string>
+    <string name="settings_system">System</string>
+    <string name="settings_diagnostics">Diagnose</string>
+    <string name="settings_diagnostics_hint">Gerät, Codecs, Schreibtest der Speicher.</string>
+    <string name="settings_tmdb_set">TMDB: eingerichtet</string>
+    <string name="settings_tmdb_missing">TMDB: kein Token (auf der Upload-Seite einstellbar)</string>
+</resources>

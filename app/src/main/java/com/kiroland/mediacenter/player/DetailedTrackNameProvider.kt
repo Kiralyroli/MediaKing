@@ -18,7 +18,8 @@ object DetailedTrackNameProvider : TrackNameProvider {
 
     const val EXTERNAL_ID_PREFIX = "external:"
 
-    private val HU = Locale.forLanguageTag("hu-HU")
+    // Track languages are named in the app's language ("Magyar", "Hungarian", "Ungarisch").
+    private val HU get() = com.kiroland.mediacenter.util.AppLocale.current
     private val NON_LANGUAGES = setOf(C.LANGUAGE_UNDETERMINED, "mul", "mis", "zxx")
 
     override fun getTrackName(format: Format): String {

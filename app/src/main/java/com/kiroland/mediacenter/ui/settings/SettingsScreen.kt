@@ -1,5 +1,12 @@
 package com.kiroland.mediacenter.ui.settings
 
+import com.kiroland.mediacenter.util.AppLocale
+import com.kiroland.mediacenter.util.AppLanguage
+import com.kiroland.mediacenter.ui.library.PillButton
+import com.kiroland.mediacenter.R
+import androidx.compose.foundation.layout.Row
+import androidx.compose.ui.res.stringResource
+import androidx.annotation.StringRes
 import android.content.Context
 import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
@@ -77,6 +84,15 @@ class SettingsViewModel @Inject constructor(
 
     fun rescan() = scanner.scanAll()
 
+    fun language(): AppLanguage = AppLocale.language(context)
+
+    /** Saves the language, then [restart]s the screen in it; film data follows in the background. */
+    fun setLanguage(language: AppLanguage, restart: () -> Unit) {
+        AppLocale.setLanguage(context, language)
+        appScope.launch { metadata.refreshLanguage() }
+        restart()
+    }
+
     /** Runs in the app scope: a full reload outlives this screen. */
     fun reloadMetadata() {
         appScope.launch { metadata.reloadAll() }
@@ -98,29 +114,57 @@ fun SettingsScreen(onOpenStorage: () -> Unit, onOpenDiagnostics: () -> Unit, vie
         contentPadding = PaddingValues(horizontal = 48.dp, vertical = 36.dp),
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
-        item { Text("Beállítások", style = MaterialTheme.typography.headlineMedium, modifier = Modifier.padding(bottom = 12.dp)) }
+        item { Text(stringResource(R.string.settings_title), style = MaterialTheme.typography.headlineMedium, modifier = Modifier.padding(bottom = 12.dp)) }
 
-        section("Lejátszás")
+        section(R.string.settings_language)
+        item {
+            Text(
+                stringResource(R.string.settings_language_hint),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(bottom = 6.dp),
+            )
+        }
+        item {
+            val chosen = remember { viewModel.language() }
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.padding(vertical = 4.dp)) {
+                AppLanguage.entries.forEach { lang ->
+                    PillButton(
+                        // Each language in its own name, so it can be found whatever is shown now.
+                        text = when (lang) {
+                            AppLanguage.SYSTEM -> stringResource(R.string.settings_language_system)
+                            AppLanguage.HUNGARIAN -> "Magyar"
+                            AppLanguage.ENGLISH -> "English"
+                            AppLanguage.GERMAN -> "Deutsch"
+                        },
+                        selected = lang == chosen,
+                        onClick = { if (lang != chosen) viewModel.setLanguage(lang) { context.findActivity()?.recreate() } },
+                    )
+                }
+            }
+        }
+
+        section(R.string.settings_playback)
         item {
             Toggle(
-                title = "Következő rész automatikusan",
-                description = "Egy sorozatrész végén rögtön indul a következő.",
+                title = stringResource(R.string.settings_auto_next),
+                description = stringResource(R.string.settings_auto_next_hint),
                 checked = settings.autoNextEpisode,
                 modifier = Modifier.focusRequester(first),
             ) { value -> viewModel.update { it.copy(autoNextEpisode = value) } }
         }
         item {
             Toggle(
-                title = "Automatikus feliratválasztás",
-                description = "Magyar hangnál a kényszerített, idegen nyelvű hangnál a teljes magyar felirat.",
+                title = stringResource(R.string.settings_auto_subtitles),
+                description = stringResource(R.string.settings_auto_subtitles_hint),
                 checked = settings.autoSubtitles,
             ) { value -> viewModel.update { it.copy(autoSubtitles = value) } }
         }
 
-        section("Előfizetéseim")
+        section(R.string.settings_subscriptions)
         item {
             Text(
-                "A „Hol nézheted?” részben ezeket teszi előre és jelöli zölddel. Amíg nem választasz, a TV-re telepített appok számítanak.",
+                stringResource(R.string.settings_subscriptions_hint),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(bottom = 6.dp),
@@ -129,76 +173,85 @@ fun SettingsScreen(onOpenStorage: () -> Unit, onOpenDiagnostics: () -> Unit, vie
         items(Subscriptions.choices, key = { "sub-" + it.providerId }) { choice ->
             Toggle(
                 title = choice.name,
-                description = if (viewModel.isAppInstalled(choice.providerId)) "Az app telepítve van." else "Az app nincs telepítve.",
+                description = stringResource(if (viewModel.isAppInstalled(choice.providerId)) R.string.settings_app_installed else R.string.settings_app_not_installed),
                 checked = choice.providerId in subscriptions,
             ) { value -> viewModel.setSubscribed(choice.providerId, value) }
         }
 
-        section("Élő TV")
+        section(R.string.settings_live_tv)
         item {
             Toggle(
-                title = "Antennás TV-adás",
-                description = "A TV beépített tunere (MinDig TV). Antenna és csatornakeresés kell hozzá.",
+                title = stringResource(R.string.settings_antenna),
+                description = stringResource(R.string.settings_antenna_hint),
                 checked = settings.showAntenna,
             ) { value -> viewModel.update { it.copy(showAntenna = value) } }
         }
 
-        section("Wi-Fi feltöltés")
+        section(R.string.settings_upload)
         item {
             Toggle(
-                title = "Indítás az alkalmazással",
-                description = "A feltöltő szerver magától elindul, amikor megnyitod az appot.",
+                title = stringResource(R.string.settings_upload_autostart),
+                description = stringResource(R.string.settings_upload_autostart_hint),
                 checked = settings.uploadAutoStart,
             ) { value -> viewModel.setUploadAutoStart(value) }
         }
 
-        section("Médiatár")
-        item { Action("Tárhelyek és mappák", "Meghajtók böngészése, mappák felvétele a médiatárba.", onClick = onOpenStorage) }
+        section(R.string.settings_library)
+        item { Action(stringResource(R.string.settings_storage), stringResource(R.string.settings_storage_hint), onClick = onOpenStorage) }
         item {
-            Action("Átfésülés most", "Új, törölt vagy átnevezett fájlok keresése a médiatár-mappákban.") {
+            Action(stringResource(R.string.settings_rescan), stringResource(R.string.settings_rescan_hint)) {
                 viewModel.rescan()
-                Toast.makeText(context, "Médiatár frissítése elindult", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, context.getString(R.string.settings_rescan_started), Toast.LENGTH_SHORT).show()
             }
         }
         item {
             Action(
-                title = "Metaadatok újratöltése",
+                title = stringResource(R.string.settings_reload),
                 description = if (reloadArmed) {
-                    "Nyomd meg újra: minden TMDB-adat (a kézi javítások is) törlődik és újra letöltődik."
+                    stringResource(R.string.settings_reload_armed)
                 } else {
-                    "Poszterek, leírások, epizódcímek újra lekérése a TMDB-ről."
+                    stringResource(R.string.settings_reload_hint)
                 },
                 warning = reloadArmed,
             ) {
                 if (reloadArmed) {
                     viewModel.reloadMetadata()
-                    Toast.makeText(context, "Metaadatok újratöltése elindult", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, context.getString(R.string.settings_reload_started), Toast.LENGTH_SHORT).show()
                 }
                 reloadArmed = !reloadArmed
             }
         }
 
-        section("Rendszer")
-        item { Action("Diagnosztika", "Készülék, kodekek, tárhelyek írástesztje.", onClick = onOpenDiagnostics) }
+        section(R.string.settings_system)
+        item { Action(stringResource(R.string.settings_diagnostics), stringResource(R.string.settings_diagnostics_hint), onClick = onOpenDiagnostics) }
         item {
             Action(
                 "MediaKing ${BuildConfig.VERSION_NAME}",
-                "TMDB: " + if (viewModel.tmdbConfigured) "beállítva" else "nincs token (local.properties: tmdb.token)",
+                stringResource(if (viewModel.tmdbConfigured) R.string.settings_tmdb_set else R.string.settings_tmdb_missing),
             ) {}
         }
     }
     LaunchedEffect(Unit) { runCatching { first.requestFocus() } }
 }
 
-private fun LazyListScope.section(title: String) {
+private fun LazyListScope.section(@StringRes title: Int) {
     item {
         Text(
-            title,
+            stringResource(title),
             modifier = Modifier.padding(top = 20.dp, bottom = 4.dp),
             style = MaterialTheme.typography.titleMedium,
             color = MaterialTheme.colorScheme.primary,
         )
     }
+}
+
+private fun Context.findActivity(): android.app.Activity? {
+    var c: Context? = this
+    while (c is android.content.ContextWrapper) {
+        if (c is android.app.Activity) return c
+        c = c.baseContext
+    }
+    return null
 }
 
 @Composable

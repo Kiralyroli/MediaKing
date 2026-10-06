@@ -92,6 +92,23 @@ class MetadataRepository @Inject constructor(
     }
 
     /** Forgets every TMDB match (including manual ones) and looks everything up again. */
+    /**
+     * After a language change: every matched title's texts again, in the new language. The matches
+     * themselves (manual fixes too) stay; episode lists are reloaded by the next enrichment.
+     */
+    suspend fun refreshLanguage() {
+        if (!isConfigured) return
+        for (old in dao.matched()) {
+            val id = old.tmdbId ?: continue
+            runLogged("language ${old.key}") {
+                dao.upsert(if (old.key.startsWith("tv:")) showEntity(old.key, id) else movieEntity(old.key, id))
+            }
+        }
+        dao.clearEpisodes()
+        dao.resetSeasonEpisodes()
+        enrichMissing()
+    }
+
     suspend fun reloadAll() {
         dao.clearEpisodes()
         dao.clearSeasons()

@@ -265,7 +265,7 @@ private fun rowKey(row: EpisodeRow): String = when (row) {
 private fun seasonLabel(season: Int) = if (season == 0) "Különkiadások" else "$season. évad"
 
 private fun formatAirDate(isoDate: String?): String = runCatching {
-    LocalDate.parse(isoDate).format(DateTimeFormatter.ofPattern("yyyy. MMMM d.", Locale.forLanguageTag("hu-HU")))
+    LocalDate.parse(isoDate).format(DateTimeFormatter.ofLocalizedDate(java.time.format.FormatStyle.LONG).withLocale(com.kiroland.mediacenter.util.AppLocale.current))
 }.getOrDefault(isoDate.orEmpty())
 
 private const val MISSING_ALPHA = 0.5f

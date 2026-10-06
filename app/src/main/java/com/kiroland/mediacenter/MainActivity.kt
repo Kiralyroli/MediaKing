@@ -9,6 +9,11 @@ import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+    // The app's own language (settings), not necessarily the TV's.
+    override fun attachBaseContext(newBase: android.content.Context) {
+        super.attachBaseContext(com.kiroland.mediacenter.util.AppLocale.wrap(newBase))
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {

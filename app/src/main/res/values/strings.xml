@@ -1,4 +1,51 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">MediaKing</string>
+    <!-- Side menu -->
+    <string name="nav_search">Keresés</string>
+    <string name="nav_home">Kezdőlap</string>
+    <string name="nav_movies">Filmek</string>
+    <string name="nav_series">Sorozatok</string>
+    <string name="nav_watched">Megnézettek</string>
+    <string name="nav_live_tv">Élő TV</string>
+    <string name="nav_upload">Feltöltés</string>
+    <string name="nav_addons">Kiegészítők</string>
+    <string name="nav_storage">Tárhelyek</string>
+    <string name="nav_settings">Beállítások</string>
+    <string name="nav_diagnostics">Diagnosztika</string>
+    <!-- Settings -->
+    <string name="settings_title">Beállítások</string>
+    <string name="settings_language">Nyelv</string>
+    <string name="settings_language_hint">Az app nyelve, a dátumok és a filmadatok (címek, leírások) is. Váltáskor a filmadatok az új nyelven töltődnek újra.</string>
+    <string name="settings_language_system">A TV nyelve szerint</string>
+    <string name="settings_playback">Lejátszás</string>
+    <string name="settings_auto_next">Következő rész automatikusan</string>
+    <string name="settings_auto_next_hint">Egy sorozatrész végén rögtön indul a következő.</string>
+    <string name="settings_auto_subtitles">Automatikus feliratválasztás</string>
+    <string name="settings_auto_subtitles_hint">Magyar hangnál a kényszerített, idegen nyelvű hangnál a teljes magyar felirat.</string>
+    <string name="settings_subscriptions">Előfizetéseim</string>
+    <string name="settings_subscriptions_hint">A „Hol nézheted?” részben ezeket teszi előre és jelöli zölddel. Amíg nem választasz, a TV-re telepített appok számítanak.</string>
+    <string name="settings_app_installed">Az app telepítve van.</string>
+    <string name="settings_app_not_installed">Az app nincs telepítve.</string>
+    <string name="settings_live_tv">Élő TV</string>
+    <string name="settings_antenna">Antennás TV-adás</string>
+    <string name="settings_antenna_hint">A TV beépített tunere (MinDig TV). Antenna és csatornakeresés kell hozzá.</string>
+    <string name="settings_upload">Wi-Fi feltöltés</string>
+    <string name="settings_upload_autostart">Indítás az alkalmazással</string>
+    <string name="settings_upload_autostart_hint">A feltöltő szerver magától elindul, amikor megnyitod az appot.</string>
+    <string name="settings_library">Médiatár</string>
+    <string name="settings_storage">Tárhelyek és mappák</string>
+    <string name="settings_storage_hint">Meghajtók böngészése, mappák felvétele a médiatárba.</string>
+    <string name="settings_rescan">Átfésülés most</string>
+    <string name="settings_rescan_hint">Új, törölt vagy átnevezett fájlok keresése a médiatár-mappákban.</string>
+    <string name="settings_rescan_started">Médiatár frissítése elindult</string>
+    <string name="settings_reload">Metaadatok újratöltése</string>
+    <string name="settings_reload_armed">Nyomd meg újra: minden TMDB-adat (a kézi javítások is) törlődik és újra letöltődik.</string>
+    <string name="settings_reload_hint">Poszterek, leírások, epizódcímek újra lekérése a TMDB-ről.</string>
+    <string name="settings_reload_started">Metaadatok újratöltése elindult</string>
+    <string name="settings_system">Rendszer</string>
+    <string name="settings_diagnostics">Diagnosztika</string>
+    <string name="settings_diagnostics_hint">Készülék, kodekek, tárhelyek írástesztje.</string>
+    <string name="settings_tmdb_set">TMDB: beállítva</string>
+    <string name="settings_tmdb_missing">TMDB: nincs token (a feltöltő oldalon adható meg)</string>
 </resources>

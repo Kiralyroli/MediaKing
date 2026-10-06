@@ -75,7 +75,8 @@ interface TmdbApi {
 
     companion object {
         const val BASE_URL = "https://api.themoviedb.org/3/"
-        const val LANGUAGE = "hu-HU"
+        /** Placeholder the TMDB client replaces with the app's language (see NetworkModule). */
+        const val LANGUAGE = "app"
         const val FALLBACK_LANGUAGE = "en-US"
     }
 }

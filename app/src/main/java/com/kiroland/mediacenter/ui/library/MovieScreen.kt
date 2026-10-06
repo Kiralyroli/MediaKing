@@ -147,7 +147,7 @@ fun factsLine(year: Int?, meta: MetadataEntity?): String = listOfNotNull(
     year?.toString(),
     meta?.genres,
     meta?.runtimeMinutes?.let { if (it >= 60) "${it / 60} ó ${it % 60} p" else "$it p" },
-    meta?.rating?.let { "★ " + String.format(Locale.forLanguageTag("hu-HU"), "%.1f", it) },
+    meta?.rating?.let { "★ " + String.format(com.kiroland.mediacenter.util.AppLocale.current, "%.1f", it) },
 ).joinToString(" · ")
 
 /** Full-screen artwork, darkened towards the left and bottom so text stays readable. */

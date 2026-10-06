@@ -63,6 +63,11 @@ import javax.inject.Inject
 @OptIn(UnstableApi::class)
 @AndroidEntryPoint
 class PlayerActivity : ComponentActivity() {
+    // The app's own language (settings), not necessarily the TV's.
+    override fun attachBaseContext(newBase: android.content.Context) {
+        super.attachBaseContext(com.kiroland.mediacenter.util.AppLocale.wrap(newBase))
+    }
+
 
     @Inject lateinit var library: LibraryRepository
     // Progress writes must survive the activity finishing.

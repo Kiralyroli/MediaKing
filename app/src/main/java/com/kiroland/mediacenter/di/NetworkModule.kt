@@ -1,6 +1,7 @@
 package com.kiroland.mediacenter.di
 
 import com.kiroland.mediacenter.data.metadata.TmdbCredentials
+import com.kiroland.mediacenter.util.AppLocale
 import com.kiroland.mediacenter.data.metadata.tmdb.TmdbApi
 import dagger.Module
 import dagger.Provides
@@ -31,8 +32,15 @@ object NetworkModule {
         // The token only goes to api.themoviedb.org; image requests use the shared client without it.
         val tmdbClient = okHttp.newBuilder()
             .addInterceptor { chain ->
+                val request = chain.request()
+                // "app" stands for the app's current language, which can change while it runs.
+                val url = if (request.url.queryParameter("language") == TmdbApi.LANGUAGE) {
+                    request.url.newBuilder().setQueryParameter("language", AppLocale.tmdbLanguage).build()
+                } else {
+                    request.url
+                }
                 chain.proceed(
-                    chain.request().newBuilder()
+                    request.newBuilder().url(url)
                         .header("Authorization", "Bearer ${credentials.token}")
                         .header("Accept", "application/json")
                         .build(),

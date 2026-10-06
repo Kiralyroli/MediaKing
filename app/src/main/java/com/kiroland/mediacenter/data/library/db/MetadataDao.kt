@@ -119,6 +119,12 @@ interface MetadataDao {
     @Query("UPDATE watched_title SET rating = :rating WHERE `key` = :key")
     suspend fun rateWatched(key: String, rating: Int?)
 
+    @Query("SELECT * FROM metadata WHERE tmdbId IS NOT NULL")
+    suspend fun matched(): List<MetadataEntity>
+
+    @Query("UPDATE season_metadata SET episodesFetchedAt = NULL")
+    suspend fun resetSeasonEpisodes()
+
     @Query("DELETE FROM metadata")
     suspend fun clearMetadata()
 

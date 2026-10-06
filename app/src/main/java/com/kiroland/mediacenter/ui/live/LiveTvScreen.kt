@@ -318,7 +318,7 @@ private fun Tile(
 }
 
 private fun clock(millis: Long): String =
-    java.text.SimpleDateFormat("HH:mm", java.util.Locale.forLanguageTag("hu-HU")).format(java.util.Date(millis))
+    java.text.SimpleDateFormat("HH:mm", com.kiroland.mediacenter.util.AppLocale.current).format(java.util.Date(millis))
 
 private fun Color.compositeOverBlack(): Color = Color(red * alpha, green * alpha, blue * alpha, 1f)
 

@@ -158,7 +158,7 @@ private fun ProbeSummary(report: ProbeReport) {
 
 private fun WriteTestResult.describe(): String =
     if (success) {
-        "✔ " + (writeMbPerSec?.let { String.format(Locale.forLanguageTag("hu-HU"), "%.1f MB/s", it) } ?: message)
+        "✔ " + (writeMbPerSec?.let { String.format(com.kiroland.mediacenter.util.AppLocale.current, "%.1f MB/s", it) } ?: message)
     } else {
         "✖ $message"
     }

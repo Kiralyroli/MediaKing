@@ -245,4 +245,4 @@ private fun GuideCell(
 }
 
 private fun clock(millis: Long): String =
-    java.text.SimpleDateFormat("HH:mm", java.util.Locale.forLanguageTag("hu-HU")).format(java.util.Date(millis))
+    java.text.SimpleDateFormat("HH:mm", com.kiroland.mediacenter.util.AppLocale.current).format(java.util.Date(millis))

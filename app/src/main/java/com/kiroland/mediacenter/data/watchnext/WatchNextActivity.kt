@@ -17,6 +17,11 @@ import javax.inject.Inject
  */
 @AndroidEntryPoint
 class WatchNextActivity : ComponentActivity() {
+    // The app's own language (settings), not necessarily the TV's.
+    override fun attachBaseContext(newBase: android.content.Context) {
+        super.attachBaseContext(com.kiroland.mediacenter.util.AppLocale.wrap(newBase))
+    }
+
 
     @Inject lateinit var dao: LibraryDao
 

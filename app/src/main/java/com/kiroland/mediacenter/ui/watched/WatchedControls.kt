@@ -58,5 +58,6 @@ fun RatingRow(rating: Int?, onRate: (Int?) -> Unit, modifier: Modifier = Modifie
 /** "★★★★☆" for a list. */
 fun starsText(rating: Int?): String? = rating?.let { "★".repeat(it) + "☆".repeat(5 - it) }
 
-/** "2026.10.06." (short enough for a poster caption) */
-fun watchedDate(millis: Long): String = SimpleDateFormat("yyyy.MM.dd.", Locale.forLanguageTag("hu-HU")).format(Date(millis))
+/** "2026. 10. 06." / "10/6/26" / "06.10.26" (short enough for a poster caption) */
+fun watchedDate(millis: Long): String =
+    java.text.DateFormat.getDateInstance(java.text.DateFormat.SHORT, com.kiroland.mediacenter.util.AppLocale.current).format(Date(millis))

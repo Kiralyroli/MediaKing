@@ -1,5 +1,7 @@
 package com.kiroland.mediacenter.ui.home
 
+import androidx.compose.ui.res.stringResource
+import androidx.annotation.StringRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.layout.Arrangement
@@ -75,19 +77,19 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-private enum class HomeSection(val label: String, val icon: ImageVector, val inDrawer: Boolean = true) {
-    Search("Keresés", Icons.Outlined.Search),
-    Home("Kezdőlap", Icons.Outlined.Home),
-    Movies("Filmek", Icons.Outlined.Movie),
-    Series("Sorozatok", Icons.Outlined.Tv),
-    Watched("Megnézettek", Icons.Outlined.TaskAlt),
-    LiveTv("Élő TV", Icons.Outlined.LiveTv),
-    Upload("Feltöltés", Icons.Outlined.CloudUpload),
-    Addons("Kiegészítők", Icons.Outlined.Extension),
-    Storage("Tárhelyek", Icons.Outlined.Storage, inDrawer = false),
-    Settings("Beállítások", Icons.Outlined.Settings),
+private enum class HomeSection(@StringRes val label: Int, val icon: ImageVector, val inDrawer: Boolean = true) {
+    Search(R.string.nav_search, Icons.Outlined.Search),
+    Home(R.string.nav_home, Icons.Outlined.Home),
+    Movies(R.string.nav_movies, Icons.Outlined.Movie),
+    Series(R.string.nav_series, Icons.Outlined.Tv),
+    Watched(R.string.nav_watched, Icons.Outlined.TaskAlt),
+    LiveTv(R.string.nav_live_tv, Icons.Outlined.LiveTv),
+    Upload(R.string.nav_upload, Icons.Outlined.CloudUpload),
+    Addons(R.string.nav_addons, Icons.Outlined.Extension),
+    Storage(R.string.nav_storage, Icons.Outlined.Storage, inDrawer = false),
+    Settings(R.string.nav_settings, Icons.Outlined.Settings),
     // Reached from Settings, to keep the drawer short enough for a 1080p screen.
-    Diagnostics("Diagnosztika", Icons.Outlined.Info, inDrawer = false),
+    Diagnostics(R.string.nav_diagnostics, Icons.Outlined.Info, inDrawer = false),
 }
 
 @Composable
@@ -193,7 +195,7 @@ private fun NavPill(item: HomeSection, selected: Boolean, onClick: () -> Unit, m
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Icon(item.icon, contentDescription = null, modifier = Modifier.size(20.dp))
-            Text(item.label, style = MaterialTheme.typography.titleMedium, maxLines = 1)
+            Text(stringResource(item.label), style = MaterialTheme.typography.titleMedium, maxLines = 1)
         }
     }
 }
@@ -208,9 +210,11 @@ private fun Clock() {
             now = System.currentTimeMillis()
         }
     }
-    val hu = Locale.forLanguageTag("hu-HU")
+    val locale = com.kiroland.mediacenter.util.AppLocale.current
+    // "kedd, október 6." / "Tuesday, October 6" / "Dienstag, 6. Oktober"
+    val datePattern = android.text.format.DateFormat.getBestDateTimePattern(locale, "EEEEMMMMd")
     Column(Modifier.padding(start = 10.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-        Text(SimpleDateFormat("HH:mm", hu).format(Date(now)), style = MaterialTheme.typography.headlineMedium)
-        Text(SimpleDateFormat("EEEE, MMMM d.", hu).format(Date(now)), style = MaterialTheme.typography.bodySmall, color = TextMuted)
+        Text(SimpleDateFormat("HH:mm", locale).format(Date(now)), style = MaterialTheme.typography.headlineMedium)
+        Text(SimpleDateFormat(datePattern, locale).format(Date(now)), style = MaterialTheme.typography.bodySmall, color = TextMuted)
     }
 }

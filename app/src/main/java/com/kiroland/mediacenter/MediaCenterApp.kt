@@ -34,6 +34,10 @@ class MediaCenterApp : Application(), SingletonImageLoader.Factory {
     // Created here so the add-on guides start loading with the app, not when Live TV first opens.
     @Inject lateinit var epg: EpgRepository
 
+    override fun attachBaseContext(base: android.content.Context) {
+        super.attachBaseContext(com.kiroland.mediacenter.util.AppLocale.wrap(base))
+    }
+
     override fun onCreate() {
         super.onCreate()
         if (settings.current.uploadAutoStart) TransferService.start(this)

@@ -2,7 +2,8 @@ package com.kiroland.mediacenter.data.library
 
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
-import java.util.Locale
+import java.time.format.FormatStyle
+import com.kiroland.mediacenter.util.AppLocale
 
 /** One season as TMDB lists it: its number, episode count and first air date ("2023-05-04"). */
 data class SeasonInfo(val number: Int, val name: String?, val episodeCount: Int, val airDate: String?)
@@ -61,14 +62,14 @@ object SeasonFacts {
         else -> null
     }
 
-    /** "2027. július 8." */
-    fun longDate(isoDate: String?): String? = format(isoDate, "yyyy. MMMM d.")
+    /** "2027. július 8." / "July 8, 2027" / "8. Juli 2027" */
+    fun longDate(isoDate: String?): String? = format(isoDate, FormatStyle.LONG)
 
-    /** "2027. júl. 8." */
-    fun shortDate(isoDate: String?): String? = format(isoDate, "yyyy. MMM d.")
+    /** "2027. júl. 8." / "Jul 8, 2027" / "08.07.2027" */
+    fun shortDate(isoDate: String?): String? = format(isoDate, FormatStyle.MEDIUM)
 
-    private fun format(isoDate: String?, pattern: String): String? = runCatching {
-        LocalDate.parse(isoDate).format(DateTimeFormatter.ofPattern(pattern, Locale.forLanguageTag("hu-HU")))
+    private fun format(isoDate: String?, style: FormatStyle): String? = runCatching {
+        LocalDate.parse(isoDate).format(DateTimeFormatter.ofLocalizedDate(style).withLocale(AppLocale.current))
     }.getOrNull()
 
     fun today(): String = LocalDate.now().toString()
