@@ -21,7 +21,7 @@
     <string name="settings_auto_next">Nächste Folge automatisch</string>
     <string name="settings_auto_next_hint">Am Ende einer Folge startet sofort die nächste.</string>
     <string name="settings_auto_subtitles">Automatische Untertitel</string>
-    <string name="settings_auto_subtitles_hint">Bei ungarischem Ton die erzwungenen, bei anderem Ton die vollständigen ungarischen Untertitel.</string>
+    <string name="settings_auto_subtitles_hint">Bei deutschem Ton die erzwungenen, bei anderem Ton die vollständigen deutschen Untertitel.</string>
     <string name="settings_subscriptions">Meine Abos</string>
     <string name="settings_subscriptions_hint">„Wo ansehen?“ zeigt diese zuerst und grün markiert. Bis du wählst, zählen die auf dem Fernseher installierten Apps.</string>
     <string name="settings_app_installed">Die App ist installiert.</string>

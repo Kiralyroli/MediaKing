@@ -189,7 +189,8 @@ class PlayerActivity : ComponentActivity() {
         val exoPlayer = builder.build().apply {
             // Subtitles are picked by SubtitleChooser once the audio track is known.
             trackSelectionParameters = trackSelectionParameters.buildUpon()
-                .setPreferredAudioLanguages("hu", "en")
+                // The app's language first (a Hungarian dub for a Hungarian app), then English.
+                .setPreferredAudioLanguages(*listOf(AppLocale.current.language, "en").distinct().toTypedArray())
                 .build()
             addListener(object : Player.Listener {
                 override fun onTracksChanged(tracks: Tracks) {
@@ -315,7 +316,7 @@ class PlayerActivity : ComponentActivity() {
             }
 
         val params = exoPlayer.trackSelectionParameters.buildUpon()
-        when (val choice = SubtitleChooser.choose(audioLanguage, options)) {
+        when (val choice = SubtitleChooser.choose(audioLanguage, options, preferred = AppLocale.current.language)) {
             is SubtitleChoice.Select -> {
                 val group = tracks.groups[choice.option.groupIndex].mediaTrackGroup
                 params.setTrackTypeDisabled(C.TRACK_TYPE_TEXT, false)

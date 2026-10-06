@@ -30,4 +30,16 @@ class SubtitleChooserTest {
         assertEquals(SubtitleChoice.Keep, SubtitleChooser.choose("en", listOf(en)))
         assertEquals(SubtitleChoice.Keep, SubtitleChooser.choose(null, emptyList()))
     }
+
+    @Test
+    fun `follows the app language`() {
+        val enFull = TextTrackOption(3, 0, "eng", forced = false)
+        val enForced = TextTrackOption(4, 0, "en", forced = true)
+        val deFull = TextTrackOption(5, 0, "ger", forced = false)
+        val all = listOf(huFull, enFull, enForced, deFull)
+        assertEquals(SubtitleChoice.Select(enForced), SubtitleChooser.choose("en", all, preferred = "en"))
+        assertEquals(SubtitleChoice.Select(enFull), SubtitleChooser.choose("hu", all, preferred = "en"))
+        assertEquals(SubtitleChoice.Select(deFull), SubtitleChooser.choose("en", all, preferred = "de"))
+        assertEquals(SubtitleChoice.Off, SubtitleChooser.choose("deu", all, preferred = "de"))
+    }
 }

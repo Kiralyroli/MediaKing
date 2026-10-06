@@ -11,9 +11,9 @@ sealed interface SubtitleChoice {
 }
 
 /**
- * Hungarian-first automatic subtitle choice:
- * - Hungarian audio (dubbed releases): only the Hungarian *forced* track (signs, foreign dialogue), else none.
- * - Any other audio: the full Hungarian track, falling back to a forced one.
+ * Automatic subtitle choice in the app's language ([choose]'s preferred, Hungarian by default):
+ * - Audio in that language (dubbed releases): only its *forced* track (signs, foreign dialogue), else none.
+ * - Any other audio: the full track in that language, falling back to a forced one.
  */
 object SubtitleChooser {
 
@@ -33,6 +33,7 @@ object SubtitleChooser {
         null, "", "und" -> null
         "hun" -> "hu"
         "eng" -> "en"
+        "ger", "deu" -> "de"
         else -> code
     }
 }

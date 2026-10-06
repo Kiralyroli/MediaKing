@@ -21,7 +21,7 @@
     <string name="settings_auto_next">Next episode automatically</string>
     <string name="settings_auto_next_hint">When an episode ends, the next one starts right away.</string>
     <string name="settings_auto_subtitles">Automatic subtitles</string>
-    <string name="settings_auto_subtitles_hint">With Hungarian audio the forced subtitles, with other audio the full Hungarian ones.</string>
+    <string name="settings_auto_subtitles_hint">With English audio the forced subtitles, with other audio the full English ones.</string>
     <string name="settings_subscriptions">My subscriptions</string>
     <string name="settings_subscriptions_hint">“Where to watch” lists these first and marks them green. Until you choose, the apps installed on the TV count.</string>
     <string name="settings_app_installed">The app is installed.</string>
