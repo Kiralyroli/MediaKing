@@ -33,7 +33,7 @@ import java.io.File
 data class RootDto(val path: String, val name: String, val kind: String, val freeBytes: Long, val totalBytes: Long)
 
 @Serializable
-data class InfoDto(val device: String, val roots: List<RootDto>)
+data class InfoDto(val device: String, val roots: List<RootDto>, val uploadsSupported: Boolean = true)
 
 @Serializable
 data class EntryDto(val name: String, val size: Long)
@@ -87,6 +87,8 @@ data class NetworkFolderDto(val root: String, val username: String = "", val ite
 interface TransferHost {
     val pairingCode: String
     val deviceName: String
+    /** false where the drives cannot be written (Android 11 and later); the rest of the page still works. */
+    val uploadsSupported: Boolean get() = true
     fun roots(): List<RootDto>
     fun onChunk(file: File, total: Long, receivedBefore: Long, bytes: Long)
     fun onFileDone(file: File)
@@ -180,7 +182,7 @@ class TransferServer(
         get("/api/info") {
             if (!authorized(call)) return@get
             val roots = withContext(Dispatchers.IO) { host.roots() }
-            call.respondJson(InfoDto(host.deviceName, roots))
+            call.respondJson(InfoDto(host.deviceName, roots, host.uploadsSupported))
         }
 
         get("/api/list") {

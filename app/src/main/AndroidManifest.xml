@@ -1,7 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+    <!-- Android 10 (the target TV): with requestLegacyExternalStorage, plain file access to whole drives.
+         From 11 the same paths show folders and media files only; from 13 videos take READ_MEDIA_VIDEO. -->
+    <uses-permission
+        android:name="android.permission.READ_EXTERNAL_STORAGE"
+        android:maxSdkVersion="32" />
+    <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
     <!-- On Android 10 this also grants write access to VISIBLE public volumes (USB drives). -->
     <uses-permission
         android:name="android.permission.WRITE_EXTERNAL_STORAGE"

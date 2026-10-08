@@ -106,12 +106,16 @@
       <p class="error" id="remoteError" style="margin:0"></p>
     </section>
 
-    <section>
+    <section id="noUploads" class="hidden">
+      <p class="muted" style="margin:0" data-t="noUploads"></p>
+    </section>
+
+    <section class="uploadOnly">
       <h2 data-t="where"></h2>
       <div class="roots" id="roots"></div>
     </section>
 
-    <section>
+    <section class="uploadOnly">
       <div class="crumbs" id="crumbs"></div>
       <div class="row" style="margin-bottom:8px">
         <span class="muted" id="free"></span>
@@ -121,7 +125,7 @@
       <ul class="list" id="listing"></ul>
     </section>
 
-    <section>
+    <section class="uploadOnly">
       <h2><span data-t="uploadTo"></span> <span id="targetName" style="text-transform:none;color:var(--text)"></span></h2>
       <div class="drop" id="drop">
         <p data-t="dropHere"></p>
@@ -243,6 +247,7 @@ const TEXTS = {
     dropHere: "Húzd ide a fájlokat, vagy",
     chooseFiles: "Fájlok kiválasztása",
     wholeFolder: "Teljes mappa",
+    noUploads: "Ezen a TV-n (Android 11 vagy újabb) az Android nem engedi, hogy az app a meghajtóra írjon, ezért a feltöltés és a törlés nem érhető el. A távirányító és a beállítások lent működnek. Filmeket a meghajtóra számítógépről másolhatsz.",
     uploadTip: "Tipp: feltöltés közben tartsd bekapcsolva a telefon kijelzőjét. Ha megszakad, válaszd ki újra ugyanazt a fájlt ugyanide – onnan folytatja, ahol abbamaradt.",
     addons: "Kiegészítők",
     addonsHelp: "Élő csatornákat adnak az Élő TV menühöz. Egy kiegészítő egy <code>.json</code> leíró fájl (formátum: <code>docs/addons.md</code>); nem futtat kódot. Azonos azonosítójú kiegészítő telepítése frissíti a régit.",
@@ -343,6 +348,7 @@ const TEXTS = {
     dropHere: "Drop files here, or",
     chooseFiles: "Choose files",
     wholeFolder: "Whole folder",
+    noUploads: "On this TV (Android 11 or later) Android does not let the app write to the drive, so uploading and deleting are not available. The remote and the settings below work. Copy films to the drive from a computer.",
     uploadTip: "Tip: keep the phone's screen on while uploading. If it stops, choose the same file for the same place again – it continues where it left off.",
     addons: "Add-ons",
     addonsHelp: "They add live channels to Live TV. An add-on is a <code>.json</code> description file (format: <code>docs/addons.md</code>); it runs no code. Installing an add-on with the same id updates the old one.",
@@ -443,6 +449,7 @@ const TEXTS = {
     dropHere: "Dateien hierher ziehen, oder",
     chooseFiles: "Dateien auswählen",
     wholeFolder: "Ganzer Ordner",
+    noUploads: "Auf diesem Fernseher (Android 11 oder neuer) erlaubt Android der App nicht, auf das Laufwerk zu schreiben, daher sind Hochladen und Löschen nicht verfügbar. Fernbedienung und Einstellungen unten funktionieren. Filme kannst du vom Computer auf das Laufwerk kopieren.",
     uploadTip: "Tipp: Lass beim Hochladen den Bildschirm des Handys an. Bricht es ab, wähle dieselbe Datei für denselben Ort erneut – es geht dort weiter, wo es aufgehört hat.",
     addons: "Add-ons",
     addonsHelp: "Sie fügen dem Live-TV Sender hinzu. Ein Add-on ist eine <code>.json</code>-Beschreibungsdatei (Format: <code>docs/addons.md</code>); es führt keinen Code aus. Ein Add-on mit derselben ID ersetzt das alte.",
@@ -616,6 +623,9 @@ async function start() {
   $("app").classList.remove("hidden");
   $("device").textContent = info.body.device;
   roots = info.body.roots;
+  const uploads = info.body.uploadsSupported !== false;
+  document.querySelectorAll(".uploadOnly").forEach((s) => s.classList.toggle("hidden", !uploads));
+  $("noUploads").classList.toggle("hidden", uploads);
   renderRoots();
   refreshRemote();
   loadAddons();

@@ -2,8 +2,6 @@ package com.kiroland.mediacenter.ui.storage
 
 import com.kiroland.mediacenter.R
 import androidx.compose.ui.res.stringResource
-import android.Manifest
-import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -36,7 +34,6 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import androidx.core.content.ContextCompat
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.tv.material3.Button
@@ -44,13 +41,9 @@ import androidx.tv.material3.Card
 import androidx.tv.material3.Icon
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
+import com.kiroland.mediacenter.data.storage.StoragePermissions
 import com.kiroland.mediacenter.data.storage.StorageVolumeInfo
 import com.kiroland.mediacenter.util.formatBytes
-
-private val STORAGE_PERMISSIONS = arrayOf(
-    Manifest.permission.READ_EXTERNAL_STORAGE,
-    Manifest.permission.WRITE_EXTERNAL_STORAGE,
-)
 
 @Composable
 fun StorageScreen(
@@ -59,13 +52,10 @@ fun StorageScreen(
 ) {
     val context = LocalContext.current
     var permissionGranted by remember {
-        mutableStateOf(
-            ContextCompat.checkSelfPermission(context, Manifest.permission.READ_EXTERNAL_STORAGE) ==
-                PackageManager.PERMISSION_GRANTED,
-        )
+        mutableStateOf(StoragePermissions.isGranted(context))
     }
     val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { result ->
-        permissionGranted = result[Manifest.permission.READ_EXTERNAL_STORAGE] == true
+        permissionGranted = StoragePermissions.isGranted(result)
         viewModel.refresh()
     }
     val volumes by viewModel.volumes.collectAsStateWithLifecycle()
@@ -79,7 +69,7 @@ fun StorageScreen(
         Text(stringResource(R.string.storage_title), style = MaterialTheme.typography.headlineMedium)
 
         if (!permissionGranted) {
-            PermissionRequest(onRequest = { permissionLauncher.launch(STORAGE_PERMISSIONS) })
+            PermissionRequest(onRequest = { permissionLauncher.launch(StoragePermissions.required) })
             return@Column
         }
 

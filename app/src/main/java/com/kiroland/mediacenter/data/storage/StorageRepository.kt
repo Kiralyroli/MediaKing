@@ -4,6 +4,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.os.Build
 import android.os.Environment
 import android.os.StatFs
 import android.os.storage.StorageManager
@@ -21,8 +22,9 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * Plain java.io.File access to mounted volumes. This works on the Android 10 target thanks to
- * requestLegacyExternalStorage; the TV has no DocumentsUI, so SAF tree pickers are not an option.
+ * Plain java.io.File access to mounted volumes. On Android 10 (the target TV, requestLegacyExternalStorage)
+ * that is everything; from 11 the media permission still lists folders and reads videos by path, which is
+ * what the library needs (see [StoragePermissions]). The TV has no DocumentsUI, so SAF pickers are no option.
  */
 @Singleton
 class StorageRepository @Inject constructor(
@@ -34,6 +36,13 @@ class StorageRepository @Inject constructor(
     /** Mount points of the internal shared storage and every attached drive. Blocking (lists /storage). */
     fun volumeRoots(): List<File> = buildList {
         add(Environment.getExternalStorageDirectory())
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            // Listing /storage itself is not allowed any more; the mounted volumes know their own directory.
+            storageManager.storageVolumes
+                .filter { it.state == Environment.MEDIA_MOUNTED || it.state == Environment.MEDIA_MOUNTED_READ_ONLY }
+                .mapNotNullTo(this) { it.directory }
+            return@buildList
+        }
         File("/storage").listFiles()
             ?.filter { it.isDirectory && it.name !in IGNORED_STORAGE_DIRS }
             ?.let(::addAll)

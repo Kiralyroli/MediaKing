@@ -3,6 +3,7 @@ package com.kiroland.mediacenter.data.transfer
 import com.kiroland.mediacenter.data.subtitles.OpenSubtitles
 import com.kiroland.mediacenter.data.remote.RemoteControl
 import com.kiroland.mediacenter.R
+import com.kiroland.mediacenter.data.storage.StoragePermissions
 import com.kiroland.mediacenter.util.AppLocale
 import android.content.Context
 import android.net.ConnectivityManager
@@ -84,12 +85,13 @@ class TransferRepository @Inject constructor(
 
     override val pairingCode: String get() = _state.value.pairingCode
     override val deviceName: String get() = "${Build.MANUFACTURER} ${Build.MODEL}"
+    override val uploadsSupported: Boolean get() = StoragePermissions.hasLegacyAccess
 
     @Synchronized
     fun start() {
         if (server != null) return
         val store = UploadStore(
-            allowedRoots = { storage.volumeRoots() },
+            allowedRoots = { if (uploadsSupported) storage.volumeRoots() else emptyList() },
             protectedFolders = { runBlocking { libraryDao.folders() }.map { File(it.path) } },
         )
         val newServer = TransferServer(this, store) {
@@ -125,6 +127,7 @@ class TransferRepository @Inject constructor(
 
     /** Library folders first (where uploads usually go), then whole drives. */
     override fun roots(): List<RootDto> {
+        if (!uploadsSupported) return emptyList()
         val libraryFolders = runBlocking { libraryDao.folders() }.map { File(it.path) }.filter { it.isDirectory }
         fun dto(file: File, kind: String, name: String): RootDto {
             val stat = runCatching { StatFs(file.path) }.getOrNull()
