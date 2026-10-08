@@ -374,6 +374,8 @@
     <string name="diag_unavailable">nicht verfügbar</string>
     <string name="diag_data_source">Datenquelle</string>
     <string name="diag_movie_data">Film- und Seriendaten</string>
+    <string name="diag_licenses">Open-Source-Lizenzen</string>
+    <string name="diag_licenses_note">MediaKing ist freie Software (GPL-3.0), Quellcode: %1$s</string>
     <string name="diag_hardware">Hardware</string>
     <string name="diag_software">Software (System)</string>
     <string name="diag_unsupported">Nicht unterstützt</string>

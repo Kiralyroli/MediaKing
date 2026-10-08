@@ -121,3 +121,8 @@ Minden push a `main` ágra lefordítja az appot és lefuttatja a teszteket (GitH
 - FFmpeg-dekóder: [Jellyfin media3-ffmpeg-decoder](https://github.com/jellyfin/jellyfin-androidx-media)
 - Betűtípusok: [Space Grotesk](https://github.com/floriankarsten/space-grotesk) és [Manrope](https://github.com/googlefonts/manrope),
   SIL Open Font License 1.1 ([docs/licenses](docs/licenses)).
+
+## Licenc
+
+A MediaKing szabad szoftver: [GNU General Public License v3.0](LICENSE).
+A felhasznált könyvtárak licencei az appban is megtekinthetők (Diagnosztika → Nyílt forrású licencek).

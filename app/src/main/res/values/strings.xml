@@ -375,6 +375,8 @@
     <string name="diag_unavailable">nem érhető el</string>
     <string name="diag_data_source">Adatforrás</string>
     <string name="diag_movie_data">Film- és sorozatadatok</string>
+    <string name="diag_licenses">Nyílt forrású licencek</string>
+    <string name="diag_licenses_note">A MediaKing szabad szoftver (GPL-3.0), a forráskódja: %1$s</string>
     <string name="diag_hardware">Hardveres</string>
     <string name="diag_software">Szoftveres (rendszer)</string>
     <string name="diag_unsupported">Nem támogatott</string>

@@ -12,6 +12,9 @@ import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
@@ -31,6 +34,11 @@ import java.util.Locale
 @Composable
 fun DiagnosticsScreen(viewModel: DiagnosticsViewModel = hiltViewModel()) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    var openLicense by remember { mutableStateOf<OpenSourceComponent?>(null) }
+    openLicense?.let { component ->
+        LicenseText(component, onClose = { openLicense = null })
+        return
+    }
 
     LazyColumn(
         modifier = Modifier
@@ -104,6 +112,23 @@ fun DiagnosticsScreen(viewModel: DiagnosticsViewModel = hiltViewModel()) {
                 "This product uses the TMDB API but is not endorsed or certified by TMDB.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+
+        section(R.string.diag_licenses)
+        item {
+            Text(
+                stringResource(R.string.diag_licenses_note, SOURCE_URL),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        items(OPEN_SOURCE_COMPONENTS) { component ->
+            ListItem(
+                selected = false,
+                onClick = { openLicense = component },
+                headlineContent = { Text(component.name) },
+                trailingContent = { Text(component.license) },
             )
         }
     }
