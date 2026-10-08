@@ -27,6 +27,8 @@ android {
             rootProject.file("local.properties").takeIf { it.exists() }?.inputStream()?.use { load(it) }
         }
         buildConfigField("String", "TMDB_TOKEN", "\"${localProperties.getProperty("tmdb.token", "")}\"")
+        // OpenSubtitles API key, also untracked (opensubtitles.key=...); the upload page can override it.
+        buildConfigField("String", "OPENSUBTITLES_KEY", "\"${localProperties.getProperty("opensubtitles.key", "")}\"")
     }
 
     buildTypes {

@@ -37,7 +37,7 @@ class SubtitleException(message: String) : IOException(message)
 
 /**
  * OpenSubtitles.com (REST API v1). The API key is the user's own (a free "API consumer" on the site),
- * given on the upload page; an account is optional and only raises the daily download limit.
+ * given on the upload page or built in from local.properties; an account is optional and only raises the daily download limit.
  * Everything is stored on the TV only.
  */
 @Singleton
@@ -51,19 +51,19 @@ class OpenSubtitles @Inject constructor(
     @Volatile
     private var token: String? = null
 
-    val apiKey: String get() = prefs.getString(KEY_API, null).orEmpty()
+    val apiKey: String get() = prefs.getString(KEY_API, null).orEmpty().ifBlank { BuildConfig.OPENSUBTITLES_KEY }
     val username: String get() = prefs.getString(KEY_USER, null).orEmpty()
     val isConfigured: Boolean get() = apiKey.isNotBlank()
 
-    /** Checks the key (and the account, if given) with OpenSubtitles before storing them. */
+    /** Checks the key (and the account, if given) with OpenSubtitles before storing them. A blank key keeps the built-in one. */
     suspend fun setAccount(apiKey: String, username: String, password: String): Result<Unit> = runCatching {
-        val key = apiKey.trim()
+        val key = apiKey.trim().ifBlank { BuildConfig.OPENSUBTITLES_KEY }
         require(key.length in 16..128 && key.none { it.isWhitespace() }) { AppLocale.text(R.string.subs_key_invalid) }
         withContext(Dispatchers.IO) {
             get("$BASE/infos/languages", key).use { if (!it.isSuccessful) throw SubtitleException(AppLocale.text(R.string.subs_key_rejected)) }
             if (username.isNotBlank()) login(key, username.trim(), password)
         }
-        prefs.edit().putString(KEY_API, key).putString(KEY_USER, username.trim()).putString(KEY_PASSWORD, password).apply()
+        prefs.edit().putString(KEY_API, apiKey.trim()).putString(KEY_USER, username.trim()).putString(KEY_PASSWORD, password).apply()
     }
 
     fun clear() {

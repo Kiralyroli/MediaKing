@@ -1093,7 +1093,9 @@ $("tmdbClear").addEventListener("click", async () => {
 });
 
 // --- OpenSubtitles ---
+let subsConfigured = false;
 function showSubtitles(status) {
+  subsConfigured = status.configured;
   $("subsStatus").textContent = !status.configured ? t("subsNone") : status.username ? t("subsSetUser", status.username) : t("subsSet");
   $("subsClear").classList.toggle("hidden", !status.configured);
 }
@@ -1107,7 +1109,7 @@ async function loadSubtitles() {
 
 $("subsSave").addEventListener("click", async () => {
   const request = { apiKey: $("subsKey").value.trim(), username: $("subsUser").value.trim(), password: $("subsPassword").value };
-  if (!request.apiKey) return;
+  if (!request.apiKey && !subsConfigured) return;
   $("subsSave").disabled = true;
   $("subsError").textContent = t("connecting");
   try {
