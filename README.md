@@ -142,3 +142,5 @@ Minden push a `main` ágra lefordítja az appot és lefuttatja a teszteket (GitH
 
 A MediaKing szabad szoftver: [GNU General Public License v3.0](LICENSE).
 A felhasznált könyvtárak licencei az appban is megtekinthetők (Diagnosztika → Nyílt forrású licencek).
+
+Adatvédelmi nyilatkozat: [docs/privacy-policy.md](docs/privacy-policy.md).
