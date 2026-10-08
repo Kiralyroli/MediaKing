@@ -13,13 +13,22 @@ import android.net.wifi.WifiManager
 import android.os.IBinder
 import android.os.PowerManager
 import com.kiroland.mediacenter.MainActivity
+import com.kiroland.mediacenter.data.storage.StoragePermissions
+import dagger.hilt.EntryPoint
+import dagger.hilt.InstallIn
 import dagger.hilt.android.AndroidEntryPoint
+import dagger.hilt.android.EntryPointAccessors
+import dagger.hilt.components.SingletonComponent
 import javax.inject.Inject
 
 /**
  * Keeps the upload server alive while the user has it switched on. Android TV kills background apps
  * freely, so this runs in the foreground and holds a Wi-Fi lock (no power-save radio) and a partial
  * wake lock (CPU keeps writing to the drive) for as long as the server is up.
+ *
+ * Only where uploads are possible (Android 10 and older, see [StoragePermissions]). From Android 11 the
+ * server only serves the remote and the settings, which need no more than the app being open, so it
+ * runs in the app's process without a foreground service.
  */
 @AndroidEntryPoint
 class TransferService : Service() {
@@ -93,11 +102,28 @@ class TransferService : Service() {
         private const val ACTION_STOP = "com.kiroland.mediacenter.STOP_TRANSFER"
 
         fun start(context: Context) {
-            context.startForegroundService(Intent(context, TransferService::class.java))
+            if (StoragePermissions.hasLegacyAccess) {
+                context.startForegroundService(Intent(context, TransferService::class.java))
+            } else {
+                repository(context).start()
+            }
         }
 
         fun stop(context: Context) {
-            context.stopService(Intent(context, TransferService::class.java))
+            if (StoragePermissions.hasLegacyAccess) {
+                context.stopService(Intent(context, TransferService::class.java))
+            } else {
+                repository(context).stop()
+            }
         }
+
+        private fun repository(context: Context): TransferRepository =
+            EntryPointAccessors.fromApplication(context, TransferEntryPoint::class.java).transferRepository()
+    }
+
+    @EntryPoint
+    @InstallIn(SingletonComponent::class)
+    interface TransferEntryPoint {
+        fun transferRepository(): TransferRepository
     }
 }

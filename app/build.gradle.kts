@@ -17,7 +17,7 @@ android {
         // The target TV runs Android 10; older devices are out of scope.
         minSdk = 29
         targetSdk = 36
-        versionCode = 1
+        versionCode = 2
         versionName = "0.1"
         // TV boxes are ARM; dropping x86 halves the FFmpeg payload.
         ndk { abiFilters += listOf("armeabi-v7a", "arm64-v8a") }

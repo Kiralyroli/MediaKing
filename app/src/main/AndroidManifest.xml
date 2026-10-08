@@ -15,8 +15,10 @@
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+    <!-- The upload server's foreground service, used only up to Android 10 (see TransferService). -->
+    <uses-permission
+        android:name="android.permission.FOREGROUND_SERVICE"
+        android:maxSdkVersion="29" />
     <!-- Publishing our own "continue watching" items to the home screen's Watch Next row. -->
     <uses-permission android:name="com.android.providers.tv.permission.WRITE_EPG_DATA" />
 
@@ -107,10 +109,9 @@
             </intent-filter>
         </activity>
 
-        <!-- Wi-Fi upload server: runs in the foreground while the user has it switched on. -->
+        <!-- Wi-Fi upload server: runs in the foreground while the user has it switched on (Android 10 and older). -->
         <service
             android:name=".data.transfer.TransferService"
-            android:exported="false"
-            android:foregroundServiceType="dataSync" />
+            android:exported="false" />
     </application>
 </manifest>
