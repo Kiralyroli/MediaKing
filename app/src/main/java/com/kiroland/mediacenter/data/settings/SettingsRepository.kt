@@ -1,6 +1,7 @@
 package com.kiroland.mediacenter.data.settings
 
 import android.content.Context
+import com.kiroland.mediacenter.data.streaming.Regions
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -22,6 +23,8 @@ data class Settings(
      * "the ones whose app is on this TV".
      */
     val subscriptions: Set<Int>? = null,
+    /** Country for "where to watch" (ISO code); null follows the TV's region (see Regions). */
+    val region: String? = null,
 )
 
 /** App preferences; small and synchronous, so SharedPreferences behind a StateFlow is enough. */
@@ -33,6 +36,9 @@ class SettingsRepository @Inject constructor(@ApplicationContext context: Contex
     val settings: StateFlow<Settings> = _settings.asStateFlow()
     val current: Settings get() = _settings.value
 
+    /** The country "where to watch" is about. */
+    val region: String get() = Regions.effective(current.region)
+
     fun update(transform: (Settings) -> Settings) {
         val next = transform(_settings.value)
         prefs.edit()
@@ -43,6 +49,7 @@ class SettingsRepository @Inject constructor(@ApplicationContext context: Contex
             .apply {
                 val subscriptions = next.subscriptions
                 if (subscriptions == null) remove(SUBSCRIPTIONS) else putStringSet(SUBSCRIPTIONS, subscriptions.mapTo(HashSet()) { it.toString() })
+                if (next.region == null) remove(REGION) else putString(REGION, next.region)
             }
             .apply()
         _settings.value = next
@@ -54,6 +61,7 @@ class SettingsRepository @Inject constructor(@ApplicationContext context: Contex
         showAntenna = prefs.getBoolean(SHOW_ANTENNA, false),
         uploadAutoStart = prefs.getBoolean(UPLOAD_AUTOSTART, false),
         subscriptions = prefs.getStringSet(SUBSCRIPTIONS, null)?.mapNotNullTo(HashSet()) { it.toIntOrNull() },
+        region = prefs.getString(REGION, null),
     )
 
     private companion object {
@@ -62,5 +70,6 @@ class SettingsRepository @Inject constructor(@ApplicationContext context: Contex
         const val SHOW_ANTENNA = "show_antenna"
         const val UPLOAD_AUTOSTART = "upload_autostart"
         const val SUBSCRIPTIONS = "streaming_subscriptions"
+        const val REGION = "streaming_region"
     }
 }

@@ -24,6 +24,8 @@
     <string name="settings_auto_subtitles_hint">Bei deutschem Ton die erzwungenen, bei anderem Ton die vollständigen deutschen Untertitel.</string>
     <string name="settings_subscriptions">Meine Abos</string>
     <string name="settings_subscriptions_hint">„Wo ansehen?“ zeigt diese zuerst und grün markiert. Bis du wählst, zählen die auf dem Fernseher installierten Apps.</string>
+    <string name="settings_region">Land</string>
+    <string name="settings_region_auto">Wie der Fernseher: %1$s</string>
     <string name="settings_app_installed">Die App ist installiert.</string>
     <string name="settings_app_not_installed">Die App ist nicht installiert.</string>
     <string name="settings_live_tv">Live-TV</string>
@@ -239,6 +241,7 @@
     <string name="live_title">Live-TV</string>
     <string name="live_intro_in_app">Sender laufen im eingebauten Player. Umschalten mit hoch/runter oder den Programmtasten.</string>
     <string name="live_intro_mediaklikk">Die öffentlich-rechtlichen Sender öffnen sich in der offiziellen Médiaklikk-App, falls installiert, sonst auf der Live-Seite von mediaklikk.hu im Browser des Fernsehers.</string>
+    <string name="live_intro_addons">Live-Sender fügst du mit Add-ons hinzu (Menü Add-ons).</string>
     <string name="live_guide">Programmführer</string>
     <string name="live_public">Öffentlich-rechtlich</string>
     <string name="live_play_here">Wiedergabe hier · %1$s</string>
@@ -259,6 +262,7 @@
     <!-- Upload, storage, add-ons, browser, diagnostics -->
     <string name="upload_title">WLAN-Upload</string>
     <string name="upload_intro">Lade Filme und Serien vom Handy oder Computer im Browser direkt auf das Laufwerk am Fernseher hoch. Das Gerät muss im selben Netzwerk sein.</string>
+    <string name="upload_intro_no_writes">Vom Handy oder Computer, im Browser: Fernbedienung und Einstellungen für Filmdaten und Untertitel-Downloads. Das Gerät muss im selben Netzwerk sein. Auf dieser Android-Version kann nichts auf das Laufwerk hochgeladen werden.</string>
     <string name="upload_start">Einschalten</string>
     <string name="upload_stop">Ausschalten</string>
     <string name="upload_new_code">Neuer Kopplungscode</string>

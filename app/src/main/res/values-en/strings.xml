@@ -24,6 +24,8 @@
     <string name="settings_auto_subtitles_hint">With English audio the forced subtitles, with other audio the full English ones.</string>
     <string name="settings_subscriptions">My subscriptions</string>
     <string name="settings_subscriptions_hint">“Where to watch” lists these first and marks them green. Until you choose, the apps installed on the TV count.</string>
+    <string name="settings_region">Country</string>
+    <string name="settings_region_auto">From the TV: %1$s</string>
     <string name="settings_app_installed">The app is installed.</string>
     <string name="settings_app_not_installed">The app is not installed.</string>
     <string name="settings_live_tv">Live TV</string>
@@ -239,6 +241,7 @@
     <string name="live_title">Live TV</string>
     <string name="live_intro_in_app">Channels play in the built-in player. Switch channels with up/down or the channel buttons.</string>
     <string name="live_intro_mediaklikk">Public channels open in the official Médiaklikk app if installed, otherwise on mediaklikk.hu\'s live page in the TV\'s browser.</string>
+    <string name="live_intro_addons">Add live channels with add-ons (Add-ons menu).</string>
     <string name="live_guide">TV guide</string>
     <string name="live_public">Public broadcasting</string>
     <string name="live_play_here">Plays here · %1$s</string>
@@ -259,6 +262,7 @@
     <!-- Upload, storage, add-ons, browser, diagnostics -->
     <string name="upload_title">Wi-Fi upload</string>
     <string name="upload_intro">Upload films and shows from a phone or computer, in the browser, straight to the drive plugged into the TV. The device must be on the same network.</string>
+    <string name="upload_intro_no_writes">From a phone or computer, in the browser: a remote and the settings for film data and subtitle downloads. The device must be on the same network. On this Android version nothing can be uploaded to the drive.</string>
     <string name="upload_start">Turn on</string>
     <string name="upload_stop">Turn off</string>
     <string name="upload_new_code">New pairing code</string>

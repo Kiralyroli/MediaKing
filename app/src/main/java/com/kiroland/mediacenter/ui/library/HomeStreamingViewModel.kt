@@ -8,7 +8,6 @@ import com.kiroland.mediacenter.data.news.NewsRepository
 import kotlinx.coroutines.launch
 import com.kiroland.mediacenter.data.settings.SettingsRepository
 import com.kiroland.mediacenter.data.streaming.StreamingRepository
-import com.kiroland.mediacenter.data.streaming.Subscriptions
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.SharingStarted
@@ -40,13 +39,13 @@ class HomeStreamingViewModel @Inject constructor(
     val watchlist: StateFlow<List<WatchlistEntity>> =
         streaming.watchlist.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
-    /** Reloaded when the subscriptions change; one shelf per subscription, in the settings' order. */
+    /** Reloaded when the subscriptions or the country change; one shelf per subscription, in the settings' order. */
     @OptIn(ExperimentalCoroutinesApi::class)
     val popular: StateFlow<List<PopularShelf>> = settings.settings
-        .map { streaming.mySubscriptions() }
+        .map { streaming.mySubscriptions() to streaming.region }
         .distinctUntilChanged()
-        .mapLatest { mine ->
-            Subscriptions.choices.filter { it.providerId in mine }.mapNotNull { choice ->
+        .mapLatest { (mine, _) ->
+            streaming.subscriptionChoices().filter { it.providerId in mine }.mapNotNull { choice ->
                 streaming.popularOn(choice.providerId).takeIf { it.isNotEmpty() }?.let { PopularShelf(choice.name, it) }
             }
         }

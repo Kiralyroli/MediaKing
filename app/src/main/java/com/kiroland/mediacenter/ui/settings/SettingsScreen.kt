@@ -50,7 +50,22 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 import androidx.compose.foundation.lazy.items
 import com.kiroland.mediacenter.data.streaming.StreamingRepository
-import com.kiroland.mediacenter.data.streaming.Subscriptions
+import com.kiroland.mediacenter.data.streaming.Regions
+import com.kiroland.mediacenter.data.streaming.StreamingProviders
+import com.kiroland.mediacenter.data.streaming.Subscribable
+import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.background
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Check
+import androidx.tv.material3.Icon
+import com.kiroland.mediacenter.ui.theme.Background
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.mapLatest
+import kotlinx.coroutines.flow.stateIn
 
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
@@ -65,6 +80,22 @@ class SettingsViewModel @Inject constructor(
     fun subscriptions(): Set<Int> = streaming.mySubscriptions()
 
     fun isAppInstalled(providerId: Int): Boolean = streaming.isAppInstalled(providerId)
+
+    /** No app known for the service: "installed" or not means nothing then. */
+    fun hasKnownApp(providerId: Int): Boolean = providerId in StreamingProviders.apps
+
+    /** The services offered in the chosen country, reloaded when the country changes. */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val choices: StateFlow<List<Subscribable>> = repository.settings
+        .map { repository.region }
+        .distinctUntilChanged()
+        .mapLatest { streaming.subscriptionChoices() }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    /** The chosen country, or null when it follows the TV. */
+    fun chosenRegion(): String? = repository.current.region
+
+    fun setRegion(code: String?) = repository.update { it.copy(region = code) }
 
     fun setSubscribed(providerId: Int, subscribed: Boolean) {
         val now = streaming.mySubscriptions()
@@ -108,8 +139,29 @@ fun SettingsScreen(onOpenStorage: () -> Unit, onOpenDiagnostics: () -> Unit, vie
     // Destructive action: first press arms, second runs (as elsewhere in the app).
     var reloadArmed by remember { mutableStateOf(false) }
     val first = remember { FocusRequester() }
+    val choices by viewModel.choices.collectAsStateWithLifecycle()
+    var pickingRegion by remember { mutableStateOf(false) }
+    var pickerUsed by remember { mutableStateOf(false) }
+    val regionRow = remember { FocusRequester() }
+    // Outlives the list while the country picker is shown, so the list comes back where it was.
+    val listState = rememberLazyListState()
+    val locale = AppLocale.current
+
+    if (pickingRegion) {
+        RegionPicker(
+            chosen = settings.region,
+            locale = locale,
+            onPick = { code ->
+                viewModel.setRegion(code)
+                pickingRegion = false
+            },
+            onClose = { pickingRegion = false },
+        )
+        return
+    }
 
     LazyColumn(
+        state = listState,
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(horizontal = 48.dp, vertical = 36.dp),
         verticalArrangement = Arrangement.spacedBy(4.dp),
@@ -171,10 +223,30 @@ fun SettingsScreen(onOpenStorage: () -> Unit, onOpenDiagnostics: () -> Unit, vie
                 modifier = Modifier.padding(bottom = 6.dp),
             )
         }
-        items(Subscriptions.choices, key = { "sub-" + it.providerId }) { choice ->
+        item {
+            val chosen = settings.region
+            Action(
+                title = stringResource(R.string.settings_region),
+                description = if (chosen == null) {
+                    stringResource(R.string.settings_region_auto, Regions.displayName(Regions.effective(null), locale))
+                } else {
+                    Regions.displayName(chosen, locale)
+                },
+                modifier = Modifier.focusRequester(regionRow),
+                onClick = {
+                    pickingRegion = true
+                    pickerUsed = true
+                },
+            )
+        }
+        items(choices, key = { "sub-" + it.providerId }) { choice ->
             Toggle(
                 title = choice.name,
-                description = stringResource(if (viewModel.isAppInstalled(choice.providerId)) R.string.settings_app_installed else R.string.settings_app_not_installed),
+                description = when {
+                    !viewModel.hasKnownApp(choice.providerId) -> ""
+                    viewModel.isAppInstalled(choice.providerId) -> stringResource(R.string.settings_app_installed)
+                    else -> stringResource(R.string.settings_app_not_installed)
+                },
                 checked = choice.providerId in subscriptions,
             ) { value -> viewModel.setSubscribed(choice.providerId, value) }
         }
@@ -233,6 +305,49 @@ fun SettingsScreen(onOpenStorage: () -> Unit, onOpenDiagnostics: () -> Unit, vie
         }
     }
     LaunchedEffect(Unit) { runCatching { first.requestFocus() } }
+    // Back on the list after choosing: where the user left it.
+    LaunchedEffect(pickingRegion) { if (!pickingRegion && pickerUsed) runCatching { regionRow.requestFocus() } }
+}
+
+/** Every country, the TV's own first; covers the settings while open. */
+@Composable
+private fun RegionPicker(chosen: String?, locale: java.util.Locale, onPick: (String?) -> Unit, onClose: () -> Unit) {
+    BackHandler(onBack = onClose)
+    val countries = remember(locale) { Regions.all(locale) }
+    val current = remember { FocusRequester() }
+    LazyColumn(
+        modifier = Modifier.fillMaxSize().background(Background),
+        contentPadding = PaddingValues(horizontal = 48.dp, vertical = 36.dp),
+        verticalArrangement = Arrangement.spacedBy(2.dp),
+    ) {
+        item { Text(stringResource(R.string.settings_region), style = MaterialTheme.typography.headlineMedium, modifier = Modifier.padding(bottom = 12.dp)) }
+        item {
+            RegionRow(
+                stringResource(R.string.settings_region_auto, Regions.displayName(Regions.effective(null), locale)),
+                selected = chosen == null,
+                modifier = if (chosen == null) Modifier.focusRequester(current) else Modifier,
+            ) { onPick(null) }
+        }
+        items(countries, key = { it }) { code ->
+            RegionRow(
+                Regions.displayName(code, locale),
+                selected = code == chosen,
+                modifier = if (code == chosen) Modifier.focusRequester(current) else Modifier,
+            ) { onPick(code) }
+        }
+    }
+    LaunchedEffect(Unit) { runCatching { current.requestFocus() } }
+}
+
+@Composable
+private fun RegionRow(name: String, selected: Boolean, modifier: Modifier, onClick: () -> Unit) {
+    ListItem(
+        selected = selected,
+        onClick = onClick,
+        modifier = modifier,
+        headlineContent = { Text(name) },
+        trailingContent = if (selected) ({ Icon(Icons.Outlined.Check, contentDescription = null) }) else null,
+    )
 }
 
 private fun LazyListScope.section(@StringRes title: Int) {
@@ -268,16 +383,17 @@ private fun Toggle(
         onClick = { onChange(!checked) },
         modifier = modifier,
         headlineContent = { Text(title) },
-        supportingContent = { Text(description) },
+        supportingContent = if (description.isEmpty()) null else ({ Text(description) }),
         trailingContent = { Switch(checked = checked, onCheckedChange = null) },
     )
 }
 
 @Composable
-private fun Action(title: String, description: String, warning: Boolean = false, onClick: () -> Unit) {
+private fun Action(title: String, description: String, warning: Boolean = false, modifier: Modifier = Modifier, onClick: () -> Unit) {
     ListItem(
         selected = false,
         onClick = onClick,
+        modifier = modifier,
         headlineContent = { Text(title) },
         supportingContent = { Text(description, color = if (warning) Color(0xFFFFC857) else MaterialTheme.colorScheme.onSurfaceVariant) },
     )

@@ -20,7 +20,7 @@ import kotlinx.coroutines.CancellationException
 import javax.inject.Inject
 import javax.inject.Singleton
 
-/** Where to watch a title in Hungary, and opening it in the provider's app. */
+/** Where to watch a title in the user's country (see [Regions]), and opening it in the provider's app. */
 @Singleton
 class StreamingRepository @Inject constructor(
     @param:ApplicationContext private val context: Context,
@@ -65,15 +65,19 @@ class StreamingRepository @Inject constructor(
     /** Offers change often, so they are kept for a few hours only, in memory. */
     private val cache = HashMap<String, Pair<Long, Availability>>()
 
-    /** null if unknown (no token, offline); an empty list if no provider in Hungary has it. */
+    /** The country offers are looked up for. */
+    val region: String get() = settings.region
+
+    /** null if unknown (no token, offline); an empty list if no provider in the country has it. */
     suspend fun availability(isMovie: Boolean, tmdbId: Int): Availability? {
         if (!credentials.isConfigured) return null
-        val key = (if (isMovie) "movie:" else "tv:") + tmdbId
+        val region = region
+        val key = (if (isMovie) "movie:" else "tv:") + tmdbId + "/" + region
         synchronized(cache) {
             cache[key]?.takeIf { System.currentTimeMillis() - it.first < CACHE_MS }?.let { return it.second }
         }
         return try {
-            val country = api.watchProviders(if (isMovie) "movie" else "tv", tmdbId).results[REGION]
+            val country = api.watchProviders(if (isMovie) "movie" else "tv", tmdbId).results[region]
             val result = Availability(country?.let(StreamingProviders::merge).orEmpty())
             synchronized(cache) { cache[key] = System.currentTimeMillis() to result }
             result
@@ -90,20 +94,22 @@ class StreamingRepository @Inject constructor(
 
     private val popularCache = HashMap<String, Pair<Long, List<Title>>>()
 
-    /** What is popular on one provider in Hungary (films and series together); empty when unknown. */
+    /** What is popular on one provider in the country (films and series together); empty when unknown. */
     suspend fun popularOn(providerId: Int): List<Title> {
         if (!credentials.isConfigured) return emptyList()
+        val region = region
+        val cacheKey = "$providerId/$region/${AppLocale.tmdbLanguage}"
         synchronized(popularCache) {
-            popularCache["$providerId/${AppLocale.tmdbLanguage}"]?.takeIf { System.currentTimeMillis() - it.first < CACHE_MS }?.let { return it.second }
+            popularCache[cacheKey]?.takeIf { System.currentTimeMillis() - it.first < CACHE_MS }?.let { return it.second }
         }
         return try {
             fun List<DiscoverResult>.titles(isMovie: Boolean) = filter { it.posterPath != null }.map {
                 Title(isMovie, it.id, (if (isMovie) it.title else it.name).orEmpty(), (if (isMovie) it.releaseDate else it.firstAirDate)?.take(4)?.toIntOrNull(), it.posterPath) to it.popularity
             }
-            val movies = api.discover("movie", providerId.toString()).results.titles(isMovie = true)
-            val series = api.discover("tv", providerId.toString()).results.titles(isMovie = false)
+            val movies = api.discover("movie", providerId.toString(), region).results.titles(isMovie = true)
+            val series = api.discover("tv", providerId.toString(), region).results.titles(isMovie = false)
             val result = mergeByPopularity(movies, series, { it.second }, { it.first.title }, limit = 20).map { it.first }
-            synchronized(popularCache) { popularCache["$providerId/${AppLocale.tmdbLanguage}"] = System.currentTimeMillis() to result }
+            synchronized(popularCache) { popularCache[cacheKey] = System.currentTimeMillis() to result }
             result
         } catch (e: CancellationException) {
             throw e
@@ -122,7 +128,8 @@ class StreamingRepository @Inject constructor(
     suspend fun byGenre(genre: BrowseGenre): List<Title> {
         if (!credentials.isConfigured) return emptyList()
         val providers = mySubscriptions().sorted().joinToString("|").ifEmpty { null }
-        val cacheKey = "${genre.name}/$providers/${AppLocale.tmdbLanguage}"
+        val region = region
+        val cacheKey = "${genre.name}/$providers/$region/${AppLocale.tmdbLanguage}"
         synchronized(genreCache) {
             genreCache[cacheKey]?.takeIf { System.currentTimeMillis() - it.first < CACHE_MS }?.let { return it.second }
         }
@@ -132,7 +139,7 @@ class StreamingRepository @Inject constructor(
                 return api.discover(
                     type = type,
                     providers = providers,
-                    region = if (providers == null) null else REGION,
+                    region = if (providers == null) null else region,
                     monetization = if (providers == null) null else "flatrate",
                     genres = genres,
                     // Without a provider filter the list would start with barely known titles.
@@ -176,8 +183,42 @@ class StreamingRepository @Inject constructor(
     /** The user's subscriptions: chosen in the settings, or the services whose app is installed. */
     fun mySubscriptions(): Set<Int> = Subscriptions.effective(
         settings.current.subscriptions,
-        Subscriptions.choices.map { it.providerId }.filterTo(HashSet(), ::isAppInstalled),
+        StreamingProviders.apps.keys.filterTo(HashSet(), ::isAppInstalled),
     )
+
+    private val choicesCache = HashMap<String, List<Subscribable>>()
+    private val choicesPrefs = context.getSharedPreferences("streaming_providers", Context.MODE_PRIVATE)
+
+    /**
+     * The services to offer in the settings for the country, in its own order: the biggest ones, and any
+     * the user already has. The country's list is kept for the session, and the last good one also on
+     * disk, for when TMDB cannot be reached.
+     */
+    suspend fun subscriptionChoices(): List<Subscribable> =
+        Subscriptions.choices(servicesInRegion(), keep = mySubscriptions() + settings.current.subscriptions.orEmpty())
+
+    private suspend fun servicesInRegion(): List<Subscribable> {
+        val region = region
+        synchronized(choicesCache) { choicesCache[region]?.let { return it } }
+        val fetched = if (!credentials.isConfigured) null else try {
+            Subscriptions.servicesIn(region, api.regionProviders("movie", region).results, api.regionProviders("tv", region).results)
+                .takeIf { it.isNotEmpty() }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.w(TAG, "Providers in $region failed: ${e.message}")
+            null
+        }
+        if (fetched != null) {
+            synchronized(choicesCache) { choicesCache[region] = fetched }
+            choicesPrefs.edit().putString(region, fetched.joinToString("\n") { "${it.providerId}\t${it.name}" }).apply()
+            return fetched
+        }
+        return choicesPrefs.getString(region, null)
+            ?.lines()?.mapNotNull { line -> line.split('\t', limit = 2).takeIf { it.size == 2 }?.let { (id, name) -> id.toIntOrNull()?.let { Subscribable(it, name) } } }
+            ?.takeIf { it.isNotEmpty() }
+            ?: Subscriptions.fallback
+    }
 
     fun isAppInstalled(providerId: Int): Boolean =
         StreamingProviders.apps[providerId]?.packages?.any { isInstalled(it) } == true
@@ -227,7 +268,6 @@ class StreamingRepository @Inject constructor(
 
     private companion object {
         const val TAG = "StreamingRepository"
-        const val REGION = "HU"
         const val PLAY_STORE = "com.android.vending"
         const val CACHE_MS = 6L * 60 * 60 * 1000
         const val MIN_VOTES = 20

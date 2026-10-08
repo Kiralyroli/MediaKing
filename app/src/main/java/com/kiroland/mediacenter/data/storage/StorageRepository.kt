@@ -1,5 +1,6 @@
 package com.kiroland.mediacenter.data.storage
 
+import com.kiroland.mediacenter.util.AppLocale
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -31,7 +32,8 @@ class StorageRepository @Inject constructor(
     @param:ApplicationContext private val context: Context,
 ) {
     private val storageManager = context.getSystemService(StorageManager::class.java)
-    private val collator = Collator.getInstance(Locale.forLanguageTag("hu-HU"))
+    /** Sorting by the app's language (Hungarian puts "Á" next to "A", "Cs" after "C"). */
+    private val collator: Collator get() = Collator.getInstance(AppLocale.current)
 
     /** Mount points of the internal shared storage and every attached drive. Blocking (lists /storage). */
     fun volumeRoots(): List<File> = buildList {

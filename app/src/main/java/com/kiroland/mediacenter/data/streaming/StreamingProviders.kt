@@ -1,5 +1,6 @@
 package com.kiroland.mediacenter.data.streaming
 
+import com.kiroland.mediacenter.data.metadata.tmdb.RegionProvider
 import com.kiroland.mediacenter.R
 import androidx.annotation.StringRes
 import com.kiroland.mediacenter.data.metadata.tmdb.CountryProviders
@@ -8,7 +9,7 @@ import com.kiroland.mediacenter.data.metadata.tmdb.TmdbImages
 /** How a title can be watched at a provider, best first. */
 enum class Offer { SUBSCRIPTION, FREE, RENT, BUY }
 
-/** One provider offering a title, as TMDB (JustWatch) lists it for Hungary. */
+/** One provider offering a title, as TMDB (JustWatch) lists it for the user's country. */
 data class ProviderOffer(
     val providerId: Int,
     val name: String,
@@ -40,6 +41,7 @@ object StreamingProviders {
     val apps: Map<Int, ProviderApp> = mapOf(
         8 to ProviderApp(listOf("com.netflix.ninja", "com.netflix.mediaclient"), "https://www.netflix.com/"),
         119 to PRIME,
+        9 to PRIME, // Prime Video's id in the US
         10 to PRIME,
         1899 to ProviderApp(listOf("com.wbd.stream", "com.hbo.hbonow"), "https://www.hbomax.com/", "https://play.hbomax.com/search"),
         337 to ProviderApp(listOf("com.disney.disneyplus"), "https://www.disneyplus.com/", "https://www.disneyplus.com/search"),
@@ -48,13 +50,16 @@ object StreamingProviders {
         2 to APPLE,
         3 to ProviderApp(listOf("com.google.android.videos"), "https://play.google.com/store/movies"),
         188 to ProviderApp(listOf("com.google.android.youtube.tv", "com.google.android.youtube"), "https://www.youtube.com/"),
-        35 to ProviderApp(listOf("tv.wuaki.apptv", "tv.wuaki"), "https://www.rakuten.tv/hu"),
+        35 to ProviderApp(listOf("tv.wuaki.apptv", "tv.wuaki"), "https://www.rakuten.tv/"),
         2695 to ProviderApp(listOf("hu.mtva.mediaklikk"), "https://mediaklikk.hu/"),
         11 to ProviderApp(listOf("com.mubi"), "https://mubi.com/"),
         283 to ProviderApp(listOf("com.crunchyroll.crunchyroid"), "https://www.crunchyroll.com/"),
         538 to ProviderApp(listOf("com.plexapp.android"), "https://watch.plex.tv/"),
         223 to ProviderApp(listOf("com.hayu.hayu", "com.nbcuni.hayu"), "https://www.hayu.com/"),
         701 to ProviderApp(listOf("com.spiintl.tv.filmbox", "com.spiintl.filmbox"), "https://www.filmboxplus.com/"),
+        15 to ProviderApp(listOf("com.hulu.livingroomplus", "com.hulu.plus"), "https://www.hulu.com/"),
+        386 to ProviderApp(listOf("com.peacocktv.peacockandroid"), "https://www.peacocktv.com/"),
+        531 to ProviderApp(listOf("com.cbs.ott", "com.cbs.app"), "https://www.paramountplus.com/"),
     )
 
     /** Every package we might launch, for the manifest's <queries> and the installed check. */
@@ -110,7 +115,7 @@ private val PRIME = ProviderApp(
 
 private val APPLE = ProviderApp(
     listOf("com.apple.atve.androidtv.appletv", "com.apple.atve.sony.appletv"),
-    "https://tv.apple.com/hu",
+    "https://tv.apple.com/",
 )
 
 /**
@@ -131,27 +136,52 @@ fun <T> mergeByPopularity(movies: List<T>, series: List<T>, popularity: (T) -> D
 data class Subscribable(val providerId: Int, val name: String)
 
 object Subscriptions {
-    /** The subscription services offered in Hungary that matter here, in TMDB's Hungarian order. */
-    val choices = listOf(
+    /** Offered when the country's own list cannot be fetched (offline, no token): the big international ones. */
+    val fallback = listOf(
         Subscribable(8, "Netflix"),
         Subscribable(119, "Amazon Prime Video"),
-        Subscribable(1899, "HBO Max"),
         Subscribable(337, "Disney+"),
-        Subscribable(1773, "SkyShowtime"),
+        Subscribable(1899, "HBO Max"),
         Subscribable(350, "Apple TV+"),
         Subscribable(188, "YouTube Premium"),
-        Subscribable(11, "MUBI"),
-        Subscribable(701, "FilmBox+"),
-        Subscribable(223, "Hayu"),
         Subscribable(283, "Crunchyroll"),
+        Subscribable(11, "MUBI"),
     )
 
-    /** YouTube comes with every Android TV: having the app says nothing about a Premium subscription. */
-    private val notImpliedByApp = setOf(188)
+    /**
+     * YouTube comes with every Android TV: having the app says nothing about a Premium subscription.
+     * Neither does a store app that only rents and sells.
+     */
+    private val notImpliedByApp = setOf(188, 2, 3, 10) // and the stores: Apple TV, Google Play, Amazon Video
+
+    /**
+     * Not subscriptions of their own: ad tiers, channels sold inside another service, stores that only
+     * rent and sell, and guides.
+     */
+    private val NOT_A_SERVICE = Regex("""\bwith ads\b|\bchannel\b|\bstandard with\b|\bstore\b|justwatch""", RegexOption.IGNORE_CASE)
+
+    /** Stores by id (Apple TV Store, Google Play, Fandango at Home, Amazon Video, Microsoft, YouTube, Rakuten TV). */
+    private val STORES = setOf(2, 3, 7, 10, 68, 192, 35)
+
+    /**
+     * Every service in a country, from TMDB's film and series provider lists: in that country's order,
+     * a service on both lists once.
+     */
+    fun servicesIn(region: String, movie: List<RegionProvider>, tv: List<RegionProvider>): List<Subscribable> =
+        (movie + tv)
+            .filterNot { it.id in STORES || NOT_A_SERVICE.containsMatchIn(it.name) }
+            .groupBy { it.id }
+            .map { (id, entries) -> Triple(id, entries.first().name, entries.minOf { it.priorities[region] ?: it.priority }) }
+            .sortedBy { it.third }
+            .map { (id, name, _) -> Subscribable(id, name) }
+
+    /** What to offer: the country's [limit] biggest, plus any further down that the user already has ([keep]). */
+    fun choices(services: List<Subscribable>, keep: Set<Int>, limit: Int = 20): List<Subscribable> =
+        services.take(limit) + services.drop(limit).filter { it.providerId in keep }
 
     /** Chosen in the settings, or until then the services whose app is installed. */
     fun effective(chosen: Set<Int>?, installedProviders: Set<Int>): Set<Int> =
-        chosen ?: choices.map { it.providerId }.filterTo(HashSet()) { it in installedProviders && it !in notImpliedByApp }
+        chosen ?: installedProviders.filterTo(HashSet()) { it !in notImpliedByApp }
 
     /**
      * Offers sorted for this user: what their subscriptions include first, then other subscriptions,

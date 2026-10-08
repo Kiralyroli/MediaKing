@@ -25,6 +25,8 @@
     <string name="settings_auto_subtitles_hint">Magyar hangnál a kényszerített, idegen nyelvű hangnál a teljes magyar felirat.</string>
     <string name="settings_subscriptions">Előfizetéseim</string>
     <string name="settings_subscriptions_hint">A „Hol nézheted?” részben ezeket teszi előre és jelöli zölddel. Amíg nem választasz, a TV-re telepített appok számítanak.</string>
+    <string name="settings_region">Ország</string>
+    <string name="settings_region_auto">A TV szerint: %1$s</string>
     <string name="settings_app_installed">Az app telepítve van.</string>
     <string name="settings_app_not_installed">Az app nincs telepítve.</string>
     <string name="settings_live_tv">Élő TV</string>
@@ -240,6 +242,7 @@
     <string name="live_title">Élő TV</string>
     <string name="live_intro_in_app">A csatornák a beépített lejátszóban indulnak. Csatornaváltás: fel/le vagy a csatornagombok.</string>
     <string name="live_intro_mediaklikk">A közmédia csatornái a hivatalos Médiaklikk alkalmazásban nyílnak meg, ha telepítve van, különben a mediaklikk.hu élő oldalán, a TV böngészőjében.</string>
+    <string name="live_intro_addons">Élő csatornákat kiegészítőkkel adhatsz hozzá (Kiegészítők menü).</string>
     <string name="live_guide">Műsorújság</string>
     <string name="live_public">Közmédia</string>
     <string name="live_play_here">Lejátszás itt · %1$s</string>
@@ -260,6 +263,7 @@
     <!-- Upload, storage, add-ons, browser, diagnostics -->
     <string name="upload_title">Wi-Fi feltöltés</string>
     <string name="upload_intro">Tölts fel filmeket és sorozatokat telefonról vagy számítógépről, böngészőből, közvetlenül a TV-re kötött meghajtóra. Az eszköznek ugyanazon a hálózaton kell lennie.</string>
+    <string name="upload_intro_no_writes">Telefonról vagy számítógépről, böngészőből: távirányító, filmadatok és feliratletöltés beállítása. Az eszköznek ugyanazon a hálózaton kell lennie. Ezen az Android-verzión a meghajtóra nem lehet feltölteni.</string>
     <string name="upload_start">Bekapcsolás</string>
     <string name="upload_stop">Kikapcsolás</string>
     <string name="upload_new_code">Új párosítási kód</string>

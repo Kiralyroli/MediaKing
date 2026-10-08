@@ -1,10 +1,15 @@
 package com.kiroland.mediacenter.data.library
 
+import com.kiroland.mediacenter.util.TestStrings
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
 
 class SeasonFactsTest {
+    init {
+        TestStrings.install()
+    }
+
 
     // Silo as TMDB lists it on 2026-10-05.
     private val silo = listOf(

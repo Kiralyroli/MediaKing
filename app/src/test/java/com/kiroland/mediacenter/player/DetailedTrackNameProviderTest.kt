@@ -1,5 +1,6 @@
 package com.kiroland.mediacenter.player
 
+import com.kiroland.mediacenter.util.TestStrings
 import androidx.media3.common.C
 import androidx.media3.common.Format
 import androidx.media3.common.MimeTypes
@@ -7,6 +8,10 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class DetailedTrackNameProviderTest {
+    init {
+        TestStrings.install()
+    }
+
 
     private fun name(build: Format.Builder.() -> Unit) =
         DetailedTrackNameProvider.getTrackName(Format.Builder().apply(build).build())

@@ -54,6 +54,7 @@ import androidx.tv.material3.Text
 import com.google.zxing.BarcodeFormat
 import com.google.zxing.EncodeHintType
 import com.google.zxing.qrcode.QRCodeWriter
+import com.kiroland.mediacenter.data.storage.StoragePermissions
 import com.kiroland.mediacenter.data.transfer.PairingGuard
 import com.kiroland.mediacenter.data.transfer.TransferRepository
 import com.kiroland.mediacenter.data.transfer.TransferService
@@ -96,7 +97,7 @@ fun TransferScreen(viewModel: TransferViewModel = hiltViewModel()) {
             item {
                 Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                     Text(
-                        stringResource(R.string.upload_intro),
+                        stringResource(if (StoragePermissions.hasLegacyAccess) R.string.upload_intro else R.string.upload_intro_no_writes),
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                     state.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }

@@ -1,5 +1,6 @@
 package com.kiroland.mediacenter.media
 
+import com.kiroland.mediacenter.util.TestStrings
 import com.kiroland.mediacenter.data.storage.StorageRepository
 import com.kiroland.mediacenter.util.formatBytes
 import org.junit.Assert.assertEquals
@@ -8,6 +9,10 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class MediaTypeTest {
+    init {
+        TestStrings.install()
+    }
+
 
     @Test
     fun `classifies by extension case-insensitively`() {

@@ -54,6 +54,11 @@
         <package android:name="com.nbcuni.hayu" />
         <package android:name="com.spiintl.tv.filmbox" />
         <package android:name="com.spiintl.filmbox" />
+        <package android:name="com.hulu.livingroomplus" />
+        <package android:name="com.hulu.plus" />
+        <package android:name="com.peacocktv.peacockandroid" />
+        <package android:name="com.cbs.ott" />
+        <package android:name="com.cbs.app" />
         <intent>
             <action android:name="android.intent.action.VIEW" />
             <category android:name="android.intent.category.BROWSABLE" />

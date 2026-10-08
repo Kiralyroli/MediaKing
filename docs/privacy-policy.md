@@ -21,7 +21,7 @@ reklám, analitika, hibajelentés-küldés vagy más követés.
 Minden adat kizárólag a készüléken marad, és az app törlésével törlődik:
 
 - a médiatár (fájlnevek, elérési utak), a lejátszási pozíciók, a megnézett lista és a saját értékeléseid;
-- a beállítások (nyelv, előfizetéseid listája, feliratbeállítások);
+- a beállítások (nyelv, ország, előfizetéseid listája, feliratbeállítások);
 - ha megadod: a hálózati (SMB) mappák felhasználóneve és jelszava, a TMDB-token, az OpenSubtitles API-kulcs,
   felhasználónév és jelszó;
 - a letöltött feliratok.
@@ -35,7 +35,7 @@ adatvédelmi szabályaik vonatkoznak rájuk.
 
 | Szolgáltatás | Mire | Mit küld |
 |---|---|---|
-| [The Movie Database (TMDB)](https://www.themoviedb.org/privacy-policy) | filmadatok, poszterek, hol nézhető (JustWatch-adatok) | a fájlnévből kiolvasott címet és évet, a TMDB-azonosítókat, a nyelvet |
+| [The Movie Database (TMDB)](https://www.themoviedb.org/privacy-policy) | filmadatok, poszterek, hol nézhető (JustWatch-adatok) | a fájlnévből kiolvasott címet és évet, a TMDB-azonosítókat, a nyelvet és a beállított országot |
 | [OpenSubtitles](https://www.opensubtitles.com/en/privacy) | feliratletöltés (csak ha kéred) | a film vagy epizód TMDB-azonosítóját, a nyelvet, és ha megadtad, a fiókod adatait |
 | [TheIntroDB](https://theintrodb.org) | főcím/stáblista átugrása | a film vagy epizód TMDB-azonosítóját |
 | Kiegészítők | élő csatornák, műsorújság | amit a kiegészítő leír; kiegészítőt csak te telepíthetsz |
@@ -81,7 +81,7 @@ crash reporting or any other tracking.
 All data stays on the device only and is removed when the app is uninstalled:
 
 - the library (file names, paths), playback positions, the watched list and your own ratings;
-- settings (language, your subscriptions, subtitle preferences);
+- settings (language, country, your subscriptions, subtitle preferences);
 - if you enter them: user names and passwords of network (SMB) folders, a TMDB token, an OpenSubtitles API key,
   user name and password;
 - downloaded subtitles.
@@ -95,7 +95,7 @@ policies apply.
 
 | Service | Purpose | What is sent |
 |---|---|---|
-| [The Movie Database (TMDB)](https://www.themoviedb.org/privacy-policy) | film data, posters, where to watch (JustWatch data) | the title and year read from the file name, TMDB ids, the language |
+| [The Movie Database (TMDB)](https://www.themoviedb.org/privacy-policy) | film data, posters, where to watch (JustWatch data) | the title and year read from the file name, TMDB ids, the language and the chosen country |
 | [OpenSubtitles](https://www.opensubtitles.com/en/privacy) | subtitle download (only when you ask for it) | the TMDB id of the film or episode, the language, and your account if you entered one |
 | [TheIntroDB](https://theintrodb.org) | skipping intros and credits | the TMDB id of the film or episode |
 | Add-ons | live channels, programme guide | whatever the add-on describes; only you can install add-ons |

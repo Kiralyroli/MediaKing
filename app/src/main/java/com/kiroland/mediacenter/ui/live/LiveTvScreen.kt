@@ -1,5 +1,6 @@
 package com.kiroland.mediacenter.ui.live
 
+import com.kiroland.mediacenter.data.streaming.Regions
 import com.kiroland.mediacenter.R
 import androidx.compose.ui.res.stringResource
 import android.widget.Toast
@@ -92,6 +93,9 @@ class LiveTvViewModel @Inject constructor(
     /** The installed add-on channel that plays this built-in tile in the app's own player, if any. */
     fun addonFor(channel: LiveChannel): Pair<AddonManifest, AddonChannel>? = addonRepository.forBuiltin(channel.id)
 
+    /** Hungarian public-service channels: for viewers in Hungary. */
+    val inHungary: Boolean get() = settings.region == Regions.HUNGARY
+
     /** The tuner needs an antenna and a channel scan, which not every home has: off unless asked for. */
     var showAntenna: Boolean
         get() = settings.current.showAntenna
@@ -126,6 +130,8 @@ fun LiveTvScreen(onOpenGuide: () -> Unit, viewModel: LiveTvViewModel = hiltViewM
         return current?.let { context.getString(R.string.live_now, it.title) } to next?.let { "${clock(it.start)} ${it.title}" }
     }
     val anyInApp = PublicChannels.all.any { viewModel.addonFor(it) != null }
+    // The Hungarian public channels are for viewers in Hungary, or where an add-on already plays them.
+    val showPublic = anyInApp || viewModel.inHungary
     // Add-on channels that are not attached to a built-in tile get rows of their own.
     val builtinIds = PublicChannels.all.map { it.id }.toSet()
     val addonRows = installedAddons
@@ -142,10 +148,10 @@ fun LiveTvScreen(onOpenGuide: () -> Unit, viewModel: LiveTvViewModel = hiltViewM
             Column(Modifier.padding(horizontal = 48.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text(stringResource(R.string.live_title), style = MaterialTheme.typography.headlineMedium)
                 Text(
-                    if (anyInApp) {
-                        stringResource(R.string.live_intro_in_app)
-                    } else {
-                        stringResource(R.string.live_intro_mediaklikk)
+                    when {
+                        anyInApp -> stringResource(R.string.live_intro_in_app)
+                        showPublic -> stringResource(R.string.live_intro_mediaklikk)
+                        else -> stringResource(R.string.live_intro_addons)
                     },
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -159,7 +165,7 @@ fun LiveTvScreen(onOpenGuide: () -> Unit, viewModel: LiveTvViewModel = hiltViewM
             }
         }
 
-        item {
+        if (showPublic) item {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text(stringResource(R.string.live_public), style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(start = 48.dp))
                 LazyRow(
@@ -260,7 +266,7 @@ fun LiveTvScreen(onOpenGuide: () -> Unit, viewModel: LiveTvViewModel = hiltViewM
                         Text(stringResource(if (showAntenna) R.string.live_hide_antenna else R.string.live_show_antenna))
                     }
                 }
-                if (!anyInApp) {
+                if (showPublic && !anyInApp) {
                     Text(
                         stringResource(R.string.live_mtva_note),
                         style = MaterialTheme.typography.bodySmall,

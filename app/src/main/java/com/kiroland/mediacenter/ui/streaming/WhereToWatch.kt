@@ -55,7 +55,7 @@ suspend fun loadWhereToWatch(streaming: StreamingRepository, isMovie: Boolean, t
 }
 
 /**
- * "Where to watch" in Hungary: one pill per provider, subscriptions first; OK opens the provider's
+ * "Where to watch" in the user's country: one pill per provider, subscriptions first; OK opens the provider's
  * app (its search for the title where it has one). Data by JustWatch through TMDB, credited.
  */
 @Composable

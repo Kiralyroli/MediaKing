@@ -8,7 +8,7 @@ import androidx.annotation.StringRes
 import androidx.annotation.VisibleForTesting
 import java.util.Locale
 
-/** The app's languages; [SYSTEM] follows the TV's language when it is one of these, else Hungarian. */
+/** The app's languages; [SYSTEM] follows the TV's language when it is one of these, else English. */
 enum class AppLanguage(val tag: String?) {
     SYSTEM(null),
     HUNGARIAN("hu"),
@@ -35,6 +35,12 @@ object AppLocale {
     @VisibleForTesting
     var testStrings: ((Int, Array<out Any>) -> String)? = null
 
+    /** Unit tests have no context to read the language from; they set it here. */
+    @VisibleForTesting
+    fun useForTests(locale: Locale) {
+        cached = locale
+    }
+
     /** Called once from the application, so [text] works outside activities. */
     fun init(app: Context) {
         resources = wrap(app).resources
@@ -54,13 +60,13 @@ object AppLocale {
         resources = wrap(context.applicationContext).resources
     }
 
-    /** The effective locale: the chosen language, or the system's if supported, else Hungarian. */
+    /** The effective locale: the chosen language, or the system's if supported, else English. */
     fun locale(context: Context): Locale {
         cached?.let { return it }
         val tag = language(context).tag
             // The TV's own setting: Locale.getDefault() is ours once a language has been applied.
             ?: Resources.getSystem().configuration.locales.get(0).language.takeIf { it in SUPPORTED }
-            ?: "hu"
+            ?: "en"
         return Locale.forLanguageTag(tag).also {
             cached = it
             Locale.setDefault(it)
@@ -68,7 +74,7 @@ object AppLocale {
     }
 
     /** The locale once known, for formatting where no context is at hand. */
-    val current: Locale get() = cached ?: Locale.forLanguageTag("hu")
+    val current: Locale get() = cached ?: Locale.ENGLISH
 
     /** TMDB's language parameter for texts (titles, overviews) in the app's language. */
     val tmdbLanguage: String

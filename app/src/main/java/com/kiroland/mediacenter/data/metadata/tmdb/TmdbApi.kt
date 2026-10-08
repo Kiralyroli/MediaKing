@@ -31,12 +31,12 @@ interface TmdbApi {
         @Query("include_adult") includeAdult: Boolean = false,
     ): SearchResponse<MultiResult>
 
-    /** Popular titles on given providers ("8|1899") in Hungary, included in a subscription. */
+    /** Popular titles on given providers ("8|1899") in a country, included in a subscription. */
     @GET("discover/{type}")
     suspend fun discover(
         @Path("type") type: String,
         @Query("with_watch_providers") providers: String?,
-        @Query("watch_region") region: String? = "HU",
+        @Query("watch_region") region: String?,
         @Query("with_watch_monetization_types") monetization: String? = "flatrate",
         @Query("with_genres") genres: String? = null,
         @Query("vote_count.gte") minVotes: Int? = null,
@@ -72,6 +72,14 @@ interface TmdbApi {
         @Path("type") type: String,
         @Path("id") id: Int,
     ): WatchProvidersResponse
+
+    /** The streaming services TMDB knows in a country, with their order there. */
+    @GET("watch/providers/{type}")
+    suspend fun regionProviders(
+        @Path("type") type: String,
+        @Query("watch_region") region: String,
+        @Query("language") language: String = LANGUAGE,
+    ): SearchResponse<RegionProvider>
 
     companion object {
         const val BASE_URL = "https://api.themoviedb.org/3/"
@@ -213,6 +221,14 @@ data class ProviderEntry(
     @SerialName("provider_name") val name: String,
     @SerialName("logo_path") val logoPath: String? = null,
     @SerialName("display_priority") val priority: Int = 0,
+)
+
+@Serializable
+data class RegionProvider(
+    @SerialName("provider_id") val id: Int,
+    @SerialName("provider_name") val name: String,
+    @SerialName("display_priorities") val priorities: Map<String, Int> = emptyMap(),
+    @SerialName("display_priority") val priority: Int = Int.MAX_VALUE,
 )
 
 /** A search/multi hit: a film (title, release_date) or a series (name, first_air_date). */

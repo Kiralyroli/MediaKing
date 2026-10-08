@@ -1,5 +1,6 @@
 package com.kiroland.mediacenter.data.library
 
+import com.kiroland.mediacenter.util.AppLocale
 import com.kiroland.mediacenter.data.library.db.LibraryDao
 import com.kiroland.mediacenter.data.library.db.LibraryFolderEntity
 import com.kiroland.mediacenter.data.library.db.MediaEntity
@@ -38,7 +39,8 @@ class LibraryRepository @Inject constructor(
     private val watchedTitles: WatchedRepository,
 ) {
     val folders: Flow<List<LibraryFolderEntity>> = dao.observeFolders()
-    private val collator = Collator.getInstance(Locale.forLanguageTag("hu-HU"))
+    /** Sorting by the app's language (Hungarian puts "Á" next to "A", "Cs" after "C"). */
+    private val collator: Collator get() = Collator.getInstance(AppLocale.current)
 
     val movies: Flow<List<MediaWithProgress>> = dao.observeMovies().map { list ->
         list.sortedWith(compareBy(collator) { it.displayTitle })
