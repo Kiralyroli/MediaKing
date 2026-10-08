@@ -31,13 +31,35 @@ android {
         buildConfigField("String", "OPENSUBTITLES_KEY", "\"${localProperties.getProperty("opensubtitles.key", "")}\"")
     }
 
+    // Play upload key from the untracked keystore.properties (storeFile, storePassword, keyAlias, keyPassword).
+    val keystoreProperties = Properties().apply {
+        rootProject.file("keystore.properties").takeIf { it.exists() }?.inputStream()?.use { load(it) }
+    }
+    signingConfigs {
+        if (keystoreProperties.isNotEmpty()) {
+            create("upload") {
+                storeFile = rootProject.file(keystoreProperties.getProperty("storeFile"))
+                storePassword = keystoreProperties.getProperty("storePassword")
+                keyAlias = keystoreProperties.getProperty("keyAlias")
+                keyPassword = keystoreProperties.getProperty("keyPassword")
+            }
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
-            // Sideload only for now: signed with the debug key.
+            // The Play build (bundleRelease); without keystore.properties (CI) it falls back to the debug key.
+            signingConfig = signingConfigs.findByName("upload") ?: signingConfigs.getByName("debug")
+        }
+        // Release code signed with the debug key, so a sideloaded install updates in place (assembleSideload):
+        // a different key would mean uninstalling, and with it the library and the watched history.
+        create("sideload") {
+            initWith(getByName("release"))
             signingConfig = signingConfigs.getByName("debug")
+            matchingFallbacks += "release"
         }
     }
 

@@ -99,6 +99,22 @@ tmdb.token=eyJ...
 Token nélkül is működik, csak poszterek és leírások nélkül. A token a TV-n is megadható: **Feltöltés → Bekapcsolás**,
 majd a böngészőben a **Filmadatok (TMDB)** résznél; ez felülírja a beépítettet.
 
+A feliratletöltéshez ugyanide egy OpenSubtitles API-kulcs is beírható (`opensubtitles.key=...`); ez is megadható a TV-n.
+
+### Kiadás
+
+- `./gradlew :app:assembleSideload` – a TV-re telepíthető APK. A debug kulccsal van aláírva, így a meglévő telepítést
+  frissíti, és megmarad a médiatár és a megnézett lista.
+- `./gradlew :app:bundleRelease` – a Play Áruházba feltölthető AAB, a saját feltöltési kulccsal aláírva. A kulcs adatai a
+  verziókezelésből kizárt `keystore.properties` fájlba kerülnek:
+
+  ```properties
+  storeFile=upload-key.jks
+  storePassword=...
+  keyAlias=upload
+  keyPassword=...
+  ```
+
 ### CI
 
 Minden push a `main` ágra lefordítja az appot és lefuttatja a teszteket (GitHub Actions, `.github/workflows/ci.yml`).
