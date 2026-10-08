@@ -48,8 +48,11 @@ class RegionsTest {
         val services = Subscriptions.servicesIn("US", movie, tv)
         assertEquals(listOf(8, 15, 9), services.map { it.providerId })
         assertEquals("Netflix", services.first().name)
-        assertEquals(listOf(8), Subscriptions.choices(services, keep = emptySet(), limit = 1).map { it.providerId })
+        val none = emptySet<Int>()
+        assertEquals(listOf(8), Subscriptions.choices(services, keep = none, known = none, limit = 1).map { it.providerId })
         // A service the user has stays on offer, even far down the country's list.
-        assertEquals(listOf(8, 9), Subscriptions.choices(services, keep = setOf(9), limit = 1).map { it.providerId })
+        assertEquals(listOf(8, 9), Subscriptions.choices(services, keep = setOf(9), known = none, limit = 1).map { it.providerId })
+        // Services with a known TV app come first, each group in the country's order.
+        assertEquals(listOf(9, 8, 15), Subscriptions.choices(services, keep = none, known = setOf(9)).map { it.providerId })
     }
 }

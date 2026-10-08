@@ -175,9 +175,21 @@ object Subscriptions {
             .sortedBy { it.third }
             .map { (id, name, _) -> Subscribable(id, name) }
 
-    /** What to offer: the country's [limit] biggest, plus any further down that the user already has ([keep]). */
-    fun choices(services: List<Subscribable>, keep: Set<Int>, limit: Int = 20): List<Subscribable> =
-        services.take(limit) + services.drop(limit).filter { it.providerId in keep }
+    /**
+     * What to offer, at most [limit] plus any further down that the user already has ([keep]). TMDB's
+     * order alone puts niche services first in some countries (Hungary), so the ones with a known TV app
+     * ([known], the big ones) come first, each group in the country's order.
+     */
+    fun choices(
+        services: List<Subscribable>,
+        keep: Set<Int>,
+        known: Set<Int> = StreamingProviders.apps.keys,
+        limit: Int = 20,
+    ): List<Subscribable> {
+        val (big, other) = services.partition { it.providerId in known }
+        val ordered = big + other
+        return ordered.take(limit) + ordered.drop(limit).filter { it.providerId in keep }
+    }
 
     /** Chosen in the settings, or until then the services whose app is installed. */
     fun effective(chosen: Set<Int>?, installedProviders: Set<Int>): Set<Int> =
